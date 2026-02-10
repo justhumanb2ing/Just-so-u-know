@@ -39,6 +39,11 @@
   - 입력 중 `400ms` 디바운스로 자동 저장
 - 저장 성공 시 `set_page_updated_at` 트리거로 `updated_at`이 자동 갱신된다.
 
+## 페이지 접근 제어 동작
+- 페이지가 비공개(`is_public=false`)이고 요청 사용자가 소유자가 아니면 `app/[handle]/error.tsx`를 렌더링한다.
+- 페이지가 비공개여도 소유자는 조회 가능하다.
+- 프로필 수정(`name`, `bio`)은 `is_public=true`인 페이지에서만 허용한다.
+
 ## RLS 정책
 - 현재 `public.page`는 RLS 비활성화 상태
 - 이유: Better Auth `user.id`(text) + Direct Postgres 연결 구조에서 `auth.uid()` 기반 정책을 신뢰하기 어려움

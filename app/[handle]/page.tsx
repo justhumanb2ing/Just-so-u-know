@@ -7,13 +7,14 @@ import {
   PUBLIC_PAGE_NAME_CLASSNAME,
 } from "@/components/public-page/profile-field-styles";
 import { auth } from "@/lib/auth/auth";
-import { findPublicPageByPathHandle } from "@/service/onboarding/public-page";
+import { findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
+import { PRIVATE_PAGE_ACCESS_DENIED_ERROR } from "./constants";
 
 export default async function PublicPage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
   const requestHeaders = await headers();
   const [page, session] = await Promise.all([
-    findPublicPageByPathHandle(handle),
+    findPageByPathHandle(handle),
     auth.api.getSession({
       headers: requestHeaders,
     }),
@@ -24,10 +25,15 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
   }
 
   const isOwner = page.userId === session?.user.id;
+  const canEdit = isOwner;
+
+  if (shouldDenyPrivatePageAccess({ isPublic: page.isPublic, isOwner })) {
+    throw new Error(PRIVATE_PAGE_ACCESS_DENIED_ERROR);
+  }
 
   return (
     <main className="container mx-auto flex min-h-dvh max-w-2xl flex-col gap-4 p-6">
-      {isOwner ? (
+      {canEdit ? (
         <EditablePageProfile handle={page.handle} initialName={page.name} initialBio={page.bio} />
       ) : (
         <section className={PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME}>

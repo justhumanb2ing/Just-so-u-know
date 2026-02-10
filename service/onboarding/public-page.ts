@@ -13,6 +13,11 @@ export type PublicPageRow = {
   userId: string;
 };
 
+export type PrivatePageAccessPolicyInput = {
+  isPublic: boolean;
+  isOwner: boolean;
+};
+
 /**
  * 경로 파라미터 handle을 공개 페이지 조회용 저장 포맷으로 정규화한다.
  */
@@ -21,7 +26,7 @@ export function normalizeStoredHandleFromPath(pathHandle: string) {
   return PUBLIC_HANDLE_PATTERN.test(normalizedHandle) ? normalizedHandle : null;
 }
 
-const queryPublicPageByStoredHandle = cache(async (storedHandle: string) => {
+const queryPageByStoredHandle = cache(async (storedHandle: string) => {
   const result = await sql<PublicPageRow>`
     select
       name,
@@ -39,16 +44,30 @@ const queryPublicPageByStoredHandle = cache(async (storedHandle: string) => {
 });
 
 /**
- * 공개 페이지 접근 가능 여부까지 반영해 페이지 데이터를 반환한다.
+ * 비공개 페이지는 소유자에게만 접근을 허용한다.
  */
-export async function findPublicPageByPathHandle(pathHandle: string) {
+export function shouldDenyPrivatePageAccess({ isPublic, isOwner }: PrivatePageAccessPolicyInput) {
+  return !isPublic && !isOwner;
+}
+
+/**
+ * 경로 handle로 페이지를 조회한다. 공개/비공개 여부와 관계없이 반환한다.
+ */
+export async function findPageByPathHandle(pathHandle: string) {
   const storedHandle = normalizeStoredHandleFromPath(pathHandle);
 
   if (!storedHandle) {
     return null;
   }
 
-  const page = await queryPublicPageByStoredHandle(storedHandle);
+  return queryPageByStoredHandle(storedHandle);
+}
+
+/**
+ * 공개 페이지 접근 가능 여부까지 반영해 페이지 데이터를 반환한다.
+ */
+export async function findPublicPageByPathHandle(pathHandle: string) {
+  const page = await findPageByPathHandle(pathHandle);
 
   if (!page || !page.isPublic) {
     return null;
