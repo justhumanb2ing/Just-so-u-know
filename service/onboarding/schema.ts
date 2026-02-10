@@ -4,6 +4,8 @@ import { isReservedHandle } from "@/service/onboarding/reserved-handles";
 export const HANDLE_MIN_LENGTH = 3;
 export const HANDLE_MAX_LENGTH = 20;
 export const HANDLE_PATTERN = /^[a-z0-9]+$/;
+const STORED_HANDLE_PATTERN = /^@[a-z0-9]{3,20}$/;
+const LINE_BREAK_PATTERN = /[\r\n]+/g;
 
 function emptyStringToNull(value: string | null | undefined) {
   if (value == null) {
@@ -12,6 +14,14 @@ function emptyStringToNull(value: string | null | undefined) {
 
   const trimmed = value.trim();
   return trimmed.length === 0 ? null : trimmed;
+}
+
+function normalizeSingleLineText(value: string | null | undefined) {
+  if (value == null) {
+    return null;
+  }
+
+  return value.replace(LINE_BREAK_PATTERN, " ");
 }
 
 function nullableTrimmedText(maxLength: number, message: string) {
@@ -50,7 +60,7 @@ export const onboardingStoredHandleSchema = onboardingHandleSchema.transform((va
 export const onboardingSubmissionSchema = z.object({
   handle: onboardingHandleSchema,
   verifiedHandle: onboardingHandleSchema,
-  title: nullableText().optional(),
+  name: nullableText().optional(),
   bio: nullableTrimmedText(200, "Bio must be at most 200 characters.").optional(),
   image: z
     .preprocess((value) => emptyStringToNull(typeof value === "string" ? value : null), z.url("Image must be a valid URL.").nullable())
@@ -58,6 +68,23 @@ export const onboardingSubmissionSchema = z.object({
 });
 
 export type OnboardingSubmissionInput = z.infer<typeof onboardingSubmissionSchema>;
+
+/**
+ * 공개 페이지 편집 입력(name, bio)을 단일 라인으로 정규화하고 검증한다.
+ */
+export const pageProfileUpdateSchema = z.object({
+  storedHandle: z.string().trim().toLowerCase().regex(STORED_HANDLE_PATTERN, "Invalid page handle."),
+  name: z.preprocess(
+    (value) => emptyStringToNull(normalizeSingleLineText(typeof value === "string" ? value : null)),
+    z.string().nullable(),
+  ),
+  bio: z.preprocess(
+    (value) => emptyStringToNull(normalizeSingleLineText(typeof value === "string" ? value : null)),
+    z.string().max(200, "Bio must be at most 200 characters.").nullable(),
+  ),
+});
+
+export type PageProfileUpdateInput = z.infer<typeof pageProfileUpdateSchema>;
 
 /**
  * 사용자 입력 handle을 저장 포맷(@handle)으로 변환한다.

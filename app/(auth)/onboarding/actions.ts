@@ -54,7 +54,7 @@ export async function submitOnboardingAction(_prevState: OnboardingSubmitState, 
   const parsed = onboardingSubmissionSchema.safeParse({
     handle: formValueToString(formData.get("handle")),
     verifiedHandle: formValueToString(formData.get("verifiedHandle")),
-    title: formValueToString(formData.get("title")) || null,
+    name: formValueToString(formData.get("name")) || formValueToString(formData.get("title")) || null,
     bio: formValueToString(formData.get("bio")) || null,
     image: formValueToString(formData.get("image")) || null,
   });
@@ -87,7 +87,7 @@ export async function submitOnboardingAction(_prevState: OnboardingSubmitState, 
   try {
     const result = await completeOnboardingWithPageCreation(session.user.id, {
       handle: payload.handle,
-      title: payload.title,
+      name: payload.name,
       bio: payload.bio,
       image: payload.image,
     });

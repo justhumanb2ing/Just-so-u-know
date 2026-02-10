@@ -29,6 +29,11 @@ bun install
 bun dev
 ```
 
+### 공개 페이지 프로필 편집
+- 소유자는 `/{handle}` 페이지에서 `name`, `bio`를 직접 수정할 수 있다.
+- Enter 입력 시 즉시 저장되고, 입력 중에도 `400ms` 디바운스로 자동 저장된다.
+- `bio`는 최대 200자이며 줄바꿈은 저장되지 않는다.
+
 ### 검증 커맨드
 ```bash
 bun run test
@@ -40,6 +45,7 @@ bun run build
 ```bash
 psql "$DIRECT_URL" -f schema/migrations/20260210170000_create_page_table_and_onboarding_rpc.sql
 psql "$DIRECT_URL" -f schema/migrations/20260210190000_disable_page_rls_for_better_auth.sql
+psql "$DIRECT_URL" -f schema/migrations/20260210200000_rename_page_title_to_name.sql
 ```
 
 ## 문서

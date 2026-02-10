@@ -126,7 +126,7 @@ export async function checkHandleAvailability(rawHandle: string): Promise<Handle
  */
 export async function completeOnboardingWithPageCreation(
   userId: string,
-  payload: Pick<OnboardingSubmissionInput, "handle" | "title" | "bio" | "image">,
+  payload: Pick<OnboardingSubmissionInput, "handle" | "name" | "bio" | "image">,
 ): Promise<CompleteOnboardingResult> {
   const storedHandle = toStoredHandle(payload.handle);
 
@@ -139,7 +139,7 @@ export async function completeOnboardingWithPageCreation(
         from public.create_page_for_user(
           ${userId},
           ${storedHandle},
-          ${payload.title ?? null},
+          ${payload.name ?? null},
           ${payload.bio ?? null},
           ${payload.image ?? null},
           true

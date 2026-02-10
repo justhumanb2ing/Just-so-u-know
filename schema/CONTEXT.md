@@ -6,6 +6,7 @@
 ## 파일 구조와 역할
 - `schema/migrations/20260210170000_create_page_table_and_onboarding_rpc.sql`: page 테이블/인덱스/트리거/RPC 함수 생성
 - `schema/migrations/20260210190000_disable_page_rls_for_better_auth.sql`: page RLS 비활성화 및 정책 정리
+- `schema/migrations/20260210200000_rename_page_title_to_name.sql`: page `title` 컬럼을 `name`으로 교체하고 RPC 함수 계약 갱신
 
 ## 핵심 설계 결정
 - 정합성 규칙(handle 포맷/예약어/bio 길이/primary 유일성)을 DB 제약으로 강제한다.

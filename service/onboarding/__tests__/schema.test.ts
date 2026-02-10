@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { onboardingHandleSchema, onboardingStoredHandleSchema, onboardingSubmissionSchema } from "@/service/onboarding/schema";
+import {
+  onboardingHandleSchema,
+  onboardingStoredHandleSchema,
+  onboardingSubmissionSchema,
+  pageProfileUpdateSchema,
+} from "@/service/onboarding/schema";
 
 describe("onboarding schema", () => {
   test("유효한 handle은 소문자로 정규화되어 통과한다", () => {
@@ -72,12 +77,12 @@ describe("onboarding schema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("빈 문자열 title/bio/image는 null로 정규화된다", () => {
+  test("빈 문자열 name/bio/image는 null로 정규화된다", () => {
     // Arrange
     const payload = {
       handle: "tester",
       verifiedHandle: "tester",
-      title: "",
+      name: "",
       bio: "",
       image: "",
     };
@@ -90,9 +95,64 @@ describe("onboarding schema", () => {
     expect(result.data).toEqual({
       handle: "tester",
       verifiedHandle: "tester",
-      title: null,
+      name: null,
       bio: null,
       image: null,
     });
+  });
+
+  test("페이지 편집 스키마는 name/bio 개행을 제거하고 저장한다", () => {
+    // Arrange
+    const payload = {
+      storedHandle: "@tester",
+      name: "Hello\nWorld",
+      bio: "Bio\r\nLine",
+    };
+
+    // Act
+    const result = pageProfileUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      storedHandle: "@tester",
+      name: "Hello World",
+      bio: "Bio Line",
+    });
+  });
+
+  test("페이지 편집 스키마는 빈 문자열 name/bio를 null로 정규화한다", () => {
+    // Arrange
+    const payload = {
+      storedHandle: "@tester",
+      name: "   ",
+      bio: "\n  ",
+    };
+
+    // Act
+    const result = pageProfileUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      storedHandle: "@tester",
+      name: null,
+      bio: null,
+    });
+  });
+
+  test("페이지 편집 스키마는 @ 접두가 없는 handle을 거부한다", () => {
+    // Arrange
+    const payload = {
+      storedHandle: "tester",
+      name: "Name",
+      bio: "Bio",
+    };
+
+    // Act
+    const result = pageProfileUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(false);
   });
 });

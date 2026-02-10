@@ -5,11 +5,12 @@ import { kysely } from "@/lib/kysely";
 const PUBLIC_HANDLE_PATTERN = /^@[a-z0-9]{3,20}$/;
 
 export type PublicPageRow = {
-  title: string | null;
+  name: string | null;
   handle: string;
   bio: string | null;
   image: string | null;
   isPublic: boolean;
+  userId: string;
 };
 
 /**
@@ -23,11 +24,12 @@ export function normalizeStoredHandleFromPath(pathHandle: string) {
 const queryPublicPageByStoredHandle = cache(async (storedHandle: string) => {
   const result = await sql<PublicPageRow>`
     select
-      title,
+      name,
       handle,
       bio,
       image,
-      is_public as "isPublic"
+      is_public as "isPublic",
+      user_id as "userId"
     from public.page
     where handle = ${storedHandle}
     limit 1
@@ -53,4 +55,43 @@ export async function findPublicPageByPathHandle(pathHandle: string) {
   }
 
   return page;
+}
+
+export type UpdateOwnedPublicPageProfileInput = {
+  storedHandle: string;
+  userId: string;
+  name: string | null;
+  bio: string | null;
+};
+
+export type UpdateOwnedPublicPageProfileResult = {
+  name: string | null;
+  bio: string | null;
+  updatedAt: string;
+};
+
+/**
+ * 소유한 공개 페이지의 name/bio를 갱신한다.
+ */
+export async function updateOwnedPublicPageProfile({
+  storedHandle,
+  userId,
+  name,
+  bio,
+}: UpdateOwnedPublicPageProfileInput): Promise<UpdateOwnedPublicPageProfileResult | null> {
+  const result = await sql<UpdateOwnedPublicPageProfileResult>`
+    update public.page
+    set
+      name = ${name},
+      bio = ${bio}
+    where handle = ${storedHandle}
+      and user_id = ${userId}
+      and is_public = true
+    returning
+      name,
+      bio,
+      updated_at as "updatedAt"
+  `.execute(kysely);
+
+  return result.rows[0] ?? null;
 }

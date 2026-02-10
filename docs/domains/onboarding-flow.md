@@ -17,7 +17,7 @@
 1. 사용자가 handle 입력
 2. 클라이언트 훅에서 정규화/디바운스 검증 호출
 3. 서버 액션에서 세션 확인 후 handle 중복검사
-4. 제출 시 zod로 `handle`, `verifiedHandle`, `title`, `bio`, `image` 검증
+4. 제출 시 zod로 `handle`, `verifiedHandle`, `name`, `bio`, `image` 검증
 5. 서버에서 중복 재검증 후 트랜잭션으로 페이지 생성 + `onboardingComplete=true` 반영
 6. 완료 컴포넌트에서 공개 페이지 경로로 이동
 
@@ -25,7 +25,7 @@
 - handle: 소문자/숫자만, 길이 3~20
 - 저장 handle: 항상 `@` 접두 포함
 - bio: 최대 200자
-- title/bio/image: nullable
+- name/bio/image: nullable
 
 ## 설계 결정
 - 클라이언트의 사전 검증 결과는 UX 목적이며, 서버에서 반드시 재검증한다.

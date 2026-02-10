@@ -13,3 +13,5 @@
 
 ## 변경 맥락
 - `docs/context/changes/onboarding-20260210.md`
+- `docs/context/changes/public-page-20260210.md`
+- `docs/context/changes/page-name-20260210.md`

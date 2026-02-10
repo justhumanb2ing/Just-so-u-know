@@ -73,7 +73,7 @@ export type Database = {
           image: string | null;
           is_primary: boolean;
           is_public: boolean;
-          title: string | null;
+          name: string | null;
           updated_at: string;
           user_id: string;
         };
@@ -85,7 +85,7 @@ export type Database = {
           image?: string | null;
           is_primary?: boolean;
           is_public?: boolean;
-          title?: string | null;
+          name?: string | null;
           updated_at?: string;
           user_id: string;
         };
@@ -97,7 +97,7 @@ export type Database = {
           image?: string | null;
           is_primary?: boolean;
           is_public?: boolean;
-          title?: string | null;
+          name?: string | null;
           updated_at?: string;
           user_id?: string;
         };
@@ -226,7 +226,7 @@ export type Database = {
           p_handle: string;
           p_image?: string;
           p_is_public?: boolean;
-          p_title?: string;
+          p_name?: string;
           p_user_id: string;
         };
         Returns: {
@@ -237,7 +237,7 @@ export type Database = {
           image: string | null;
           is_primary: boolean;
           is_public: boolean;
-          title: string | null;
+          name: string | null;
           updated_at: string;
           user_id: string;
         };

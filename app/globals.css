@@ -45,6 +45,10 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-brand: var(--brand);
+
+  --color-destructive-foreground: var(--destructive-foreground);
 }
 
 :root {
@@ -80,6 +84,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --brand: oklch(0.7806 0.1269 57.86);
+  --destructive-foreground: var(--color-red-700);
 }
 
 .dark {
@@ -114,6 +120,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --brand: oklch(0.7806 0.1269 57.86);
+  --destructive-foreground: var(--color-red-400);
 }
 
 @layer base {
@@ -127,5 +135,19 @@
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    scrollbar-width: none;
+  }
+
+  .phantom-shadow {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
   }
 }
