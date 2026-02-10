@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { isOnboardingComplete, resolveAuthProxyRedirectPath, resolveReturnPathFromReferer } from "@/lib/auth/route-access";
+import {
+  isOnboardingComplete,
+  resolveAuthProxyRedirectPath,
+  resolveMeRedirectPath,
+  resolveReturnPathFromReferer,
+} from "@/lib/auth/route-access";
 
 describe("route-access", () => {
   test("같은 origin referer는 return path로 사용한다", () => {
@@ -140,5 +145,67 @@ describe("route-access", () => {
 
     // Assert
     expect(redirectPath).toBeNull();
+  });
+});
+
+describe("resolveMeRedirectPath", () => {
+  test("세션이 없으면 sign-in 경로로 이동한다", () => {
+    // Arrange
+    const input = {
+      hasSession: false,
+      onboardingComplete: false,
+      primaryPageHandle: null,
+    };
+
+    // Act
+    const redirectPath = resolveMeRedirectPath(input);
+
+    // Assert
+    expect(redirectPath).toBe("/sign-in");
+  });
+
+  test("온보딩이 완료되지 않았으면 onboarding 경로로 이동한다", () => {
+    // Arrange
+    const input = {
+      hasSession: true,
+      onboardingComplete: false,
+      primaryPageHandle: "@owner",
+    };
+
+    // Act
+    const redirectPath = resolveMeRedirectPath(input);
+
+    // Assert
+    expect(redirectPath).toBe("/onboarding");
+  });
+
+  test("로그인 + 온보딩 완료 + primary handle이 있으면 해당 공개 페이지로 이동한다", () => {
+    // Arrange
+    const input = {
+      hasSession: true,
+      onboardingComplete: true,
+      primaryPageHandle: "@owner",
+    };
+
+    // Act
+    const redirectPath = resolveMeRedirectPath(input);
+
+    // Assert
+    expect(redirectPath).toBe("/@owner");
+  });
+
+  test("primary handle 형식이 잘못되었으면 onboarding 경로로 fallback 한다", () => {
+    // Arrange
+    const input = {
+      hasSession: true,
+      onboardingComplete: true,
+      primaryPageHandle: "owner",
+    };
+
+    // Act
+    const redirectPath = resolveMeRedirectPath(input);
+
+    // Assert
+    expect(redirectPath).toBe("/onboarding");
   });
 });

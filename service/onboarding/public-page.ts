@@ -13,6 +13,10 @@ export type PublicPageRow = {
   userId: string;
 };
 
+export type PrimaryPageHandleRow = {
+  handle: string;
+};
+
 export type PrivatePageAccessPolicyInput = {
   isPublic: boolean;
   isOwner: boolean;
@@ -41,6 +45,19 @@ const queryPageByStoredHandle = cache(async (storedHandle: string) => {
       user_id as "userId"
     from public.page
     where handle = ${storedHandle}
+    limit 1
+  `.execute(kysely);
+
+  return result.rows[0] ?? null;
+});
+
+const queryPrimaryPageHandleByUserId = cache(async (userId: string) => {
+  const result = await sql<PrimaryPageHandleRow>`
+    select
+      handle
+    from public.page
+    where user_id = ${userId}
+      and is_primary = true
     limit 1
   `.execute(kysely);
 
@@ -85,6 +102,14 @@ export async function findPublicPageByPathHandle(pathHandle: string) {
   }
 
   return page;
+}
+
+/**
+ * 로그인 사용자의 primary 페이지 handle만 조회한다.
+ * `/me` 리다이렉트 계산 전용으로 최소 필드만 반환한다.
+ */
+export async function findPrimaryPageHandleByUserId(userId: string) {
+  return queryPrimaryPageHandleByUserId(userId);
 }
 
 export type UpdateOwnedPageProfileInput = {

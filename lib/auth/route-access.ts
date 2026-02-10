@@ -60,6 +60,12 @@ export type ResolveAuthProxyRedirectPathInput = {
   returnPath: string;
 };
 
+export type ResolveMeRedirectPathInput = {
+  hasSession: boolean;
+  onboardingComplete: boolean;
+  primaryPageHandle: string | null;
+};
+
 /**
  * 브라우저 페이지 라우트 기준으로 proxy 리다이렉트 경로를 계산한다.
  *
@@ -100,6 +106,25 @@ export function resolveAuthProxyRedirectPath({
   }
 
   return null;
+}
+
+/**
+ * `/me` 페이지에서 인증/온보딩/primary 페이지 상태별 최종 이동 경로를 계산한다.
+ */
+export function resolveMeRedirectPath({ hasSession, onboardingComplete, primaryPageHandle }: ResolveMeRedirectPathInput) {
+  if (!hasSession) {
+    return SIGN_IN_PATH;
+  }
+
+  if (!onboardingComplete) {
+    return ONBOARDING_PATH;
+  }
+
+  if (!primaryPageHandle || !primaryPageHandle.startsWith("@")) {
+    return ONBOARDING_PATH;
+  }
+
+  return `/${primaryPageHandle}`;
 }
 
 export function isOnboardingComplete(userMetadata: unknown) {
