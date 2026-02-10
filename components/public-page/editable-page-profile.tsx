@@ -1,6 +1,7 @@
 "use client";
 
 import { CircleFadingArrowUpIcon, LoaderIcon, TrashIcon } from "lucide-react";
+import { motion } from "motion/react";
 import Image from "next/image";
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,7 +18,7 @@ import {
   PUBLIC_PAGE_IMAGE_REMOVE_BUTTON_CLASSNAME,
   PUBLIC_PAGE_NAME_CLASSNAME,
 } from "@/components/public-page/profile-field-styles";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toastManager } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
@@ -377,12 +378,19 @@ export function EditablePageProfile({ handle, initialName, initialBio, initialIm
               void handleImageInputChange(event);
             }}
           />
-          <button
+          <motion.button
             type="button"
             onClick={handleImageSelectClick}
             disabled={isUploadingImage || isDeletingImage}
             className={PUBLIC_PAGE_IMAGE_EDIT_TRIGGER_CLASSNAME}
             aria-label={imageUrl ? "Change profile image" : "Upload profile image"}
+            whileTap={{
+              scale: 0.96,
+            }}
+            transition={{
+              duration: 0.12,
+              ease: "easeOut",
+            }}
           >
             {imageUrl ? (
               <Image
@@ -405,21 +413,27 @@ export function EditablePageProfile({ handle, initialName, initialBio, initialIm
                 <LoaderIcon className="size-5 animate-spin text-white" />
               </div>
             ) : null}
-          </button>
+          </motion.button>
           {imageUrl ? (
-            <Button
+            <motion.button
               type="button"
-              size="icon-lg"
-              className={PUBLIC_PAGE_IMAGE_REMOVE_BUTTON_CLASSNAME}
+              className={cn(buttonVariants({ size: "icon-lg" }), PUBLIC_PAGE_IMAGE_REMOVE_BUTTON_CLASSNAME)}
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
                 void handleDeleteImage();
               }}
               disabled={isUploadingImage || isDeletingImage}
+              whileTap={{
+                scale: 0.92,
+              }}
+              transition={{
+                duration: 0.12,
+                ease: "easeOut",
+              }}
             >
               <TrashIcon className="size-4" strokeWidth={3} />
-            </Button>
+            </motion.button>
           ) : null}
         </div>
       </section>
