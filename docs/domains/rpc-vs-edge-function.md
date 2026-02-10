@@ -21,3 +21,10 @@
 ## 운영 기준
 - DB 내부 정합성 중심 로직은 RPC 우선
 - 외부 시스템 연동 중심 로직은 Edge Function 검토
+
+## 페이지 이미지 업로드 적용 기준
+- 현재 페이지 이미지 업로드는 Edge Function/RPC 대신 Next.js Route Handler를 사용한다.
+- 이유:
+  - Better Auth 세션 검증과 페이지 소유권 검증을 기존 서버 컨텍스트에서 재사용 가능
+  - 파일 본문은 presigned URL로 Storage에 직접 업로드해 서버 부하 최소화
+  - complete/delete 단계에서 DB 업데이트와 partial failure 응답을 앱 레이어에서 일관되게 처리 가능

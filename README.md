@@ -23,6 +23,11 @@ bun install
 - `GITHUB_CLIENT_SECRET`
 - `NAVER_CLIENT_ID`
 - `NAVER_CLIENT_SECRET`
+- `SUPABASE_S3_ENDPOINT`
+- `SUPABASE_S3_REGION`
+- `SUPABASE_S3_BUCKET` (예: `page-thumbnail`)
+- `SUPABASE_S3_ACCESS_KEY_ID`
+- `SUPABASE_S3_SECRET_ACCESS_KEY`
 
 ### 실행
 ```bash
@@ -41,6 +46,13 @@ bun dev
 - 페이지가 비공개여도 소유자는 프로필을 편집할 수 있다.
 - Enter 입력 시 즉시 저장되고, 입력 중에도 `400ms` 디바운스로 자동 저장된다.
 - `bio`는 최대 200자이며 줄바꿈은 저장되지 않는다.
+- 프로필 이미지 업로드는 파일 선택 즉시 시작된다.
+- 업로드 전 클라이언트에서 `jpg/jpeg/png/webp`, 최대 `5MB` 검증을 수행한다.
+- 업로드 전 이미지를 `WebP(320x320, quality 0.85)`로 압축한다.
+- Storage 버킷은 `page-thumbnail`, object key는 `page/{userId}/{pageId}/profile.webp`를 사용한다.
+- 업로드는 `init-upload → presigned PUT → complete-upload` 순서로 처리되며, `page.image`에는 public URL(`?v=` 캐시 버전 포함)이 저장된다.
+- 삭제는 즉시 실행되며 `page.image = null`과 Storage object 삭제를 모두 시도한다.
+- DB 반영은 성공했지만 Storage 정리가 실패한 경우 partial failure toast를 표시한다.
 - 비공개 페이지는 소유자만 접근할 수 있으며, 비소유자 접근 시 라우트 세그먼트 `error.tsx`가 렌더링된다.
 
 ### 검증 커맨드

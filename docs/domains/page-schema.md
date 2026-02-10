@@ -7,6 +7,10 @@
 - `schema/migrations/20260210170000_create_page_table_and_onboarding_rpc.sql`
 - `schema/migrations/20260210190000_disable_page_rls_for_better_auth.sql`
 - `schema/migrations/20260210200000_rename_page_title_to_name.sql`
+- `app/api/page/image/init-upload/route.ts`
+- `app/api/page/image/complete-upload/route.ts`
+- `app/api/page/image/delete/route.ts`
+- `components/public-page/editable-page-profile.tsx`
 
 ## 테이블 스키마
 - 컬럼: `name`, `handle`, `bio`, `image`, `is_public`, `is_primary`, `created_at`, `updated_at`, `user_id`
@@ -38,6 +42,19 @@
   - 클라이언트 Enter 입력 시 즉시 저장
   - 입력 중 `400ms` 디바운스로 자동 저장
 - 저장 성공 시 `set_page_updated_at` 트리거로 `updated_at`이 자동 갱신된다.
+
+## 공개 페이지 이미지 업로드 동작
+- 버킷: `page-thumbnail`
+- object key: `page/{userId}/{pageId}/profile.webp` (단일 이미지만 허용)
+- 업로드 프로토콜: Supabase Storage S3 endpoint + AWS SDK presigned PUT
+- 처리 순서:
+  - `POST /api/page/image/init-upload`: 세션/소유권 검증 후 presigned URL 발급
+  - 클라이언트가 presigned URL로 직접 PUT 업로드
+  - `POST /api/page/image/complete-upload`: object 존재 확인 후 `page.image` 갱신
+- `page.image`는 public URL로 저장하며 캐시 무효화를 위해 `?v=<timestamp>`를 포함한다.
+- 삭제(`DELETE /api/page/image/delete`)는 `page.image = null`과 Storage object 삭제를 모두 시도한다.
+- DB 반영은 성공했지만 Storage 삭제가 실패하면 partial success 응답을 반환해 UI에서 경고 toast를 띄운다.
+- 업로드 전 클라이언트에서 `jpg/jpeg/png/webp`, 최대 `5MB`를 검증하고, `WebP(320x320, quality 0.85)`로 변환한다.
 
 ## 페이지 접근 제어 동작
 - 페이지가 비공개(`is_public=false`)이고 요청 사용자가 소유자가 아니면 `app/[handle]/error.tsx`를 렌더링한다.

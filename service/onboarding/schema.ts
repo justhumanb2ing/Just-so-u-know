@@ -55,6 +55,11 @@ export const onboardingHandleSchema = z
 export const onboardingStoredHandleSchema = onboardingHandleSchema.transform((value) => `@${value}`);
 
 /**
+ * 저장소에 저장된 공개 페이지 handle(@ 접두 포함)을 검증한다.
+ */
+export const storedHandleSchema = z.string().trim().toLowerCase().regex(STORED_HANDLE_PATTERN, "Invalid page handle.");
+
+/**
  * 온보딩 제출 페이로드를 검증한다.
  */
 export const onboardingSubmissionSchema = z.object({
@@ -73,7 +78,7 @@ export type OnboardingSubmissionInput = z.infer<typeof onboardingSubmissionSchem
  * 공개 페이지 편집 입력(name, bio)을 단일 라인으로 정규화하고 검증한다.
  */
 export const pageProfileUpdateSchema = z.object({
-  storedHandle: z.string().trim().toLowerCase().regex(STORED_HANDLE_PATTERN, "Invalid page handle."),
+  storedHandle: storedHandleSchema,
   name: z.preprocess(
     (value) => emptyStringToNull(normalizeSingleLineText(typeof value === "string" ? value : null)),
     z.string().nullable(),
@@ -85,6 +90,15 @@ export const pageProfileUpdateSchema = z.object({
 });
 
 export type PageProfileUpdateInput = z.infer<typeof pageProfileUpdateSchema>;
+
+/**
+ * 페이지 이미지 API 입력(handle) 검증 스키마다.
+ */
+export const pageImageHandleSchema = z.object({
+  handle: storedHandleSchema,
+});
+
+export type PageImageHandleInput = z.infer<typeof pageImageHandleSchema>;
 
 /**
  * 사용자 입력 handle을 저장 포맷(@handle)으로 변환한다.

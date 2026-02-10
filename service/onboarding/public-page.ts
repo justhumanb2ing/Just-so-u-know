@@ -5,6 +5,7 @@ import { kysely } from "@/lib/kysely";
 const PUBLIC_HANDLE_PATTERN = /^@[a-z0-9]{3,20}$/;
 
 export type PublicPageRow = {
+  id: string;
   name: string | null;
   handle: string;
   bio: string | null;
@@ -37,6 +38,7 @@ export function normalizeStoredHandleFromPath(pathHandle: string) {
 const queryPageByStoredHandle = cache(async (storedHandle: string) => {
   const result = await sql<PublicPageRow>`
     select
+      id,
       name,
       handle,
       bio,
@@ -144,6 +146,66 @@ export async function updateOwnedPageProfile({
     returning
       name,
       bio,
+      updated_at as "updatedAt"
+  `.execute(kysely);
+
+  return result.rows[0] ?? null;
+}
+
+export type OwnedPageImageRow = {
+  id: string;
+  image: string | null;
+};
+
+export type FindOwnedPageImageInput = {
+  storedHandle: string;
+  userId: string;
+};
+
+/**
+ * 이미지 작업용으로 소유 페이지의 최소 필드(id, image)만 조회한다.
+ */
+export async function findOwnedPageImage({ storedHandle, userId }: FindOwnedPageImageInput): Promise<OwnedPageImageRow | null> {
+  const result = await sql<OwnedPageImageRow>`
+    select
+      id,
+      image
+    from public.page
+    where handle = ${storedHandle}
+      and user_id = ${userId}
+    limit 1
+  `.execute(kysely);
+
+  return result.rows[0] ?? null;
+}
+
+export type UpdateOwnedPageImageInput = {
+  storedHandle: string;
+  userId: string;
+  image: string | null;
+};
+
+export type UpdateOwnedPageImageResult = {
+  image: string | null;
+  updatedAt: string;
+};
+
+/**
+ * 소유한 페이지의 image URL을 갱신한다.
+ */
+export async function updateOwnedPageImage({
+  storedHandle,
+  userId,
+  image,
+}: UpdateOwnedPageImageInput): Promise<UpdateOwnedPageImageResult | null> {
+  const result = await sql<UpdateOwnedPageImageResult>`
+    update public.page
+    set
+      image = ${image}
+    where handle = ${storedHandle}
+      and user_id = ${userId}
+    returning
+      image,
       updated_at as "updatedAt"
   `.execute(kysely);
 
