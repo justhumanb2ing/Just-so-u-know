@@ -67,9 +67,7 @@ export function useHandleAvailability(): UseHandleAvailabilityResult {
 
   const verifiedHandle = handleCheckState.status === "available" ? (handleCheckState.normalizedHandle ?? "") : "";
   const statusMessage =
-    handleCheckState.status === "idle"
-      ? "lowercase letters and numbers only (3 to 20 characters)."
-      : handleCheckState.message;
+    handleCheckState.status === "idle" ? "lowercase letters and numbers only (3 to 20 characters)." : handleCheckState.message;
 
   return {
     handleInput,
