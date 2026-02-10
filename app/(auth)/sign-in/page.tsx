@@ -15,7 +15,7 @@ export default async function SignInPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 px-6">
+    <main className="flex h-full w-full flex-col justify-center gap-8">
       <h1 className="font-semibold text-2xl">Sign in</h1>
       <SocialLoginOptions />
     </main>
