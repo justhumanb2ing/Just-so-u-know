@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { normalizeStoredHandleFromPath, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
+import { canEditPageProfile, normalizeStoredHandleFromPath, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
 
 describe("public-page", () => {
   test("유효한 @handle 경로를 소문자로 정규화한다", () => {
@@ -77,5 +77,33 @@ describe("private page access policy", () => {
 
     // Assert
     expect(denied).toBe(false);
+  });
+});
+
+describe("page edit policy", () => {
+  test("소유자는 비공개 여부와 무관하게 편집 가능하다", () => {
+    // Arrange
+    const policyInput = {
+      isOwner: true,
+    };
+
+    // Act
+    const canEdit = canEditPageProfile(policyInput);
+
+    // Assert
+    expect(canEdit).toBe(true);
+  });
+
+  test("비소유자는 편집할 수 없다", () => {
+    // Arrange
+    const policyInput = {
+      isOwner: false,
+    };
+
+    // Act
+    const canEdit = canEditPageProfile(policyInput);
+
+    // Assert
+    expect(canEdit).toBe(false);
   });
 });

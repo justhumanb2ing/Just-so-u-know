@@ -18,6 +18,10 @@ export type PrivatePageAccessPolicyInput = {
   isOwner: boolean;
 };
 
+export type PageEditPolicyInput = {
+  isOwner: boolean;
+};
+
 /**
  * 경로 파라미터 handle을 공개 페이지 조회용 저장 포맷으로 정규화한다.
  */
@@ -51,6 +55,13 @@ export function shouldDenyPrivatePageAccess({ isPublic, isOwner }: PrivatePageAc
 }
 
 /**
+ * 페이지 프로필 편집은 소유자에게만 허용한다.
+ */
+export function canEditPageProfile({ isOwner }: PageEditPolicyInput) {
+  return isOwner;
+}
+
+/**
  * 경로 handle로 페이지를 조회한다. 공개/비공개 여부와 관계없이 반환한다.
  */
 export async function findPageByPathHandle(pathHandle: string) {
@@ -76,36 +87,35 @@ export async function findPublicPageByPathHandle(pathHandle: string) {
   return page;
 }
 
-export type UpdateOwnedPublicPageProfileInput = {
+export type UpdateOwnedPageProfileInput = {
   storedHandle: string;
   userId: string;
   name: string | null;
   bio: string | null;
 };
 
-export type UpdateOwnedPublicPageProfileResult = {
+export type UpdateOwnedPageProfileResult = {
   name: string | null;
   bio: string | null;
   updatedAt: string;
 };
 
 /**
- * 소유한 공개 페이지의 name/bio를 갱신한다.
+ * 소유한 페이지의 name/bio를 갱신한다.
  */
-export async function updateOwnedPublicPageProfile({
+export async function updateOwnedPageProfile({
   storedHandle,
   userId,
   name,
   bio,
-}: UpdateOwnedPublicPageProfileInput): Promise<UpdateOwnedPublicPageProfileResult | null> {
-  const result = await sql<UpdateOwnedPublicPageProfileResult>`
+}: UpdateOwnedPageProfileInput): Promise<UpdateOwnedPageProfileResult | null> {
+  const result = await sql<UpdateOwnedPageProfileResult>`
     update public.page
     set
       name = ${name},
       bio = ${bio}
     where handle = ${storedHandle}
       and user_id = ${userId}
-      and is_public = true
     returning
       name,
       bio,

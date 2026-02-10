@@ -7,7 +7,7 @@ import {
   PUBLIC_PAGE_NAME_CLASSNAME,
 } from "@/components/public-page/profile-field-styles";
 import { auth } from "@/lib/auth/auth";
-import { findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
+import { canEditPageProfile, findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
 import { PRIVATE_PAGE_ACCESS_DENIED_ERROR } from "./constants";
 
 export default async function PublicPage({ params }: { params: Promise<{ handle: string }> }) {
@@ -25,7 +25,7 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
   }
 
   const isOwner = page.userId === session?.user.id;
-  const canEdit = isOwner;
+  const canEdit = canEditPageProfile({ isOwner });
 
   if (shouldDenyPrivatePageAccess({ isPublic: page.isPublic, isOwner })) {
     throw new Error(PRIVATE_PAGE_ACCESS_DENIED_ERROR);

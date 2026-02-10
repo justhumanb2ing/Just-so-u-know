@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
-import { updateOwnedPublicPageProfile } from "@/service/onboarding/public-page";
+import { updateOwnedPageProfile } from "@/service/onboarding/public-page";
 import { pageProfileUpdateSchema } from "@/service/onboarding/schema";
 
 export type SavePageProfileActionInput = {
@@ -28,7 +28,7 @@ function toStringValue(value: unknown) {
 }
 
 /**
- * 공개 페이지 소유자 요청만 허용해 name/bio를 저장한다.
+ * 페이지 소유자 요청만 허용해 name/bio를 저장한다.
  */
 export async function savePageProfileAction(rawInput: SavePageProfileActionInput): Promise<SavePageProfileActionResult> {
   const requestHeaders = await headers();
@@ -57,7 +57,7 @@ export async function savePageProfileAction(rawInput: SavePageProfileActionInput
   }
 
   try {
-    const updatedPage = await updateOwnedPublicPageProfile({
+    const updatedPage = await updateOwnedPageProfile({
       storedHandle: parsedInput.data.storedHandle,
       userId: session.user.id,
       name: parsedInput.data.name,
