@@ -34,37 +34,39 @@ export function SocialLoginOptions() {
   };
 
   return (
-    <>
-      {SOCIAL_PROVIDER_OPTIONS.map((option) => (
-        <Button
-          key={option.provider}
-          variant="outline"
-          size={"lg"}
-          className={cn(option.buttonClassName, "relative py-6 shadow-none")}
-          disabled={loadingProvider !== null}
-          onClick={() => handleSocialLogin(option.provider)}
-          aria-label={`${option.label} 로그인 (${option.loginOption})`}
-          title={`${option.label} 로그인 (${option.loginOption})`}
-        >
-          {loadingProvider === option.provider ? (
-            <LoaderIcon className="animate-spin" />
-          ) : (
-            <div>
-              <span className="flex items-center gap-1">
-                <option.Icon className="size-4" />
-                Login with {option.label}
-              </span>
-              {lastUsedLoginMethod === option.provider ? (
-                <Badge variant="default" className="absolute -top-2.5 -right-2.5 ml-1">
-                  Last used
-                </Badge>
-              ) : null}
-            </div>
-          )}
-        </Button>
-      ))}
+    <div className="flex flex-col">
+      <div className="flex flex-col gap-2">
+        {SOCIAL_PROVIDER_OPTIONS.map((option) => (
+          <Button
+            key={option.provider}
+            variant="outline"
+            size={"lg"}
+            className={cn(option.buttonClassName, "relative py-6 shadow-none")}
+            disabled={loadingProvider !== null}
+            onClick={() => handleSocialLogin(option.provider)}
+            aria-label={`${option.label} 로그인 (${option.loginOption})`}
+            title={`${option.label} 로그인 (${option.loginOption})`}
+          >
+            {loadingProvider === option.provider ? (
+              <LoaderIcon className="animate-spin" />
+            ) : (
+              <div>
+                <span className="flex items-center gap-1">
+                  <option.Icon className="size-4" />
+                  Login with {option.label}
+                </span>
+                {lastUsedLoginMethod === option.provider ? (
+                  <Badge variant="default" className="absolute -top-2.5 -right-2.5 ml-1">
+                    Last used
+                  </Badge>
+                ) : null}
+              </div>
+            )}
+          </Button>
+        ))}
+      </div>
 
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
-    </>
+    </div>
   );
 }
