@@ -8,13 +8,246 @@ export type Database = {
   };
   public: {
     Tables: {
-      [_ in never]: never;
+      account: {
+        Row: {
+          accessToken: string | null;
+          accessTokenExpiresAt: string | null;
+          accountId: string;
+          createdAt: string;
+          id: string;
+          idToken: string | null;
+          password: string | null;
+          providerId: string;
+          refreshToken: string | null;
+          refreshTokenExpiresAt: string | null;
+          scope: string | null;
+          updatedAt: string;
+          userId: string;
+        };
+        Insert: {
+          accessToken?: string | null;
+          accessTokenExpiresAt?: string | null;
+          accountId: string;
+          createdAt?: string;
+          id: string;
+          idToken?: string | null;
+          password?: string | null;
+          providerId: string;
+          refreshToken?: string | null;
+          refreshTokenExpiresAt?: string | null;
+          scope?: string | null;
+          updatedAt: string;
+          userId: string;
+        };
+        Update: {
+          accessToken?: string | null;
+          accessTokenExpiresAt?: string | null;
+          accountId?: string;
+          createdAt?: string;
+          id?: string;
+          idToken?: string | null;
+          password?: string | null;
+          providerId?: string;
+          refreshToken?: string | null;
+          refreshTokenExpiresAt?: string | null;
+          scope?: string | null;
+          updatedAt?: string;
+          userId?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "account_userId_fkey";
+            columns: ["userId"];
+            isOneToOne: false;
+            referencedRelation: "user";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      page: {
+        Row: {
+          bio: string | null;
+          created_at: string;
+          handle: string;
+          id: string;
+          image: string | null;
+          is_primary: boolean;
+          is_public: boolean;
+          title: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          bio?: string | null;
+          created_at?: string;
+          handle: string;
+          id?: string;
+          image?: string | null;
+          is_primary?: boolean;
+          is_public?: boolean;
+          title?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          bio?: string | null;
+          created_at?: string;
+          handle?: string;
+          id?: string;
+          image?: string | null;
+          is_primary?: boolean;
+          is_public?: boolean;
+          title?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "page_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "user";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      session: {
+        Row: {
+          createdAt: string;
+          expiresAt: string;
+          id: string;
+          ipAddress: string | null;
+          token: string;
+          updatedAt: string;
+          userAgent: string | null;
+          userId: string;
+        };
+        Insert: {
+          createdAt?: string;
+          expiresAt: string;
+          id: string;
+          ipAddress?: string | null;
+          token: string;
+          updatedAt: string;
+          userAgent?: string | null;
+          userId: string;
+        };
+        Update: {
+          createdAt?: string;
+          expiresAt?: string;
+          id?: string;
+          ipAddress?: string | null;
+          token?: string;
+          updatedAt?: string;
+          userAgent?: string | null;
+          userId?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_userId_fkey";
+            columns: ["userId"];
+            isOneToOne: false;
+            referencedRelation: "user";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      user: {
+        Row: {
+          createdAt: string;
+          email: string;
+          emailVerified: boolean;
+          id: string;
+          image: string | null;
+          name: string;
+          role: string | null;
+          updatedAt: string;
+          userMetadata: Json | null;
+        };
+        Insert: {
+          createdAt?: string;
+          email: string;
+          emailVerified: boolean;
+          id: string;
+          image?: string | null;
+          name: string;
+          role?: string | null;
+          updatedAt?: string;
+          userMetadata?: Json | null;
+        };
+        Update: {
+          createdAt?: string;
+          email?: string;
+          emailVerified?: boolean;
+          id?: string;
+          image?: string | null;
+          name?: string;
+          role?: string | null;
+          updatedAt?: string;
+          userMetadata?: Json | null;
+        };
+        Relationships: [];
+      };
+      verification: {
+        Row: {
+          createdAt: string;
+          expiresAt: string;
+          id: string;
+          identifier: string;
+          updatedAt: string;
+          value: string;
+        };
+        Insert: {
+          createdAt?: string;
+          expiresAt: string;
+          id: string;
+          identifier: string;
+          updatedAt?: string;
+          value: string;
+        };
+        Update: {
+          createdAt?: string;
+          expiresAt?: string;
+          id?: string;
+          identifier?: string;
+          updatedAt?: string;
+          value?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      create_page_for_user: {
+        Args: {
+          p_bio?: string;
+          p_handle: string;
+          p_image?: string;
+          p_is_public?: boolean;
+          p_title?: string;
+          p_user_id: string;
+        };
+        Returns: {
+          bio: string | null;
+          created_at: string;
+          handle: string;
+          id: string;
+          image: string | null;
+          is_primary: boolean;
+          is_public: boolean;
+          title: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "page";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
     };
     Enums: {
       [_ in never]: never;
