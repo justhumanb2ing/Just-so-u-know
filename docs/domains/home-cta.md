@@ -17,6 +17,7 @@
 - `cta-button`은 인증 조회를 수행하지 않는 정적 링크 컴포넌트로 유지한다.
 - 인증/리다이렉트 분기는 `/me` 서버 페이지에서 처리한다.
 - 랜딩 페이지(`app/page.tsx`)는 `dynamic = "force-static"`으로 고정한다.
+- `/me`는 인증 리다이렉트 전용 동적 라우트이므로 CTA 링크는 `prefetch={false}`로 유지해 선행 인증 요청을 방지한다.
 
 ## 운영 체크
 - `/me` 이동 정책 변경 시 `lib/auth/__tests__/route-access.test.ts`의 `resolveMeRedirectPath` 테스트를 함께 갱신한다.
