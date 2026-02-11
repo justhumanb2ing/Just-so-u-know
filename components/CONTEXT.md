@@ -12,6 +12,7 @@
 ## 핵심 설계 결정
 - 온보딩 입력 상태는 `use-handle-availability` 훅으로 분리해 폼 컴포넌트 책임을 축소한다.
 - 입력 필드 렌더링은 합성 컴포넌트(`handle-input-field`)로 분리한다.
+- 공개 페이지 인증 CTA는 `public-page-auth-action`에서 `세션 여부 + 페이지 소유 여부` 조합으로 단일 분기 함수(`resolvePublicPageAuthActionType`)를 통해 결정한다.
 
 ## 사용 패턴
 - 컴포넌트는 가능한 표현과 이벤트 전달에 집중하고, 도메인 검증은 서비스/액션에 위임한다.

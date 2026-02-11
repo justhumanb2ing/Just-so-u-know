@@ -1,10 +1,20 @@
 "use client";
 
+import type { ComponentProps } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/auth-client";
+import { cn } from "@/lib/utils";
 
-export function SignOutButton() {
+type SignOutButtonProps = {
+  className?: string;
+  label?: string;
+  size?: ComponentProps<typeof Button>["size"];
+  variant?: ComponentProps<typeof Button>["variant"];
+  wrapperClassName?: string;
+};
+
+export function SignOutButton({ className, label = "Sign out", size = "sm", variant = "link", wrapperClassName }: SignOutButtonProps = {}) {
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -39,16 +49,16 @@ export function SignOutButton() {
   };
 
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className={cn("flex flex-col items-start gap-1", wrapperClassName)}>
       <Button
         type="button"
-        variant="link"
-        size="sm"
-        className={"h-auto px-0 py-0 text-muted-foreground text-xs"}
+        variant={variant}
+        size={size}
+        className={cn("h-auto px-0 py-0 text-muted-foreground text-xs", className)}
         onClick={handleSignOut}
         disabled={isPending}
       >
-        sign out
+        {label}
       </Button>
       {errorMessage ? <p className="text-destructive text-xs">{errorMessage}</p> : null}
     </div>
