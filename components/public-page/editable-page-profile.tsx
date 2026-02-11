@@ -3,7 +3,6 @@
 import { CircleFadingArrowUpIcon, LoaderIcon, TrashIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
-import { EditableSocialAccountsSection } from "@/components/public-page/editable-social-accounts-section";
 import {
   PUBLIC_PAGE_BIO_CLASSNAME,
   PUBLIC_PAGE_FIELD_BASE_CLASSNAME,
@@ -151,7 +150,6 @@ export function EditablePageProfile({ handle, initialName, initialBio, initialIm
         <ProfileImageField controller={profileImage} />
       </section>
       <ProfileTextFields controller={profileDraft} />
-      <EditableSocialAccountsSection />
     </div>
   );
 }
