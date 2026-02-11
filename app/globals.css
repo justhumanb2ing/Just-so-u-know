@@ -148,6 +148,9 @@
   }
 
   .phantom-shadow {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    @apply shadow-[0_2px_4px_rgba(0,0,0,0.04)];
+  }
+  .phantom-border {
+    @apply inset-shadow-[0_1px_--theme(--color-white/16%)];
   }
 }

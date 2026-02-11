@@ -111,6 +111,47 @@ export type Database = {
           },
         ];
       };
+      page_social_items: {
+        Row: {
+          created_at: string;
+          id: string;
+          is_visible: boolean;
+          page_id: string;
+          platform: string;
+          sort_order: number;
+          updated_at: string;
+          username: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          is_visible?: boolean;
+          page_id: string;
+          platform: string;
+          sort_order?: number;
+          updated_at?: string;
+          username: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          is_visible?: boolean;
+          page_id?: string;
+          platform?: string;
+          sort_order?: number;
+          updated_at?: string;
+          username?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "page_social_items_page_id_fkey";
+            columns: ["page_id"];
+            isOneToOne: false;
+            referencedRelation: "page";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       session: {
         Row: {
           createdAt: string;
