@@ -154,3 +154,14 @@
     @apply inset-shadow-[0_1px_--theme(--color-white/16%)];
   }
 }
+
+@utility floating-shadow {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 25px 31px rgba(0, 0, 0, 0.02),
+    0 16.2037px 18.1551px rgba(0, 0, 0, 0.015),
+    0 9.62963px 9.87407px rgba(0, 0, 0, 0.012),
+    0 5px 5.0375px rgba(0, 0, 0, 0.01),
+    0 2.03704px 2.52593px rgba(0, 0, 0, 0.008),
+    0 0.462963px 1.21991px rgba(0, 0, 0, 0.005);
+}
