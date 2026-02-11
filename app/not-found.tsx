@@ -9,7 +9,7 @@ export default function NotFound() {
         <p className="text-sm md:text-base">Nothing so far!</p>
       </header>
       <aside className="flex flex-col items-center gap-2">
-        <Button variant={"link"} nativeButton={false} render={<Link href="/">Go Home</Link>} />
+        <Button variant={"link"} render={<Link href="/">Go Home</Link>} />
       </aside>
     </main>
   );

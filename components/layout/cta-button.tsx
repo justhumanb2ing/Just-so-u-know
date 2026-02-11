@@ -10,7 +10,6 @@ export default function CTAButton() {
       variant={"default"}
       size={"lg"}
       className={"h-10"}
-      nativeButton={false}
       render={
         <Link href="/me" prefetch={false}>
           Sign in

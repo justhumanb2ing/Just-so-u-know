@@ -44,7 +44,6 @@ export function OnboardingComplete({ publicPath, storedHandle }: OnboardingCompl
           size={"lg"}
           variant={"default"}
           className={"w-full rounded-xl py-6 text-lg"}
-          nativeButton={false}
           render={<Link href={publicPath}>Go to {storedHandle}</Link>}
         ></Button>
       </motion.div>
