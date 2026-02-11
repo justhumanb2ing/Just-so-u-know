@@ -40,6 +40,8 @@ bun dev
 - 비로그인: `/sign-in`
 - 로그인 + 온보딩 미완료: `/onboarding`
 - 로그인 + 온보딩 완료: `/{primary handle}`
+- 현재 라우트 URL 복사용 훅 `hooks/use-copy-current-route-url.ts`를 제공한다.
+- URL 복사 훅은 아직 UI 액션에 연결하지 않았다.
 
 ### 공개 페이지 프로필 편집
 - 소유자는 `/{handle}` 페이지에서 `name`, `bio`를 직접 수정할 수 있다.

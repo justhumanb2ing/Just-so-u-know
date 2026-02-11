@@ -153,6 +153,15 @@
   .phantom-border {
     @apply inset-shadow-[0_1px_--theme(--color-white/16%)];
   }
+
+  .press-scale {
+    transition: transform 120ms ease-out;
+  }
+
+  .press-scale:active,
+  .press-scale[data-pressed] {
+    transform: scale(0.92);
+  }
 }
 
 @utility floating-shadow {

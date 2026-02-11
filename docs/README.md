@@ -10,6 +10,7 @@
 - `docs/domains/rpc-vs-edge-function.md`
 - `docs/domains/route-access-control.md`
 - `docs/domains/home-cta.md`
+- `docs/domains/route-url-copy.md`
 
 ## 변경 맥락
 - `docs/context/changes/onboarding-20260210.md`
