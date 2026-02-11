@@ -30,7 +30,7 @@ describe("resolvePublicPageAuthActionType", () => {
     expect(actionType).toBe("my-page");
   });
 
-  test("세션이 있고 본인 페이지면 sign-out 액션을 반환한다", () => {
+  test("세션이 있고 본인 페이지면 null을 반환한다", () => {
     // Arrange
     const input = {
       hasSession: true,
@@ -41,6 +41,6 @@ describe("resolvePublicPageAuthActionType", () => {
     const actionType = resolvePublicPageAuthActionType(input);
 
     // Assert
-    expect(actionType).toBe("sign-out");
+    expect(actionType).toBeNull();
   });
 });

@@ -3,6 +3,7 @@
 import { AtSignIcon, CircleCheckIcon, XIcon as CloseIcon } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import { useState } from "react";
+import { Tooltip, TooltipPanel, TooltipTrigger } from "@/components/animate-ui/components/base/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SocialPlatform, SocialPlatformDefinition } from "@/constants/social-platforms";
@@ -164,14 +165,23 @@ function SocialPlatformRow({ option }: SocialPlatformRowProps) {
 
   return (
     <div className="mb-3 flex min-w-0 items-center gap-3">
-      <Button
-        size="icon-xl"
-        variant="default"
-        disabled={disabled}
-        className={cn(disabled && "opacity-50", "size-11! rounded-md shadow-xs", iconButtonClassName)}
-      >
-        <Icon aria-hidden="true" color={iconColor} className={iconClassName} />
-      </Button>
+      <Tooltip delay={100}>
+        <TooltipTrigger
+          render={
+            <Button
+              size="icon-xl"
+              variant="default"
+              disabled={disabled}
+              className={cn(disabled && "opacity-50", "size-11! rounded-md shadow-xs", iconButtonClassName)}
+            />
+          }
+        >
+          <Icon aria-hidden="true" color={iconColor} className={iconClassName} />
+        </TooltipTrigger>
+        <TooltipPanel side="top" align="center">
+          {label}
+        </TooltipPanel>
+      </Tooltip>
 
       <div className="relative min-w-0 flex-1">
         {isSubmitted ? (
