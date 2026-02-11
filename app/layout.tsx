@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
-import { TooltipProvider } from "@/components/animate-ui/primitives/base/tooltip";
-import { AnchoredToastProvider, ToastProvider } from "@/components/ui/toast";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -29,11 +28,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${geistSans.variable} ${geistMono.variable} h-dvh antialiased`}>
-        <ToastProvider>
-          <AnchoredToastProvider>
-            <TooltipProvider>{children}</TooltipProvider>
-          </AnchoredToastProvider>
-        </ToastProvider>
+        {children}
+        <Toaster position="top-center" />
       </body>
     </html>
   );

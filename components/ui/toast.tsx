@@ -57,7 +57,7 @@ function Toasts({ position = "bottom-right" }: { position: ToastPosition }) {
           return (
             <Toast.Root
               className={cn(
-                "absolute z-[calc(9999-var(--toast-index))] h-(--toast-calc-height) w-full select-none rounded-lg border bg-popover not-dark:bg-clip-padding text-popover-foreground shadow-lg/5 [transition:transform_.5s_cubic-bezier(.22,1,.36,1),opacity_.5s,height_.15s] before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-lg)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]",
+                "phantom-border absolute z-[calc(9999-var(--toast-index))] h-(--toast-calc-height) w-full select-none rounded-lg border border-black bg-foreground not-dark:bg-clip-padding text-background shadow-lg/5 [transition:transform_.5s_cubic-bezier(.22,1,.36,1),opacity_.5s,height_.15s] before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-lg)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]",
                 // Base positioning using data-position
                 "data-[position*=right]:right-0 data-[position*=right]:left-auto",
                 "data-[position*=left]:right-auto data-[position*=left]:left-0",
@@ -118,7 +118,7 @@ function Toasts({ position = "bottom-right" }: { position: ToastPosition }) {
 
                   <div className="flex flex-col gap-0.5">
                     <Toast.Title className="font-medium" data-slot="toast-title" />
-                    <Toast.Description className="text-muted-foreground" data-slot="toast-description" />
+                    <Toast.Description className="text-neutral-300" data-slot="toast-description" />
                   </div>
                 </div>
                 {toast.actionProps && (
@@ -196,7 +196,7 @@ function AnchoredToasts() {
                       </div>
                     </div>
                     {toast.actionProps && (
-                      <Toast.Action className={buttonVariants({ size: "xs" })} data-slot="toast-action">
+                      <Toast.Action className={cn(buttonVariants({ size: "lg" }))} data-slot="toast-action">
                         {toast.actionProps.children}
                       </Toast.Action>
                     )}

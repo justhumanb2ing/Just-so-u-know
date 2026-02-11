@@ -28,10 +28,10 @@ export default function PublicPageError({ error, reset }: PublicPageErrorProps) 
         </p>
       </header>
       <aside className="flex flex-col items-center gap-2">
-        <Button variant="outline" onClick={() => reset()}>
+        <Button size={"lg"} onClick={() => reset()} className="rounded-sm">
           Try again
         </Button>
-        <Button variant={"link"} nativeButton={false} render={<Link href="/">Go Home</Link>} />
+        <Button variant={"link"} render={<Link href="/">Go Home</Link>} />
       </aside>
     </main>
   );
