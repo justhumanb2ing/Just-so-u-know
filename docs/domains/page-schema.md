@@ -32,12 +32,17 @@
 - `create_page_for_user`: 입력 정규화, 예약어/길이 검증, advisory lock, 원자 삽입
 
 ## 공개 페이지 프로필 수정 동작
-- 수정 대상: `name`, `bio`
+- 수정 대상: `handle`, `name`, `bio`
 - 소유권 검증: `handle + user_id` 조건으로 소유자만 update 허용
 - 입력 정책:
+  - `handle`: 소문자/숫자, 3~20자, 저장 시 `@` 접두 포함
   - `name`: nullable, 길이 제한 없음
   - `bio`: nullable, 최대 200자
   - `name`/`bio` 모두 줄바꿈 문자는 공백으로 정규화
+- handle 변경 흐름:
+  - 클라이언트에서 디바운스 중복 검증을 수행한다.
+  - 제출 시 `verifiedHandle === handle` 조건을 강제한다.
+  - 서버에서 중복 검증 후 `update public.page set handle = ... where handle = ... and user_id = ...`로 갱신한다.
 - 저장 트리거:
   - 클라이언트 Enter 입력 시 즉시 저장
   - 입력 중 `400ms` 디바운스로 자동 저장
