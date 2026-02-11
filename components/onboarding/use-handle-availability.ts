@@ -13,13 +13,13 @@ type HandleCheckState = { status: "idle" } | HandleAvailabilityResult | { status
 export type UseHandleAvailabilityResult = {
   handleInput: string;
   handleCheckState: HandleCheckState;
-  statusMessage: string;
   verifiedHandle: string;
   onHandleChange: (value: string) => void;
 };
 
 /**
  * handle 입력값 정규화와 디바운스 중복 검증 상태를 캡슐화한다.
+ * 온보딩/핸들 변경 폼에서 공통으로 재사용한다.
  */
 export function useHandleAvailability(): UseHandleAvailabilityResult {
   const [handleInput, setHandleInput] = useState("");
@@ -66,13 +66,10 @@ export function useHandleAvailability(): UseHandleAvailabilityResult {
   }, [handleInput]);
 
   const verifiedHandle = handleCheckState.status === "available" ? (handleCheckState.normalizedHandle ?? "") : "";
-  const statusMessage =
-    handleCheckState.status === "idle" ? "lowercase letters and numbers only (3 to 20 characters)." : handleCheckState.message;
 
   return {
     handleInput,
     handleCheckState,
-    statusMessage,
     verifiedHandle,
     onHandleChange,
   };

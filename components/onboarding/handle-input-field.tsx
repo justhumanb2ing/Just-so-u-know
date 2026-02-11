@@ -7,7 +7,6 @@ import { HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from "@/service/onboarding/schem
 type HandleInputFieldProps = {
   handleInput: UseHandleAvailabilityResult["handleInput"];
   handleCheckState: UseHandleAvailabilityResult["handleCheckState"];
-  statusMessage: UseHandleAvailabilityResult["statusMessage"];
   onHandleChange: UseHandleAvailabilityResult["onHandleChange"];
 };
 
@@ -32,11 +31,11 @@ function HandleStatusIcon({ status }: HandleStatusIconProps) {
 }
 
 /**
- * 온보딩 handle 입력과 상태 표시 UI를 합성 컴포넌트로 분리한다.
+ * handle 입력과 상태 표시 UI를 합성 컴포넌트로 분리한다.
  */
-export function HandleInputField({ handleInput, handleCheckState, statusMessage, onHandleChange }: HandleInputFieldProps) {
+export function HandleInputField({ handleInput, handleCheckState, onHandleChange }: HandleInputFieldProps) {
   return (
-    <FieldGroup className="gap-2">
+    <FieldGroup>
       <FieldSet className="gap-2">
         <Field className="gap-0 *:not-first:mt-2">
           <FieldLabel htmlFor="handle" className="sr-only">
@@ -65,7 +64,6 @@ export function HandleInputField({ handleInput, handleCheckState, statusMessage,
           </FieldContent>
         </Field>
       </FieldSet>
-      <p className="ml-1 text-muted-foreground text-xs">{statusMessage}</p>
     </FieldGroup>
   );
 }
