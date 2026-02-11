@@ -46,6 +46,8 @@ bun dev
 - 페이지가 비공개여도 소유자는 프로필을 편집할 수 있다.
 - Enter 입력 시 즉시 저장되고, 입력 중에도 `400ms` 디바운스로 자동 저장된다.
 - `bio`는 최대 200자이며 줄바꿈은 저장되지 않는다.
+- 소셜 플랫폼 메타데이터(브랜드 색상, URL 템플릿)는 `constants/social-platforms.ts`에서 중앙 관리한다.
+- `buildSocialProfileUrl(platform, username)`으로 `도메인/username` 형태의 링크를 일관되게 생성할 수 있다.
 - 프로필 이미지 업로드는 파일 선택 즉시 시작된다.
 - 업로드 전 클라이언트에서 `jpg/jpeg/png/webp`, 최대 `5MB` 검증을 수행한다.
 - 업로드 전 이미지를 `WebP(320x320, quality 0.85)`로 압축한다.
