@@ -2,7 +2,7 @@
 
 import type { ChangeEvent, RefObject } from "react";
 import { useCallback, useRef, useState } from "react";
-import { toastManager } from "@/components/ui/toast";
+import { toast } from "sonner";
 import {
   isAllowedPageImageFileSize,
   isAllowedPageImageMimeType,
@@ -75,18 +75,14 @@ export function useProfileImageEditor({ handle, initialImage }: UseProfileImageE
   const uploadImage = useCallback(
     async (file: File) => {
       if (!isAllowedPageImageMimeType(file.type)) {
-        toastManager.add({
-          type: "error",
-          title: "Unsupported image format",
+        toast.error("Unsupported image format", {
           description: "Please upload a JPG, PNG, or WebP image.",
         });
         return;
       }
 
       if (!isAllowedPageImageFileSize(file.size)) {
-        toastManager.add({
-          type: "error",
-          title: "Image is too large",
+        toast.error("Image is too large", {
           description: `Please upload an image up to ${IMAGE_MAX_SIZE_MB}MB.`,
         });
         return;
@@ -146,16 +142,12 @@ export function useProfileImageEditor({ handle, initialImage }: UseProfileImageE
         setImageUrl(completePayload.imageUrl);
 
         if (completePayload.status === "partial_success") {
-          toastManager.add({
-            type: "error",
-            title: "Image updated with errors",
+          toast.error("Image updated with errors", {
             description: completePayload.message ?? "Previous image cleanup failed.",
           });
         }
       } catch (error) {
-        toastManager.add({
-          type: "error",
-          title: "Failed to upload image",
+        toast.error("Failed to upload image", {
           description: error instanceof Error ? error.message : "Please try again.",
         });
       } finally {
@@ -215,16 +207,12 @@ export function useProfileImageEditor({ handle, initialImage }: UseProfileImageE
       setImageUrl(null);
 
       if (payload.status === "partial_success") {
-        toastManager.add({
-          type: "error",
-          title: "Image removed with errors",
+        toast.error("Image removed with errors", {
           description: payload.message ?? "Storage cleanup failed.",
         });
       }
     } catch (error) {
-      toastManager.add({
-        type: "error",
-        title: "Failed to delete image",
+      toast.error("Failed to delete image", {
         description: error instanceof Error ? error.message : "Please try again.",
       });
     } finally {

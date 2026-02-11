@@ -2,8 +2,8 @@
 
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { savePageProfileAction } from "@/app/[handle]/actions";
-import { toastManager } from "@/components/ui/toast";
 
 const SAVE_DEBOUNCE_MS = 400;
 const LINE_BREAK_PATTERN = /[\r\n]+/g;
@@ -77,9 +77,7 @@ export function useProfileDraft({ handle, initialName, initialBio }: UseProfileD
       }
 
       if (result.status === "error") {
-        toastManager.add({
-          type: "error",
-          title: "Failed to save profile",
+        toast.error("Failed to save profile", {
           description: result.message || "Please try again.",
         });
         return;
