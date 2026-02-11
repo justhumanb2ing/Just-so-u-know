@@ -152,6 +152,39 @@ export async function updateOwnedPageProfile({
   return result.rows[0] ?? null;
 }
 
+export type UpdateOwnedPageHandleInput = {
+  storedHandle: string;
+  nextStoredHandle: string;
+  userId: string;
+};
+
+export type UpdateOwnedPageHandleResult = {
+  handle: string;
+  updatedAt: string;
+};
+
+/**
+ * 소유한 페이지의 handle을 갱신한다.
+ */
+export async function updateOwnedPageHandle({
+  storedHandle,
+  nextStoredHandle,
+  userId,
+}: UpdateOwnedPageHandleInput): Promise<UpdateOwnedPageHandleResult | null> {
+  const result = await sql<UpdateOwnedPageHandleResult>`
+    update public.page
+    set
+      handle = ${nextStoredHandle}
+    where handle = ${storedHandle}
+      and user_id = ${userId}
+    returning
+      handle,
+      updated_at as "updatedAt"
+  `.execute(kysely);
+
+  return result.rows[0] ?? null;
+}
+
 export type OwnedPageImageRow = {
   id: string;
   image: string | null;

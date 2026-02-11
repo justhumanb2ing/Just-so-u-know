@@ -2,8 +2,9 @@
 
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
-import { updateOwnedPageProfile } from "@/service/onboarding/public-page";
-import { pageProfileUpdateSchema } from "@/service/onboarding/schema";
+import { updateOwnedPageHandle, updateOwnedPageProfile } from "@/service/onboarding/public-page";
+import { pageHandleChangeSchema, pageProfileUpdateSchema, toStoredHandle } from "@/service/onboarding/schema";
+import { checkHandleAvailability } from "@/service/onboarding/service";
 
 export type SavePageProfileActionInput = {
   handle: string;
@@ -23,8 +24,53 @@ export type SavePageProfileActionResult =
       message: string;
     };
 
+export type ChangePageHandleActionState =
+  | {
+      status: "idle";
+    }
+  | {
+      status: "error";
+      message: string;
+    }
+  | {
+      status: "success";
+      publicPath: string;
+      storedHandle: string;
+    };
+
+type PostgresErrorLike = {
+  code?: string;
+  message?: string;
+};
+
 function toStringValue(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function toPostgresErrorLike(error: unknown): PostgresErrorLike | null {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  return error as PostgresErrorLike;
+}
+
+/**
+ * 핸들 변경 DB 에러를 사용자 메시지로 정규화한다.
+ */
+function resolveHandleChangeErrorMessage(error: unknown) {
+  const postgresError = toPostgresErrorLike(error);
+  const code = postgresError?.code;
+
+  if (code === "23505") {
+    return "This handle is already taken.";
+  }
+
+  if (code === "23514" || code === "22P02" || code === "P0001") {
+    return postgresError?.message ?? "Invalid handle.";
+  }
+
+  return "Failed to update page handle.";
 }
 
 /**
@@ -81,6 +127,92 @@ export async function savePageProfileAction(rawInput: SavePageProfileActionInput
     return {
       status: "error",
       message: "Failed to save page profile.",
+    };
+  }
+}
+
+/**
+ * 페이지 소유자 요청만 허용해 handle을 변경한다.
+ */
+export async function changePageHandleAction(
+  _prevState: ChangePageHandleActionState,
+  formData: FormData,
+): Promise<ChangePageHandleActionState> {
+  const requestHeaders = await headers();
+  const session = await auth.api.getSession({
+    headers: requestHeaders,
+  });
+
+  if (!session) {
+    return {
+      status: "error",
+      message: "You need to sign in first.",
+    };
+  }
+
+  const parsedInput = pageHandleChangeSchema.safeParse({
+    storedHandle: toStringValue(formData.get("storedHandle")),
+    handle: toStringValue(formData.get("handle")),
+    verifiedHandle: toStringValue(formData.get("verifiedHandle")),
+  });
+
+  if (!parsedInput.success) {
+    return {
+      status: "error",
+      message: parsedInput.error.issues[0]?.message ?? "Invalid page handle input.",
+    };
+  }
+
+  const payload = parsedInput.data;
+
+  if (payload.verifiedHandle !== payload.handle) {
+    return {
+      status: "error",
+      message: "Please verify handle availability before submitting.",
+    };
+  }
+
+  const nextStoredHandle = toStoredHandle(payload.handle);
+
+  if (nextStoredHandle === payload.storedHandle) {
+    return {
+      status: "success",
+      publicPath: `/${payload.storedHandle}`,
+      storedHandle: payload.storedHandle,
+    };
+  }
+
+  const availability = await checkHandleAvailability(payload.handle);
+  if (availability.status !== "available") {
+    return {
+      status: "error",
+      message: availability.message,
+    };
+  }
+
+  try {
+    const updatedPage = await updateOwnedPageHandle({
+      storedHandle: payload.storedHandle,
+      nextStoredHandle,
+      userId: session.user.id,
+    });
+
+    if (!updatedPage) {
+      return {
+        status: "error",
+        message: "You do not have permission to update this page.",
+      };
+    }
+
+    return {
+      status: "success",
+      publicPath: `/${updatedPage.handle}`,
+      storedHandle: updatedPage.handle,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: resolveHandleChangeErrorMessage(error),
     };
   }
 }

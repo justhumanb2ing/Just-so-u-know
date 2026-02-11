@@ -3,6 +3,7 @@
 import { CircleFadingArrowUpIcon, LoaderIcon, TrashIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
+import { EditablePageHandleForm } from "@/components/public-page/editable-page-handle-form";
 import {
   PUBLIC_PAGE_BIO_CLASSNAME,
   PUBLIC_PAGE_FIELD_BASE_CLASSNAME,
@@ -149,6 +150,7 @@ export function EditablePageProfile({ handle, initialName, initialBio, initialIm
       <section className="flex items-center gap-3">
         <ProfileImageField controller={profileImage} />
       </section>
+      <EditablePageHandleForm storedHandle={handle} />
       <ProfileTextFields controller={profileDraft} />
     </div>
   );

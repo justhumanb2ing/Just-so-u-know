@@ -3,6 +3,7 @@ import {
   onboardingHandleSchema,
   onboardingStoredHandleSchema,
   onboardingSubmissionSchema,
+  pageHandleChangeSchema,
   pageProfileUpdateSchema,
 } from "@/service/onboarding/schema";
 
@@ -151,6 +152,41 @@ describe("onboarding schema", () => {
 
     // Act
     const result = pageProfileUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
+  test("페이지 핸들 변경 스키마는 handle/verifiedHandle을 소문자로 정규화한다", () => {
+    // Arrange
+    const payload = {
+      storedHandle: "@tester",
+      handle: "NewHandle123",
+      verifiedHandle: "NewHandle123",
+    };
+
+    // Act
+    const result = pageHandleChangeSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      storedHandle: "@tester",
+      handle: "newhandle123",
+      verifiedHandle: "newhandle123",
+    });
+  });
+
+  test("페이지 핸들 변경 스키마는 @ 접두가 없는 storedHandle을 거부한다", () => {
+    // Arrange
+    const payload = {
+      storedHandle: "tester",
+      handle: "newhandle123",
+      verifiedHandle: "newhandle123",
+    };
+
+    // Act
+    const result = pageHandleChangeSchema.safeParse(payload);
 
     // Assert
     expect(result.success).toBe(false);

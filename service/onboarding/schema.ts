@@ -92,6 +92,17 @@ export const pageProfileUpdateSchema = z.object({
 export type PageProfileUpdateInput = z.infer<typeof pageProfileUpdateSchema>;
 
 /**
+ * 페이지 핸들 변경 입력을 검증한다.
+ */
+export const pageHandleChangeSchema = z.object({
+  storedHandle: storedHandleSchema,
+  handle: onboardingHandleSchema,
+  verifiedHandle: onboardingHandleSchema,
+});
+
+export type PageHandleChangeInput = z.infer<typeof pageHandleChangeSchema>;
+
+/**
  * 페이지 이미지 API 입력(handle) 검증 스키마다.
  */
 export const pageImageHandleSchema = z.object({
