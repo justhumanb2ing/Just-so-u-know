@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 
 /**
  * 홈 화면 CTA는 항상 `/me`로 이동시켜 랜딩 페이지를 정적으로 유지한다.

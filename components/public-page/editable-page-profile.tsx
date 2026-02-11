@@ -15,7 +15,7 @@ import {
   PUBLIC_PAGE_IMAGE_REMOVE_BUTTON_CLASSNAME,
   PUBLIC_PAGE_NAME_CLASSNAME,
 } from "@/components/public-page/profile-field-styles";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/test-button";
 import { Textarea } from "@/components/ui/textarea";
 import type { ProfileDraftController } from "@/hooks/use-profile-draft";
 import { useProfileDraft } from "@/hooks/use-profile-draft";

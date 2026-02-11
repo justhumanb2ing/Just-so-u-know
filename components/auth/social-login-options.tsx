@@ -4,7 +4,7 @@ import { LoaderIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SOCIAL_PROVIDER_OPTIONS, type SocialProvider } from "@/components/auth/social-provider-options";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/test-button";
 import { authClient } from "@/lib/auth/auth-client";
 import { cn } from "@/lib/utils";
 

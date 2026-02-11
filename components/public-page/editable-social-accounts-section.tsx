@@ -169,7 +169,7 @@ function SocialPlatformRow({ option }: SocialPlatformRowProps) {
         <TooltipTrigger
           render={
             <Button
-              size="icon-xl"
+              size="icon-lg"
               variant="default"
               disabled={disabled}
               className={cn(disabled && "opacity-50", "size-11! rounded-md shadow-xs", iconButtonClassName)}
@@ -244,7 +244,7 @@ export function EditableSocialAccountsSection() {
             <SocialPlatformRow key={option.platform} option={option} />
           ))}
         </ScrollArea>
-        <Button type="button" size="xl" className="mt-8 h-14! w-full rounded-full font-semibold text-lg!">
+        <Button type="button" size="lg" className="mt-8 h-14! w-full rounded-full font-semibold text-lg!">
           Add Selected Platforms
         </Button>
       </div>

@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/test-button";
 import { authClient } from "@/lib/auth/auth-client";
 
 export function DeleteAccountButton() {

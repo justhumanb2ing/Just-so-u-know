@@ -2,7 +2,7 @@
 
 import type { ComponentProps } from "react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/test-button";
 import { authClient } from "@/lib/auth/auth-client";
 import { cn } from "@/lib/utils";
 

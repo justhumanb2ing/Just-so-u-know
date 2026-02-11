@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/test-button";
 
 type OnboardingCompleteProps = {
   publicPath: string;
