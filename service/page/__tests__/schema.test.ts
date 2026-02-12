@@ -13,7 +13,7 @@ describe("page item schema", () => {
     expect(result).toBe("@tester");
   });
 
-  test("아이템 생성 스키마는 memo content 개행을 공백으로 정규화한다", () => {
+  test("아이템 생성 스키마는 memo content 개행을 \\n으로 보존한다", () => {
     // Arrange
     const payload = {
       type: "memo",
@@ -30,7 +30,7 @@ describe("page item schema", () => {
     expect(result.data).toEqual({
       type: "memo",
       data: {
-        content: "Hello World",
+        content: "Hello\nWorld",
       },
     });
   });

@@ -160,7 +160,7 @@ export type Database = {
           id: string
           is_visible: boolean
           lock_version: number
-          order_key: string
+          order_key: number
           page_id: string
           size_code: Database["public"]["Enums"]["page_item_size"]
           type_code: string
@@ -172,7 +172,7 @@ export type Database = {
           id?: string
           is_visible?: boolean
           lock_version?: number
-          order_key: string
+          order_key: number
           page_id: string
           size_code?: Database["public"]["Enums"]["page_item_size"]
           type_code: string
@@ -184,7 +184,7 @@ export type Database = {
           id?: string
           is_visible?: boolean
           lock_version?: number
-          order_key?: string
+          order_key?: number
           page_id?: string
           size_code?: Database["public"]["Enums"]["page_item_size"]
           type_code?: string
@@ -365,7 +365,7 @@ export type Database = {
           id: string
           is_visible: boolean
           lock_version: number
-          order_key: string
+          order_key: number
           page_id: string
           size_code: Database["public"]["Enums"]["page_item_size"]
           type_code: string

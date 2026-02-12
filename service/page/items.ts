@@ -6,7 +6,7 @@ export type PageItemRow = {
   pageId: string;
   typeCode: string;
   sizeCode: string;
-  orderKey: string;
+  orderKey: number;
   data: unknown;
   isVisible: boolean;
   lockVersion: number;

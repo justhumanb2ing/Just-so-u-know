@@ -38,7 +38,7 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
     <main className="container mx-auto flex min-h-dvh justify-center gap-4 overflow-hidden">
       <section className="sm:floating-shadow min-h-full max-w-lg grow px-8 py-10 sm:mt-10 sm:rounded-t-[64px] sm:border-[0.5px] sm:px-10">
         {canEdit ? (
-          <EditablePageProfile handle={page.handle} initialName={page.name} initialBio={page.bio} initialImage={page.image} />
+          <EditablePageProfile storedHandle={page.handle} initialName={page.name} initialBio={page.bio} initialImage={page.image} />
         ) : (
           <section className={PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME}>
             {page.image ? (

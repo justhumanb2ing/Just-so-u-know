@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const STORED_HANDLE_PATTERN = /^@[a-z0-9]{3,20}$/;
-const LINE_BREAK_PATTERN = /[\r\n]+/g;
+const WINDOWS_LINE_BREAK_PATTERN = /\r\n?/g;
 
 /**
  * 경로 파라미터 handle을 DB 저장 포맷(@handle)으로 정규화한다.
@@ -12,12 +12,12 @@ export function normalizeStoredHandleFromPath(pathHandle: string) {
 }
 
 /**
- * memo 아이템 생성 입력의 content를 단일 라인으로 정규화한다.
+ * memo 아이템 생성 입력의 줄바꿈을 `\n`으로 정규화하고 빈 문자열을 거부한다.
  */
 const memoContentSchema = z
   .string()
-  .transform((value) => value.replace(LINE_BREAK_PATTERN, " ").trim())
-  .refine((value) => value.length > 0, {
+  .transform((value) => value.replace(WINDOWS_LINE_BREAK_PATTERN, "\n"))
+  .refine((value) => value.trim().length > 0, {
     message: "Memo content is required.",
   });
 

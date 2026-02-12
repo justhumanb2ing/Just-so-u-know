@@ -14,6 +14,8 @@
 - `app/api/pages/[handle]/items/route.ts`
 - `service/page/schema.ts`
 - `service/page/items.ts`
+- `hooks/use-page-memo-draft.ts`
+- `components/public-page/editable-page-memo-section.tsx`
 - `components/public-page/editable-page-profile.tsx`
 
 ## 테이블 스키마
@@ -43,7 +45,7 @@
   - `type_code`는 `public.item_type(code)` FK
   - `size_code`는 `public.item_size(code)` FK
   - `data`는 `jsonb`이며 객체 형태만 허용(`jsonb_typeof(data) = 'object'`)
-  - `order_key` 길이 제한: 1~64자
+  - `order_key`는 양수 `integer`(1 이상)
   - `lock_version`은 0 이상만 허용
   - `(page_id, order_key)` 유니크 제약
 - 인덱스
@@ -57,9 +59,9 @@
 - `create_memo_item_for_owned_page`: memo 생성 전용 RPC
   - 입력: `p_user_id`, `p_handle`, `p_content`
   - `handle + user_id`로 소유 페이지를 확인한 뒤 페이지 단위 advisory lock을 획득한다.
-  - `p_content`의 줄바꿈(`\r`, `\n`)은 공백으로 정규화하고 trim 처리한다.
-  - 정규화 결과가 빈 문자열이면 예외(`memo content is required`)를 발생시킨다.
-  - 기존 마지막 `order_key`를 기준으로 12자리 증가 키를 생성해 항상 맨 뒤에 삽입한다.
+  - `p_content`의 Windows 줄바꿈(`\r\n`, `\r`)은 `\n`으로 정규화한다.
+  - trim 기준으로 빈 문자열이면 예외(`memo content is required`)를 발생시킨다.
+  - 기존 마지막 `order_key`를 기준으로 정수 +1 키를 생성해 항상 맨 뒤에 삽입한다.
   - `type_code='memo'`, `size_code='wide-short'`, `data={"content": ...}`로 저장한다.
 
 ## 공개 페이지 프로필 수정 동작
@@ -98,7 +100,7 @@
 - 현재 지원 타입: `memo`
 - 요청 스키마:
   - `type`: `"memo"`
-  - `data.content`: 문자열(서버에서 개행을 공백으로 정규화 후 trim)
+  - `data.content`: 문자열(서버에서 `\r\n`, `\r`을 `\n`으로 정규화, trim 기준 빈 문자열 거부)
 - 처리 정책:
   - `handle`은 경로 파라미터를 저장 포맷(`@handle`)으로 정규화해 검증한다.
   - DB RPC(`create_memo_item_for_owned_page`)를 호출해 소유권 검증과 정렬 키 생성을 원자적으로 처리한다.
@@ -106,6 +108,27 @@
 - 응답:
   - 성공 시 `201 Created` + 생성된 아이템 1개 반환
   - 실패 시 `401/403/404/422/500` 상태 코드로 정규화된 에러를 반환한다.
+
+## memo draft UI 동작
+- 노출 대상: 페이지 소유자 편집 화면(`EditablePageProfile`)
+- 사용자 흐름:
+  - `Add Memo` 클릭 시 draft textarea를 즉시 생성하고 focus한다.
+  - 입력 중 `800ms` 디바운스로 자동 저장을 시도한다.
+  - `Enter` 입력은 저장 트리거가 아니라 줄바꿈으로 동작한다.
+  - memo 본문은 줄바꿈(`\n`)을 보존해 저장/표시한다.
+  - 자동 저장 전에 내용을 모두 지워도 draft는 유지한다.
+- 저장 성공 시:
+  - 생성된 memo를 로컬 목록에 append해 즉시 화면에 반영한다.
+  - 자동 저장 후에도 draft textarea는 유지되어 포커스를 잃지 않는다.
+- 저장 실패 시:
+  - draft를 유지하고 toast 에러를 표시한다.
+- `wide-short` draft 에디터 제약:
+  - draft/저장 상태 모두 카드 높이는 `h-16`으로 고정하고 overflow를 숨긴다.
+  - draft textarea는 카드 내부 세로 중앙에 위치한다.
+  - draft textarea 높이는 부모 컨테이너(`h-full`)에 맞춰 렌더링하며 컨테이너를 넘지 않는다.
+  - 카드 높이를 초과하는 내용은 textarea 내부 스크롤로 확인한다.
+  - 저장된 아이템 텍스트는 `line-clamp-1`과 `truncate`를 적용해 한 줄로만 노출한다.
+  - 저장된 아이템은 `sizeCode`를 기준으로 렌더링 크기를 결정하며, `wide-short`일 때 `h-16`을 적용한다.
 
 ## 페이지 접근 제어 동작
 - 페이지가 비공개(`is_public=false`)이고 요청 사용자가 소유자가 아니면 `app/[handle]/error.tsx`를 렌더링한다.

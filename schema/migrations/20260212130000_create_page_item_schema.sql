@@ -33,17 +33,38 @@ create table if not exists public.page_item (
   page_id uuid not null references public.page(id) on delete cascade,
   type_code text not null references public.item_type(code),
   size_code text not null references public.item_size(code),
-  order_key text not null,
+  order_key integer not null,
   data jsonb not null default '{}'::jsonb,
   is_visible boolean not null default true,
   lock_version integer not null default 0,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
-  constraint page_item_order_key_length_check check (char_length(order_key) between 1 and 64),
+  constraint page_item_order_key_positive_check check (order_key > 0),
   constraint page_item_data_object_check check (jsonb_typeof(data) = 'object'),
   constraint page_item_lock_version_nonnegative_check check (lock_version >= 0),
   constraint page_item_page_id_order_key_unique unique (page_id, order_key)
 );
+
+alter table public.page_item
+  drop constraint if exists page_item_order_key_length_check;
+
+alter table public.page_item
+  alter column order_key type integer
+  using order_key::integer;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'page_item_order_key_positive_check'
+      and conrelid = 'public.page_item'::regclass
+  ) then
+    alter table public.page_item
+      add constraint page_item_order_key_positive_check check (order_key > 0);
+  end if;
+end
+$$;
 
 create index if not exists page_item_page_visible_order_idx
   on public.page_item (page_id, is_visible, order_key);
@@ -65,9 +86,8 @@ declare
   v_normalized_handle text;
   v_normalized_content text;
   v_page_id uuid;
-  v_last_order_key text;
-  v_next_order bigint;
-  v_next_order_key text;
+  v_last_order_key integer;
+  v_next_order integer;
   v_created_item public.page_item;
 begin
   if p_user_id is null or btrim(p_user_id) = '' then
@@ -80,10 +100,9 @@ begin
     raise exception 'invalid handle format' using errcode = 'P0001';
   end if;
 
-  v_normalized_content := regexp_replace(coalesce(p_content, ''), E'[\\r\\n]+', ' ', 'g');
-  v_normalized_content := btrim(v_normalized_content);
+  v_normalized_content := regexp_replace(coalesce(p_content, ''), E'\\r\\n?', E'\n', 'g');
 
-  if v_normalized_content = '' then
+  if btrim(v_normalized_content) = '' then
     raise exception 'memo content is required' using errcode = 'P0001';
   end if;
 
@@ -110,18 +129,12 @@ begin
   if v_last_order_key is null then
     v_next_order := 1;
   else
-    if v_last_order_key !~ '^[0-9]{12}$' then
-      raise exception 'invalid existing order key format' using errcode = 'P0001';
-    end if;
-
-    v_next_order := v_last_order_key::bigint + 1;
+    v_next_order := v_last_order_key + 1;
   end if;
 
-  if v_next_order > 999999999999 then
+  if v_next_order > 2147483647 then
     raise exception 'order key overflow' using errcode = 'P0001';
   end if;
-
-  v_next_order_key := lpad(v_next_order::text, 12, '0');
 
   insert into public.page_item (
     page_id,
@@ -133,7 +146,7 @@ begin
     v_page_id,
     'memo',
     'wide-short',
-    v_next_order_key,
+    v_next_order,
     jsonb_build_object('content', v_normalized_content)
   )
   returning * into v_created_item;
