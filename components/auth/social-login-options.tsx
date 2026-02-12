@@ -4,9 +4,9 @@ import { LoaderIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SOCIAL_PROVIDER_OPTIONS, type SocialProvider } from "@/components/auth/social-provider-options";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/test-button";
 import { authClient } from "@/lib/auth/auth-client";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
 
 export function SocialLoginOptions() {
   const [loadingProvider, setLoadingProvider] = useState<SocialProvider | null>(null);
@@ -41,7 +41,7 @@ export function SocialLoginOptions() {
             key={option.provider}
             variant="outline"
             size={"lg"}
-            className={cn(option.buttonClassName, "relative py-6 shadow-none")}
+            className={cn("relative py-6 shadow-none", option.buttonClassName)}
             disabled={loadingProvider !== null}
             onClick={() => handleSocialLogin(option.provider)}
             aria-label={`${option.label} 로그인 (${option.loginOption})`}
