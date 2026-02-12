@@ -15,6 +15,7 @@ import { buttonVariants as uiButtonVariants } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { buttonVariants } from "@/components/ui/test-button";
 import { Textarea } from "@/components/ui/textarea";
+import { useOgCrawl } from "@/hooks/use-og-crawl";
 import type { InitialPageItem, PageItem } from "@/hooks/use-page-item-composer";
 import { normalizeInitialPageItems, usePageItemComposer } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
@@ -206,6 +207,7 @@ export function EditablePageItemSection({ handle, initialItems = [] }: EditableP
     handle,
     initialItems,
   });
+  const ogController = useOgCrawl();
 
   const draftItem = controller.draft ? (
     <DraftItemCard draft={controller.draft} focusRequestId={controller.focusRequestId} onDraftChange={controller.handleDraftChange} />
@@ -224,7 +226,7 @@ export function EditablePageItemSection({ handle, initialItems = [] }: EditableP
         itemActions={itemActions}
         onMemoChange={controller.handleItemMemoChange}
       />
-      <ItemComposerBar hasDraft={Boolean(controller.draft)} onOpenComposer={controller.handleOpenComposer} />
+      <ItemComposerBar hasDraft={Boolean(controller.draft)} onOpenComposer={controller.handleOpenComposer} ogController={ogController} />
     </section>
   );
 }

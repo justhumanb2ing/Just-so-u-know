@@ -11,12 +11,15 @@
 - `app/api/page/image/init-upload/route.ts`
 - `app/api/page/image/complete-upload/route.ts`
 - `app/api/page/image/delete/route.ts`
+- `app/api/page/og/route.ts`
 - `app/api/pages/[handle]/items/route.ts`
 - `app/api/pages/[handle]/items/[itemId]/route.ts`
 - `app/[handle]/page.tsx`
 - `service/page/schema.ts`
 - `service/page/items.ts`
+- `service/page/og-crawl.ts`
 - `hooks/use-page-item-composer.ts`
+- `hooks/use-og-crawl.ts`
 - `components/public-page/page-item-section.tsx`
 - `components/public-page/page-item-composer-bar.tsx`
 - `components/public-page/editable-page-profile.tsx`
@@ -157,6 +160,19 @@
   - 성공 시 `200 OK` + `items` 배열 반환
   - 실패 시 `403/404` 상태 코드로 권한/존재 오류를 반환한다.
 
+## 링크 OG 조회 API 동작
+- 엔드포인트: `GET /api/page/og?url={absolute_url}`
+- 처리 정책:
+  - `url` 쿼리 파라미터가 없으면 `400`을 반환한다.
+  - `url`에 `http://` 또는 `https://`가 없으면 서버에서 `https://`를 자동으로 앞에 붙여 처리한다.
+  - 서버는 외부 크롤러 endpoint에 `url`, `mode=static`을 붙여 GET 요청한다.
+  - 개발 모드(`NODE_ENV !== production`)에서는 `timings=1`을 추가한다.
+  - 외부 응답은 직접 성공 형태(`{ ok: true, mode, data, ... }`)와 래핑 성공 형태(`{ ok: true, data: { ... } }`)를 모두 허용해 내부 `CrawlResult`로 정규화한다.
+  - cache 메타의 `ageMs`는 캐시 히트에서만 제공될 수 있으므로 optional로 처리한다.
+- 응답:
+  - 성공 시 `200 OK` + `data`(`CrawlResponse`) 반환
+  - 실패 시 외부 `status` 또는 `502` 상태 코드와 에러 메시지를 반환한다.
+
 ## 페이지 아이템 섹션 UI 동작
 - 노출 대상: 페이지 소유자 편집 화면(`EditablePageProfile`)
 - 사용자 흐름:
@@ -189,6 +205,10 @@
 ## 하단 고정 아이템 생성 바 동작
 - 아이템 생성 UI는 `page-item-composer-bar`로 분리되어 화면 하단에 고정된다.
 - 초안 편집 textarea는 바 내부가 아니라 아이템 목록 영역에 draft 카드로 렌더링된다.
+- 생성 바에는 `Add Link` 트리거 버튼이 있으며, 클릭 시 popover 내부 입력창에서 Enter로 OG 조회를 트리거한다.
+- OG 조회 실패 시 toast 에러만 표시하며, 성공 시 최신 결과를 바 내부 미리보기 텍스트로 갱신한다.
+- OG 조회 성공 시 링크 popover를 자동으로 닫는다.
+- OG 조회 성공 시 링크 입력값을 빈 문자열로 초기화한다.
 - 현재 서버 생성 API는 `memo` 타입만 지원하며, UI/컴포넌트 명은 타입 중립적으로 유지한다.
 - 향후 `image/video/link/map` 타입 생성 UI를 같은 생성 바에서 확장할 수 있도록 구성한다.
 

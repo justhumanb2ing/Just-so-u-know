@@ -14,6 +14,7 @@
 - 입력 필드 렌더링은 합성 컴포넌트(`handle-input-field`)로 분리한다.
 - 공개 페이지 인증 CTA는 `public-page-auth-action`(Sign in/My Page)와 `public-page-sign-out-action`(Sign out)으로 책임을 분리하고, 각각 분기 함수를 통해 노출 조건을 계산한다.
 - 공개 페이지 아이템 UI는 `page-item-section`과 `page-item-composer-bar`로 분리해 목록 렌더링과 생성 바 책임을 분리한다.
+- 하단 생성 바는 아이템 draft 생성과 링크 OG 조회 액션을 함께 제공하되, 링크 입력은 `Add Link` popover 내부에서 처리한다.
 - 아이템 본문 렌더링은 `page-item-renderers`의 타입별 렌더러 맵(`memo/link/image/default`)으로 합성한다.
 - 아이템 draft 편집 입력은 하단 바가 아니라 아이템 목록 영역의 draft 카드에서 처리한다.
 
