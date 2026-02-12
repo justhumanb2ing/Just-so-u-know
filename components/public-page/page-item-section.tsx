@@ -113,7 +113,7 @@ function getItemCardSizeClass(sizeCode: PageItem["sizeCode"]) {
   }
 
   if (sizeCode === "wide-tall") {
-    return "h-28";
+    return "h-40";
   }
 
   return "aspect-square";
