@@ -4,8 +4,7 @@ import { CircleFadingArrowUpIcon, LoaderIcon, TrashIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
 import {
-  PUBLIC_PAGE_BIO_CLASSNAME,
-  PUBLIC_PAGE_FIELD_BASE_CLASSNAME,
+  PUBLIC_PAGE_BIO_FIELD_CLASSNAME,
   PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME,
   PUBLIC_PAGE_IMAGE_CONTENT_CLASSNAME,
   PUBLIC_PAGE_IMAGE_EDIT_GROUP_CLASSNAME,
@@ -13,7 +12,9 @@ import {
   PUBLIC_PAGE_IMAGE_LOADING_OVERLAY_CLASSNAME,
   PUBLIC_PAGE_IMAGE_PLACEHOLDER_CLASSNAME,
   PUBLIC_PAGE_IMAGE_REMOVE_BUTTON_CLASSNAME,
-  PUBLIC_PAGE_NAME_CLASSNAME,
+  PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE,
+  PUBLIC_PAGE_NAME_FIELD_CLASSNAME,
+  PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME,
 } from "@/components/public-page/profile-field-styles";
 import { buttonVariants } from "@/components/ui/test-button";
 import { Textarea } from "@/components/ui/textarea";
@@ -74,7 +75,7 @@ function ProfileImageField({ controller }: ProfileImageFieldProps) {
             src={imageUrl}
             alt="Profile"
             fill
-            sizes="(min-width: 768px) 176px, 120px"
+            sizes={PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE}
             quality={95}
             unoptimized
             className={PUBLIC_PAGE_IMAGE_CONTENT_CLASSNAME}
@@ -115,14 +116,14 @@ function ProfileTextFields({ controller }: ProfileTextFieldsProps) {
   const { name, bio, handleNameChange, handleBioChange, handleEnterKeyDown } = controller;
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className={PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME}>
       <Textarea
         value={name}
         placeholder="Your name"
         rows={1}
         onChange={handleNameChange}
         onKeyDown={handleEnterKeyDown}
-        className={cn(PUBLIC_PAGE_FIELD_BASE_CLASSNAME, PUBLIC_PAGE_NAME_CLASSNAME)}
+        className={PUBLIC_PAGE_NAME_FIELD_CLASSNAME}
       />
       <Textarea
         value={bio}
@@ -131,7 +132,7 @@ function ProfileTextFields({ controller }: ProfileTextFieldsProps) {
         maxLength={200}
         onChange={handleBioChange}
         onKeyDown={handleEnterKeyDown}
-        className={cn(PUBLIC_PAGE_FIELD_BASE_CLASSNAME, PUBLIC_PAGE_BIO_CLASSNAME)}
+        className={PUBLIC_PAGE_BIO_FIELD_CLASSNAME}
       />
     </section>
   );

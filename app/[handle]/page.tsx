@@ -4,11 +4,13 @@ import { notFound } from "next/navigation";
 import { EditablePageProfile } from "@/components/public-page/editable-page-profile";
 import { EditablePageItemSection, ReadonlyPageItemSection } from "@/components/public-page/page-item-section";
 import {
-  PUBLIC_PAGE_BIO_CLASSNAME,
+  PUBLIC_PAGE_BIO_FIELD_CLASSNAME,
   PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME,
   PUBLIC_PAGE_IMAGE_CONTENT_CLASSNAME,
+  PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE,
   PUBLIC_PAGE_IMAGE_VIEW_CONTAINER_CLASSNAME,
-  PUBLIC_PAGE_NAME_CLASSNAME,
+  PUBLIC_PAGE_NAME_FIELD_CLASSNAME,
+  PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME,
 } from "@/components/public-page/profile-field-styles";
 import { auth } from "@/lib/auth/auth";
 import { canEditPageProfile, findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
@@ -64,17 +66,18 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
                 <Image
                   src={page.image}
                   alt={`${page.name ?? page.handle} profile`}
-                  width={80}
-                  height={80}
+                  fill
                   quality={95}
-                  sizes="80px"
+                  sizes={PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE}
                   unoptimized
                   className={PUBLIC_PAGE_IMAGE_CONTENT_CLASSNAME}
                 />
               </div>
             ) : null}
-            <h1 className={PUBLIC_PAGE_NAME_CLASSNAME}>{page.name ?? page.handle}</h1>
-            {page.bio ? <p className={PUBLIC_PAGE_BIO_CLASSNAME}>{page.bio}</p> : null}
+            <section className={PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME}>
+              <h1 className={PUBLIC_PAGE_NAME_FIELD_CLASSNAME}>{page.name ?? page.handle}</h1>
+              {page.bio ? <p className={PUBLIC_PAGE_BIO_FIELD_CLASSNAME}>{page.bio}</p> : null}
+            </section>
             <ReadonlyPageItemSection items={pageItems} />
           </section>
         )}

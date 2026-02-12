@@ -7,9 +7,19 @@ export const PUBLIC_PAGE_NAME_CLASSNAME = "font-bold text-3xl leading-tight trac
 
 export const PUBLIC_PAGE_BIO_CLASSNAME = "text-base md:text-lg";
 
-export const PUBLIC_PAGE_IMAGE_VIEW_CONTAINER_CLASSNAME = "size-20 overflow-hidden rounded-full border bg-muted";
+export const PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME = "flex flex-col gap-3";
 
-export const PUBLIC_PAGE_IMAGE_EDIT_GROUP_CLASSNAME = "group relative size-30 md:size-44";
+export const PUBLIC_PAGE_NAME_FIELD_CLASSNAME = `${PUBLIC_PAGE_FIELD_BASE_CLASSNAME} ${PUBLIC_PAGE_NAME_CLASSNAME}`;
+
+export const PUBLIC_PAGE_BIO_FIELD_CLASSNAME = `${PUBLIC_PAGE_FIELD_BASE_CLASSNAME} ${PUBLIC_PAGE_BIO_CLASSNAME}`;
+
+export const PUBLIC_PAGE_IMAGE_FRAME_SIZE_CLASSNAME = "size-30 md:size-44";
+
+export const PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE = "(min-width: 768px) 176px, 120px";
+
+export const PUBLIC_PAGE_IMAGE_VIEW_CONTAINER_CLASSNAME = `relative ${PUBLIC_PAGE_IMAGE_FRAME_SIZE_CLASSNAME} overflow-hidden rounded-full bg-muted`;
+
+export const PUBLIC_PAGE_IMAGE_EDIT_GROUP_CLASSNAME = `group relative ${PUBLIC_PAGE_IMAGE_FRAME_SIZE_CLASSNAME}`;
 
 export const PUBLIC_PAGE_IMAGE_EDIT_TRIGGER_CLASSNAME =
   "relative size-full overflow-hidden rounded-full bg-muted disabled:cursor-not-allowed disabled:opacity-80";
