@@ -41,6 +41,8 @@ type ItemListProps = {
   draftItem?: ReactNode;
   itemActions?: EditableItemActions;
   onMemoChange?: (itemId: string, nextValue: string) => void;
+  onLinkTitleChange?: (itemId: string, nextValue: string) => void;
+  onLinkTitleSubmit?: (itemId: string) => void;
 };
 
 type DraftItemCardProps = {
@@ -78,6 +80,33 @@ const PAGE_ITEM_RESIZE_OPTIONS: Array<{
   },
 ];
 
+const PAGE_ITEM_CARD_BASE_CLASSNAME = "group relative flex flex-col justify-center gap-2 rounded-[16px] border p-3";
+
+type PageItemCardStyleConfig = {
+  className?: string;
+  sizeClassByCode?: Partial<Record<PageItem["sizeCode"], string>>;
+};
+
+const DEFAULT_PAGE_ITEM_CARD_STYLE_CONFIG: PageItemCardStyleConfig = {
+  className: "overflow-visible",
+};
+
+/**
+ * 아이템 타입별 카드 스타일 확장 포인트.
+ * 타입 추가 시 map에 key를 추가하면 카드 클래스/사이즈 전략을 독립적으로 확장할 수 있다.
+ */
+const PAGE_ITEM_CARD_STYLE_CONFIG_MAP: Record<string, PageItemCardStyleConfig> = {
+  memo: {
+    className: "overflow-visible",
+  },
+  link: {
+    className: "overflow-visible p-2",
+  },
+  image: {
+    className: "overflow-visible",
+  },
+};
+
 function getItemCardSizeClass(sizeCode: PageItem["sizeCode"]) {
   if (sizeCode === "wide-short") {
     return "h-16";
@@ -88,6 +117,13 @@ function getItemCardSizeClass(sizeCode: PageItem["sizeCode"]) {
   }
 
   return "aspect-square";
+}
+
+function resolvePageItemCardClassName(item: PageItem) {
+  const styleConfig = PAGE_ITEM_CARD_STYLE_CONFIG_MAP[item.typeCode] ?? DEFAULT_PAGE_ITEM_CARD_STYLE_CONFIG;
+  const sizeClass = styleConfig.sizeClassByCode?.[item.sizeCode] ?? getItemCardSizeClass(item.sizeCode);
+
+  return cn(PAGE_ITEM_CARD_BASE_CLASSNAME, sizeClass, styleConfig.className);
 }
 
 function DraftItemCard({ draft, focusRequestId, onDraftChange }: DraftItemCardProps) {
@@ -141,21 +177,29 @@ function EditableItemActionControls({ item, itemActions }: { item: PageItem; ite
       >
         {PAGE_ITEM_RESIZE_OPTIONS.map((option) => {
           const isSelected = option.sizeCode === item.sizeCode;
+          const isOptionDisabled = item.typeCode === "link" && option.sizeCode !== "wide-short";
 
           return (
             <motion.button
               key={option.sizeCode}
               type="button"
               aria-label={option.ariaLabel}
+              disabled={isOptionDisabled}
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
+
+                if (isOptionDisabled) {
+                  return;
+                }
+
                 itemActions.onResize(item.id, option.sizeCode);
               }}
               className={cn(
                 uiButtonVariants({ size: "icon-xs", variant: "ghost" }),
                 "size-7 rounded-[4px]! border-0 p-0 text-background hover:bg-background/20 hover:text-background",
                 isSelected && "bg-background text-foreground hover:bg-background hover:text-foreground",
+                isOptionDisabled && "cursor-not-allowed opacity-45 hover:bg-transparent hover:text-background",
               )}
               whileTap={ITEM_REMOVE_TAP}
               transition={ITEM_BUTTON_TRANSITION}
@@ -169,14 +213,21 @@ function EditableItemActionControls({ item, itemActions }: { item: PageItem; ite
   );
 }
 
-function ItemList({ items, withBottomSpacing = false, draftItem, itemActions, onMemoChange }: ItemListProps) {
+function ItemList({
+  items,
+  withBottomSpacing = false,
+  draftItem,
+  itemActions,
+  onMemoChange,
+  onLinkTitleChange,
+  onLinkTitleSubmit,
+}: ItemListProps) {
   if (items.length === 0 && !draftItem) {
     return null;
   }
 
   return (
     <div className={cn("flex flex-col gap-6", withBottomSpacing ? "pb-40" : undefined)}>
-      {draftItem}
       {items.map((item) => {
         const ItemRenderer = getPageItemRenderer(item.typeCode);
 
@@ -185,16 +236,21 @@ function ItemList({ items, withBottomSpacing = false, draftItem, itemActions, on
             key={item.id}
             data-item-type={item.typeCode}
             data-size-code={item.sizeCode}
-            className={cn(
-              "group relative flex flex-col justify-center gap-2 rounded-[16px] border p-3",
-              getItemCardSizeClass(item.sizeCode),
-            )}
+            className={resolvePageItemCardClassName(item)}
           >
             {itemActions ? <EditableItemActionControls item={item} itemActions={itemActions} /> : null}
-            <ItemRenderer item={item} canEditMemo={Boolean(itemActions)} onMemoChange={onMemoChange} />
+            <ItemRenderer
+              item={item}
+              canEditMemo={Boolean(itemActions)}
+              onMemoChange={onMemoChange}
+              canEditLinkTitle={Boolean(itemActions)}
+              onLinkTitleChange={onLinkTitleChange}
+              onLinkTitleSubmit={onLinkTitleSubmit}
+            />
           </article>
         );
       })}
+      {draftItem}
     </div>
   );
 }
@@ -207,7 +263,9 @@ export function EditablePageItemSection({ handle, initialItems = [] }: EditableP
     handle,
     initialItems,
   });
-  const ogController = useOgCrawl();
+  const ogController = useOgCrawl({
+    onLookupSuccess: controller.handleCreateLinkItemFromOg,
+  });
 
   const draftItem = controller.draft ? (
     <DraftItemCard draft={controller.draft} focusRequestId={controller.focusRequestId} onDraftChange={controller.handleDraftChange} />
@@ -225,6 +283,8 @@ export function EditablePageItemSection({ handle, initialItems = [] }: EditableP
         draftItem={draftItem}
         itemActions={itemActions}
         onMemoChange={controller.handleItemMemoChange}
+        onLinkTitleChange={controller.handleItemLinkTitleChange}
+        onLinkTitleSubmit={controller.handleItemLinkTitleSubmit}
       />
       <ItemComposerBar hasDraft={Boolean(controller.draft)} onOpenComposer={controller.handleOpenComposer} ogController={ogController} />
     </section>

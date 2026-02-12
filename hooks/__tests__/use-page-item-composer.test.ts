@@ -6,11 +6,15 @@ import {
   normalizeCreatedItem,
   normalizeInitialPageItems,
   normalizeItemInput,
+  normalizeLinkTitleInput,
   normalizePageItemSizeCode,
   removePageItemById,
   resolveDraftAfterPersistSuccess,
+  resolveLinkItemCreatePayloadFromCrawl,
+  resolveLinkItemTitle,
   resolveMemoItemContent,
   restoreRemovedPageItem,
+  updateLinkItemTitle,
   updateMemoItemContent,
   updatePageItemSize,
 } from "@/hooks/use-page-item-composer";
@@ -25,6 +29,17 @@ describe("usePageItemComposer helpers", () => {
 
     // Assert
     expect(result).toBe("hello\nworld\nnext");
+  });
+
+  test("link title 입력은 줄바꿈을 공백으로 정규화한다", () => {
+    // Arrange
+    const input = "hello\r\nworld\nnext";
+
+    // Act
+    const result = normalizeLinkTitleInput(input);
+
+    // Assert
+    expect(result).toBe("hello world next");
   });
 
   test("공백과 개행만 있는 값은 저장 불가로 판단한다", () => {
@@ -161,6 +176,27 @@ describe("usePageItemComposer helpers", () => {
     expect(result).toBe("Hello\nWorld");
   });
 
+  test("link title 추출 시 줄바꿈을 공백으로 정규화한다", () => {
+    // Arrange
+    const item = {
+      id: "item-1",
+      typeCode: "link",
+      sizeCode: "wide-short",
+      orderKey: 1,
+      data: {
+        title: "Hello\r\nWorld",
+      },
+      createdAt: "2026-02-12T00:00:00.000Z",
+      updatedAt: "2026-02-12T00:00:00.000Z",
+    } as const;
+
+    // Act
+    const result = resolveLinkItemTitle(item);
+
+    // Assert
+    expect(result).toBe("Hello World");
+  });
+
   test("memo content 수정 시 대상 memo만 낙관적으로 갱신한다", () => {
     // Arrange
     const items = [
@@ -196,6 +232,87 @@ describe("usePageItemComposer helpers", () => {
       content: "after",
     });
     expect(result[1]).toEqual(items[1]);
+  });
+
+  test("link title 수정 시 대상 link만 낙관적으로 갱신한다", () => {
+    // Arrange
+    const items = [
+      {
+        id: "item-1",
+        typeCode: "link",
+        sizeCode: "wide-short",
+        orderKey: 1,
+        data: {
+          title: "before",
+          url: "https://example.com",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-2",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 2,
+        data: {
+          content: "memo",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+    ];
+
+    // Act
+    const result = updateLinkItemTitle(items, "item-1", "after");
+
+    // Assert
+    expect((result[0]?.data as { title: string }).title).toBe("after");
+    expect(result[1]).toEqual(items[1]);
+  });
+
+  test("OG 응답 payload 정규화는 data.url을 저장 기준으로 사용한다", () => {
+    // Arrange
+    const crawlResponse = {
+      ok: true,
+      mode: "static",
+      fallback: false,
+      durationMs: 12,
+      data: {
+        title: "Example Title",
+        url: "https://example.com/path",
+        favicon: "https://example.com/favicon.ico",
+      },
+    } as const;
+
+    // Act
+    const result = resolveLinkItemCreatePayloadFromCrawl(crawlResponse);
+
+    // Assert
+    expect(result).toEqual({
+      title: "Example Title",
+      url: "https://example.com/path",
+      favicon: "https://example.com/favicon.ico",
+    });
+  });
+
+  test("OG 응답 title이 비어있으면 링크 저장 payload를 만들지 않는다", () => {
+    // Arrange
+    const crawlResponse = {
+      ok: true,
+      mode: "static",
+      fallback: false,
+      durationMs: 12,
+      data: {
+        title: "   ",
+        url: "https://example.com/path",
+      },
+    } as const;
+
+    // Act
+    const result = resolveLinkItemCreatePayloadFromCrawl(crawlResponse);
+
+    // Assert
+    expect(result).toBeNull();
   });
 
   test("sizeCode 수정 시 대상 아이템만 낙관적으로 갱신한다", () => {

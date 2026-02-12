@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest";
-import { resolvePageItemDisplayText } from "@/components/public-page/page-item-renderers";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, test, vi } from "vitest";
+import { getPageItemRenderer, resolvePageItemDisplayText } from "@/components/public-page/page-item-renderers";
 import type { PageItem } from "@/hooks/use-page-item-composer";
 
 function createItem(input: Partial<PageItem>): PageItem {
@@ -32,7 +33,7 @@ describe("page item renderers", () => {
     expect(result).toBe("memo content");
   });
 
-  test("link 타입은 label/title/url 순서로 텍스트를 선택한다", () => {
+  test("link 타입은 title/url 순서로 텍스트를 선택한다", () => {
     // Arrange
     const item = createItem({
       typeCode: "link",
@@ -47,6 +48,61 @@ describe("page item renderers", () => {
 
     // Assert
     expect(result).toBe("My Link");
+  });
+
+  test("link 렌더러는 favicon이 없으면 /no-favicon.png를 사용한다", () => {
+    // Arrange
+    const item = createItem({
+      typeCode: "link",
+      data: {
+        title: "My Link",
+        url: "https://example.com",
+      },
+    });
+    const LinkRenderer = getPageItemRenderer("link");
+
+    // Act
+    render(LinkRenderer({ item }));
+    const favicon = screen.getByRole("img", { name: "My Link favicon" });
+
+    // Assert
+    expect(favicon.getAttribute("src")).toBe("/no-favicon.png");
+  });
+
+  test("소유자 모드 link title textarea에서 Enter 입력 시 저장 콜백을 호출한다", () => {
+    // Arrange
+    const onLinkTitleSubmit = vi.fn();
+    const onLinkTitleChange = vi.fn();
+    const item = createItem({
+      typeCode: "link",
+      data: {
+        title: "My Link",
+        url: "https://example.com",
+      },
+    });
+    const LinkRenderer = getPageItemRenderer("link");
+
+    // Act
+    render(
+      LinkRenderer({
+        item,
+        canEditLinkTitle: true,
+        onLinkTitleChange,
+        onLinkTitleSubmit,
+      }),
+    );
+    const inputs = screen.getAllByPlaceholderText("Title");
+    const editableInput = inputs.find((input) => input.getAttribute("readonly") === null) ?? inputs[0];
+
+    if (!editableInput) {
+      throw new Error("Editable link title input not found");
+    }
+
+    fireEvent.keyDown(editableInput, { key: "Enter", code: "Enter" });
+
+    // Assert
+    expect(onLinkTitleSubmit).toHaveBeenCalledTimes(1);
+    expect(onLinkTitleSubmit).toHaveBeenCalledWith("item-1");
   });
 
   test("image 타입은 alt/caption/title/src 순서로 텍스트를 선택한다", () => {

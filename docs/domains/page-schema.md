@@ -8,6 +8,7 @@
 - `schema/migrations/20260210190000_disable_page_rls_for_better_auth.sql`
 - `schema/migrations/20260210200000_rename_page_title_to_name.sql`
 - `schema/migrations/20260212130000_create_page_item_schema.sql`
+- `schema/migrations/20260212173000_create_link_item_function.sql`
 - `app/api/page/image/init-upload/route.ts`
 - `app/api/page/image/complete-upload/route.ts`
 - `app/api/page/image/delete/route.ts`
@@ -69,6 +70,13 @@
   - trim 기준으로 빈 문자열이면 예외(`memo content is required`)를 발생시킨다.
   - 기존 마지막 `order_key`를 기준으로 정수 +1 키를 생성해 항상 맨 뒤에 삽입한다.
   - `type_code='memo'`, `size_code='wide-short'`, `data={"content": ...}`로 저장한다.
+- `create_link_item_for_owned_page`: link 생성 전용 RPC
+  - 입력: `p_user_id`, `p_handle`, `p_url`, `p_title`, `p_favicon`
+  - `handle + user_id`로 소유 페이지를 확인한 뒤 페이지 단위 advisory lock을 획득한다.
+  - `p_url`은 `http/https` 절대 URL만 허용하며 저장 기준 URL은 `data.url`이다.
+  - `p_title`의 줄바꿈은 공백으로 정규화하고 trim 기준 빈 문자열이면 예외(`link title is required`)를 발생시킨다.
+  - 기존 마지막 `order_key`를 기준으로 정수 +1 키를 생성해 항상 맨 뒤에 삽입한다.
+  - `type_code='link'`, `size_code='wide-short'`, `data={"url","title","favicon"}`로 저장한다.
 
 ## 공개 페이지 프로필 수정 동작
 - 수정 대상: `handle`, `name`, `bio`
@@ -103,14 +111,17 @@
 ## 페이지 아이템 생성 API 동작
 - 엔드포인트: `POST /api/pages/{handle}/items`
 - 인증: Better Auth 세션 필수
-- 현재 지원 타입: `memo`
+- 현재 지원 타입: `memo`, `link`
 - 요청 스키마:
-  - `type`: `"memo"`
-  - `data.content`: 문자열(서버에서 `\r\n`, `\r`을 `\n`으로 정규화, trim 기준 빈 문자열 거부)
+  - `type: "memo"` + `data.content`: 문자열(서버에서 `\r\n`, `\r`을 `\n`으로 정규화, trim 기준 빈 문자열 거부)
+  - `type: "link"` + `data.url`/`data.title`/`data.favicon?`
+  - `link`의 `data.url`은 절대 URL이어야 하며 OG 응답의 `data.url`을 최종 저장 기준으로 사용한다.
+  - `link`의 `data.title`은 단일 라인으로 정규화되고 trim 기준 빈 문자열을 거부한다.
 - 처리 정책:
   - `handle`은 경로 파라미터를 저장 포맷(`@handle`)으로 정규화해 검증한다.
-  - DB RPC(`create_memo_item_for_owned_page`)를 호출해 소유권 검증과 정렬 키 생성을 원자적으로 처리한다.
-  - `memo`는 `size_code='wide-short'`로 고정한다.
+  - `memo` 생성은 DB RPC(`create_memo_item_for_owned_page`)로 처리한다.
+  - `link` 생성은 DB RPC(`create_link_item_for_owned_page`)로 처리한다.
+  - 생성 시 기본 `size_code`는 `wide-short`이다.
 - 응답:
   - 성공 시 `201 Created` + 생성된 아이템 1개 반환
   - 실패 시 `401/403/404/422/500` 상태 코드로 정규화된 에러를 반환한다.
@@ -137,6 +148,7 @@
   - 비소유자는 `403`을 반환한다.
 - 요청 스키마:
   - `type: "memo"` + `data.content`로 memo 본문 수정
+  - `type: "link"` + `data.title`로 link title 수정
   - `type: "size"` + `data.sizeCode`(`wide-short | wide-tall | wide-full`)로 카드 크기 수정
 - 처리 정책:
   - `handle`은 경로 파라미터를 저장 포맷(`@handle`)으로 정규화해 검증한다.
@@ -186,6 +198,10 @@
   - 저장된 아이템 카드 좌상단에 hover 시 사이즈 버튼 그룹이 노출된다.
   - 삭제 버튼 클릭 시 목록에서 즉시 제거(낙관적 업데이트) 후 서버 물리 삭제를 요청한다.
   - 사이즈 버튼 클릭 시 목록에서 즉시 사이즈를 변경(낙관적 업데이트)하고 서버에 즉시 동기화한다.
+  - link 아이템의 hover 사이즈 버튼 그룹은 비활성화 상태로 렌더링된다.
+  - link title은 소유자에게만 editable textarea로 노출되며 입력 중 `800ms` 디바운스로 자동 저장된다.
+  - link title textarea에서 `Enter`는 줄바꿈 대신 즉시 저장 트리거로 동작한다.
+  - link title이 비어있으면 저장 요청을 보내지 않는다.
 - 저장 성공 시:
   - 생성된 아이템을 로컬 목록에 append해 즉시 화면에 반영한다.
   - 자동 저장 후에도 draft textarea는 유지되어 포커스를 잃지 않는다.
@@ -194,22 +210,29 @@
   - draft를 유지하고 toast 에러를 표시한다.
   - 아이템 삭제 실패 시 제거했던 항목을 기존 `orderKey` 기준으로 복구하고 toast 에러를 표시한다.
   - 아이템 사이즈 변경 실패 시 마지막 서버 동기화 size로 롤백하고 toast 에러를 표시한다.
+  - link title 저장 실패 시 기존 값은 유지하고 toast 에러를 표시한다.
 - 아이템 카드 렌더링 제약:
   - draft/저장 상태 모두 카드 높이는 `h-16`으로 고정하고 overflow를 숨긴다.
   - draft textarea는 카드 내부 세로 중앙에 위치한다.
   - draft textarea 높이는 부모 컨테이너(`h-full`)에 맞춰 렌더링하며 컨테이너를 넘지 않는다.
   - 카드 높이를 초과하는 내용은 textarea 내부 스크롤로 확인한다.
   - 저장된 아이템 텍스트는 `line-clamp-2`로 요약 노출한다.
+- link 아이템 렌더링 제약:
+  - 부모 컨테이너 패딩은 `p-2`를 사용한다.
+  - favicon은 `img` 태그로 `48x48` 크기로 렌더링한다.
+  - favicon 클릭 시 외부 URL로 이동한다.
+  - favicon이 없으면 `/no-favicon.png`를 사용한다.
+  - title은 중앙 정렬로 렌더링한다.
 - 저장된 아이템은 `sizeCode`를 기준으로 렌더링 크기를 결정한다.
 
 ## 하단 고정 아이템 생성 바 동작
 - 아이템 생성 UI는 `page-item-composer-bar`로 분리되어 화면 하단에 고정된다.
 - 초안 편집 textarea는 바 내부가 아니라 아이템 목록 영역에 draft 카드로 렌더링된다.
 - 생성 바에는 `Add Link` 트리거 버튼이 있으며, 클릭 시 popover 내부 입력창에서 Enter로 OG 조회를 트리거한다.
-- OG 조회 실패 시 toast 에러만 표시하며, 성공 시 최신 결과를 바 내부 미리보기 텍스트로 갱신한다.
-- OG 조회 성공 시 링크 popover를 자동으로 닫는다.
-- OG 조회 성공 시 링크 입력값을 빈 문자열로 초기화한다.
-- 현재 서버 생성 API는 `memo` 타입만 지원하며, UI/컴포넌트 명은 타입 중립적으로 유지한다.
+- OG 조회 실패 시 toast 에러를 표시한다.
+- OG 조회 성공 후 link 생성까지 성공하면 링크 popover를 자동으로 닫고 입력값을 초기화한다.
+- OG 응답에서 `data.url` 또는 `data.title`이 비어있으면 link 저장을 시도하지 않는다.
+- link 생성 성공 시 생성된 아이템을 목록에 즉시 append한다.
 - 향후 `image/video/link/map` 타입 생성 UI를 같은 생성 바에서 확장할 수 있도록 구성한다.
 
 ## 공개 페이지 아이템 표시 동작

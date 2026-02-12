@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
 import { findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
-import { createOwnedMemoItem, findVisiblePageItemsByStoredHandle } from "@/service/page/items";
+import { createOwnedLinkItem, createOwnedMemoItem, findVisiblePageItemsByStoredHandle } from "@/service/page/items";
 import { normalizeStoredHandleFromPath, pageItemCreateSchema } from "@/service/page/schema";
 
 export const runtime = "nodejs";
@@ -76,7 +76,7 @@ export async function GET(_request: Request, context: CreateItemRouteContext) {
 }
 
 /**
- * memo 아이템 생성 중 발생한 DB 예외를 HTTP 상태 코드/메시지로 정규화한다.
+ * 페이지 아이템 생성 중 발생한 DB 예외를 HTTP 상태 코드/메시지로 정규화한다.
  */
 function mapCreateItemError(error: unknown) {
   const postgresError = toPostgresErrorLike(error);
@@ -105,7 +105,7 @@ function mapCreateItemError(error: unknown) {
 
 /**
  * 소유한 페이지에 새 아이템을 생성한다.
- * 현재는 memo 타입 생성만 지원한다.
+ * 현재는 memo/link 타입 생성을 지원한다.
  */
 export async function POST(request: Request, context: CreateItemRouteContext) {
   const session = await resolveSessionOrNull(request.headers);
@@ -160,11 +160,20 @@ export async function POST(request: Request, context: CreateItemRouteContext) {
   }
 
   try {
-    const createdItem = await createOwnedMemoItem({
-      storedHandle,
-      userId: session.user.id,
-      content: parsedBody.data.data.content,
-    });
+    const createdItem =
+      parsedBody.data.type === "memo"
+        ? await createOwnedMemoItem({
+            storedHandle,
+            userId: session.user.id,
+            content: parsedBody.data.data.content,
+          })
+        : await createOwnedLinkItem({
+            storedHandle,
+            userId: session.user.id,
+            url: parsedBody.data.data.url,
+            title: parsedBody.data.data.title,
+            favicon: parsedBody.data.data.favicon ?? null,
+          });
 
     return Response.json(
       {

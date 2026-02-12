@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import type { CrawlResponse } from "@/service/page/og-crawl";
@@ -19,12 +19,16 @@ type SubmitOgLookupOptions = {
   onSuccess?: () => void;
 };
 
+type UseOgCrawlParams = {
+  onLookupSuccess?: (crawlResponse: CrawlResponse) => Promise<boolean> | boolean;
+};
+
 export type OgCrawlController = {
   linkUrl: string;
   isPending: boolean;
   lastFetchedOg: CrawlResponse | null;
   handleLinkUrlChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  handleSubmitOgLookup: (event: SubmitEvent, options?: SubmitOgLookupOptions) => void;
+  handleSubmitOgLookup: (event: FormEvent<HTMLFormElement>, options?: SubmitOgLookupOptions) => void;
 };
 
 /**
@@ -40,7 +44,7 @@ export function buildOgLookupEndpoint(linkUrl: string) {
  * 링크 URL로 OG를 조회하는 클라이언트 상태/이벤트를 관리한다.
  * 실패 시에만 toast를 노출한다.
  */
-export function useOgCrawl(): OgCrawlController {
+export function useOgCrawl({ onLookupSuccess }: UseOgCrawlParams = {}): OgCrawlController {
   const [linkUrl, setLinkUrl] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [lastFetchedOg, setLastFetchedOg] = useState<CrawlResponse | null>(null);
@@ -50,7 +54,7 @@ export function useOgCrawl(): OgCrawlController {
   }, []);
 
   const handleSubmitOgLookup = useCallback(
-    (event: SubmitEvent, options?: SubmitOgLookupOptions) => {
+    (event: FormEvent<HTMLFormElement>, options?: SubmitOgLookupOptions) => {
       event.preventDefault();
 
       const nextLinkUrl = linkUrl.trim();
@@ -74,6 +78,15 @@ export function useOgCrawl(): OgCrawlController {
           }
 
           setLastFetchedOg(payload.data);
+
+          if (onLookupSuccess) {
+            const canCommit = await onLookupSuccess(payload.data);
+
+            if (!canCommit) {
+              return;
+            }
+          }
+
           setLinkUrl("");
           options?.onSuccess?.();
         } catch (error) {
@@ -87,7 +100,7 @@ export function useOgCrawl(): OgCrawlController {
         }
       })();
     },
-    [isPending, linkUrl],
+    [isPending, linkUrl, onLookupSuccess],
   );
 
   return {

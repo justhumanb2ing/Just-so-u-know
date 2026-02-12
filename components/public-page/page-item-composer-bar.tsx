@@ -30,7 +30,7 @@ export function ItemComposerBar({ hasDraft, onOpenComposer, ogController }: Item
               <form
                 className="w-full"
                 onSubmit={(event) => {
-                  ogController.handleSubmitOgLookup(event.nativeEvent, {
+                  ogController.handleSubmitOgLookup(event, {
                     onSuccess: () => {
                       setIsLinkPopoverOpen(false);
                     },
@@ -44,6 +44,7 @@ export function ItemComposerBar({ hasDraft, onOpenComposer, ogController }: Item
                   className="h-12 border-none px-3 shadow-none placeholder:text-neutral-400 focus:border-input focus:ring-0 focus-visible:border-input focus-visible:ring-0"
                   inputMode="url"
                   autoComplete="off"
+                  disabled={ogController.isPending}
                   aria-label="Link URL"
                 />
               </form>

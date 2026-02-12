@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { auth } from "@/lib/auth/auth";
 import { findPageByPathHandle } from "@/service/onboarding/public-page";
-import { deleteOwnedPageItem, updateOwnedMemoItem, updateOwnedPageItemSize } from "@/service/page/items";
+import { deleteOwnedPageItem, updateOwnedLinkItemTitle, updateOwnedMemoItem, updateOwnedPageItemSize } from "@/service/page/items";
 import { normalizeStoredHandleFromPath, pageItemUpdateSchema } from "@/service/page/schema";
 
 export const runtime = "nodejs";
@@ -93,7 +93,7 @@ function mapDeleteItemError(error: unknown) {
 
 /**
  * 소유한 페이지의 아이템을 수정한다.
- * 현재는 memo content 수정과 size_code 수정을 지원한다.
+ * 현재는 memo content, link title, size_code 수정을 지원한다.
  */
 export async function PATCH(request: Request, context: UpdateItemRouteContext) {
   const requestHeaders = await headers();
@@ -193,12 +193,19 @@ export async function PATCH(request: Request, context: UpdateItemRouteContext) {
             itemId: parsedItemId.data,
             content: parsedBody.data.data.content,
           })
-        : await updateOwnedPageItemSize({
-            storedHandle,
-            userId: session.user.id,
-            itemId: parsedItemId.data,
-            sizeCode: parsedBody.data.data.sizeCode,
-          });
+        : parsedBody.data.type === "link"
+          ? await updateOwnedLinkItemTitle({
+              storedHandle,
+              userId: session.user.id,
+              itemId: parsedItemId.data,
+              title: parsedBody.data.data.title,
+            })
+          : await updateOwnedPageItemSize({
+              storedHandle,
+              userId: session.user.id,
+              itemId: parsedItemId.data,
+              sizeCode: parsedBody.data.data.sizeCode,
+            });
 
     if (!updatedItem) {
       return Response.json(

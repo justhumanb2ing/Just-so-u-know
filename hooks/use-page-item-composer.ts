@@ -4,11 +4,13 @@ import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PAGE_ITEM_SIZE_CODES, type PageItemSizeCode } from "@/service/page/item-size";
+import type { CrawlResponse } from "@/service/page/og-crawl";
 
 export const ITEM_COMPOSER_AUTOSAVE_DEBOUNCE_MS = 800;
 export const DEFAULT_PAGE_ITEM_SIZE_CODE: PageItemSizeCode = "wide-short";
 
 const WINDOWS_LINE_BREAK_PATTERN = /\r\n?/g;
+const LINK_TITLE_LINE_BREAK_PATTERN = /\r?\n/g;
 
 export type { PageItemSizeCode } from "@/service/page/item-size";
 
@@ -63,7 +65,10 @@ export type PageItemComposerController = {
   focusRequestId: number;
   handleOpenComposer: () => void;
   handleDraftChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+  handleCreateLinkItemFromOg: (crawlResponse: CrawlResponse) => Promise<boolean>;
   handleItemMemoChange: (itemId: string, nextValue: string) => void;
+  handleItemLinkTitleChange: (itemId: string, nextValue: string) => void;
+  handleItemLinkTitleSubmit: (itemId: string) => void;
   handleItemResize: (itemId: string, nextSizeCode: PageItemSizeCode) => void;
   handleRemoveItem: (itemId: string) => void;
 };
@@ -71,6 +76,12 @@ export type PageItemComposerController = {
 export type UsePageItemComposerParams = {
   handle: string;
   initialItems?: InitialPageItem[];
+};
+
+type LinkItemCreatePayload = {
+  url: string;
+  title: string;
+  favicon: string | null;
 };
 
 /**
@@ -97,6 +108,13 @@ function createDraftId() {
  */
 export function normalizeItemInput(value: string) {
   return value.replace(WINDOWS_LINE_BREAK_PATTERN, "\n");
+}
+
+/**
+ * 링크 title 입력을 단일 라인으로 정규화한다.
+ */
+export function normalizeLinkTitleInput(value: string) {
+  return value.replace(LINK_TITLE_LINE_BREAK_PATTERN, " ");
 }
 
 /**
@@ -135,15 +153,23 @@ function sortPageItems(items: PageItem[]) {
   return [...items].sort((a, b) => a.orderKey - b.orderKey);
 }
 
+function toObjectData(data: unknown) {
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  return data as Record<string, unknown>;
+}
+
 /**
  * memo 아이템 데이터에서 content를 추출한다.
  */
 export function resolveMemoItemContent(item: PageItem) {
-  if (!item.data || typeof item.data !== "object") {
+  const data = toObjectData(item.data);
+
+  if (!data) {
     return "";
   }
-
-  const data = item.data as Record<string, unknown>;
   const content = data.content;
 
   if (typeof content !== "string") {
@@ -154,13 +180,73 @@ export function resolveMemoItemContent(item: PageItem) {
 }
 
 /**
+ * link 아이템 데이터에서 title을 추출한다.
+ */
+export function resolveLinkItemTitle(item: PageItem) {
+  const data = toObjectData(item.data);
+
+  if (!data) {
+    return "";
+  }
+
+  const title = data.title;
+
+  if (typeof title !== "string") {
+    return "";
+  }
+
+  return normalizeLinkTitleInput(title);
+}
+
+/**
+ * link 아이템 데이터에서 URL을 추출한다.
+ */
+export function resolveLinkItemUrl(item: PageItem) {
+  const data = toObjectData(item.data);
+
+  if (!data) {
+    return null;
+  }
+
+  const url = data.url;
+
+  return typeof url === "string" && url.trim().length > 0 ? url.trim() : null;
+}
+
+/**
+ * link 아이템 데이터에서 favicon URL을 추출한다.
+ */
+export function resolveLinkItemFavicon(item: PageItem) {
+  const data = toObjectData(item.data);
+
+  if (!data) {
+    return null;
+  }
+
+  const favicon = data.favicon;
+
+  return typeof favicon === "string" && favicon.trim().length > 0 ? favicon.trim() : null;
+}
+
+/**
  * memo data에 content를 주입한 새 객체를 반환한다.
  */
 function mergeMemoItemDataContent(data: unknown, content: string) {
-  const nextData = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const nextData = toObjectData(data) ?? {};
   return {
     ...nextData,
     content,
+  };
+}
+
+/**
+ * link data에 title을 주입한 새 객체를 반환한다.
+ */
+function mergeLinkItemDataTitle(data: unknown, title: string) {
+  const nextData = toObjectData(data) ?? {};
+  return {
+    ...nextData,
+    title,
   };
 }
 
@@ -184,6 +270,32 @@ export function updateMemoItemContent(items: PageItem[], itemId: string, content
     return {
       ...item,
       data: mergeMemoItemDataContent(item.data, content),
+    };
+  });
+
+  return hasChanged ? nextItems : items;
+}
+
+/**
+ * 아이템 목록에서 특정 link 아이템의 title을 낙관적으로 갱신한다.
+ */
+export function updateLinkItemTitle(items: PageItem[], itemId: string, title: string) {
+  let hasChanged = false;
+
+  const nextItems = items.map((item) => {
+    if (item.id !== itemId || item.typeCode !== "link") {
+      return item;
+    }
+
+    if (resolveLinkItemTitle(item) === title) {
+      return item;
+    }
+
+    hasChanged = true;
+
+    return {
+      ...item,
+      data: mergeLinkItemDataTitle(item.data, title),
     };
   });
 
@@ -282,7 +394,63 @@ export function normalizeCreatedItem(item: PersistedPageItemApiResponse["item"])
 }
 
 /**
- * 현재는 memo 타입 생성/수정만 지원하지만, 호출부는 타입 확장을 고려한 아이템 컨트롤러로 사용한다.
+ * OG 조회 결과를 링크 아이템 생성 payload로 정규화한다.
+ * 저장 기준 URL은 `data.url`만 사용한다.
+ */
+export function resolveLinkItemCreatePayloadFromCrawl(crawlResponse: CrawlResponse): LinkItemCreatePayload | null {
+  const rawUrl = crawlResponse.data.url;
+  const rawTitle = crawlResponse.data.title;
+  const rawFavicon = crawlResponse.data.favicon;
+
+  if (typeof rawUrl !== "string" || rawUrl.trim().length === 0) {
+    return null;
+  }
+
+  let normalizedUrl: string;
+
+  try {
+    const parsed = new URL(rawUrl.trim());
+
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+
+    normalizedUrl = parsed.toString();
+  } catch {
+    return null;
+  }
+
+  if (typeof rawTitle !== "string") {
+    return null;
+  }
+
+  const normalizedTitle = normalizeLinkTitleInput(rawTitle).trim();
+
+  if (!hasMeaningfulItemContent(normalizedTitle)) {
+    return null;
+  }
+
+  let normalizedFavicon: string | null = null;
+
+  if (typeof rawFavicon === "string" && rawFavicon.trim().length > 0) {
+    try {
+      const parsedFavicon = new URL(rawFavicon.trim());
+
+      normalizedFavicon = parsedFavicon.protocol === "http:" || parsedFavicon.protocol === "https:" ? parsedFavicon.toString() : null;
+    } catch {
+      normalizedFavicon = null;
+    }
+  }
+
+  return {
+    url: normalizedUrl,
+    title: normalizedTitle,
+    favicon: normalizedFavicon,
+  };
+}
+
+/**
+ * memo/link 타입 생성과 아이템 수정/삭제를 관리한다.
  */
 export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemComposerParams): PageItemComposerController {
   const normalizedInitialItemsRef = useRef<PageItem[] | null>(null);
@@ -299,6 +467,9 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
   const memoSaveTimerMapRef = useRef<Map<string, number>>(new Map());
   const memoPersistInFlightIdsRef = useRef<Set<string>>(new Set());
   const memoPersistQueuedIdsRef = useRef<Set<string>>(new Set());
+  const linkTitleSaveTimerMapRef = useRef<Map<string, number>>(new Map());
+  const linkTitlePersistInFlightIdsRef = useRef<Set<string>>(new Set());
+  const linkTitlePersistQueuedIdsRef = useRef<Set<string>>(new Set());
   const itemSizePersistInFlightIdsRef = useRef<Set<string>>(new Set());
   const itemSizePersistQueuedIdsRef = useRef<Set<string>>(new Set());
   const itemLastSyncedSizeCodeMapRef = useRef<Map<string, PageItemSizeCode>>(
@@ -320,9 +491,16 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         window.clearTimeout(timerId);
       }
 
+      for (const timerId of linkTitleSaveTimerMapRef.current.values()) {
+        window.clearTimeout(timerId);
+      }
+
       memoSaveTimerMapRef.current.clear();
       memoPersistInFlightIdsRef.current.clear();
       memoPersistQueuedIdsRef.current.clear();
+      linkTitleSaveTimerMapRef.current.clear();
+      linkTitlePersistInFlightIdsRef.current.clear();
+      linkTitlePersistQueuedIdsRef.current.clear();
       itemSizePersistInFlightIdsRef.current.clear();
       itemSizePersistQueuedIdsRef.current.clear();
       itemLastSyncedSizeCodeMapRef.current.clear();
@@ -396,6 +574,59 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       });
     }
   }, [handle]);
+
+  /**
+   * OG 조회 결과를 기반으로 link 아이템을 생성한다.
+   */
+  const handleCreateLinkItemFromOg = useCallback(
+    async (crawlResponse: CrawlResponse) => {
+      const linkPayload = resolveLinkItemCreatePayloadFromCrawl(crawlResponse);
+
+      if (!linkPayload) {
+        toast.error("Failed to save item", {
+          description: "Link title and URL are required.",
+        });
+        return false;
+      }
+
+      try {
+        const response = await fetch(buildPageItemsEndpoint(handle), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "link",
+            data: {
+              url: linkPayload.url,
+              title: linkPayload.title,
+              favicon: linkPayload.favicon,
+            },
+          }),
+        });
+
+        const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+        if (!response.ok || payload.status !== "success") {
+          throw new Error(payload.status === "error" ? payload.message : "Failed to create item.");
+        }
+
+        const createdItem = normalizeCreatedItem(payload.item);
+        itemLastSyncedSizeCodeMapRef.current.set(createdItem.id, createdItem.sizeCode);
+        setItems((prevItems) => sortPageItems([...prevItems, createdItem]));
+
+        return true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to create item.";
+
+        toast.error("Failed to save item", {
+          description: message,
+        });
+        return false;
+      }
+    },
+    [handle],
+  );
 
   useEffect(() => {
     if (!draft || draft.isSaving || !draft.hasUserInput) {
@@ -478,6 +709,84 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         if (memoPersistQueuedIdsRef.current.has(itemId)) {
           memoPersistQueuedIdsRef.current.delete(itemId);
           void persistItemMemo(itemId);
+        }
+      }
+    },
+    [handle],
+  );
+
+  /**
+   * link 아이템 title을 서버에 저장한다.
+   * 동일 아이템은 단일 in-flight 요청만 허용하고, 중복 요청은 마지막 상태로 재실행한다.
+   */
+  const persistItemLinkTitle = useCallback(
+    async (itemId: string) => {
+      if (linkTitlePersistInFlightIdsRef.current.has(itemId)) {
+        linkTitlePersistQueuedIdsRef.current.add(itemId);
+        return;
+      }
+
+      const targetItem = itemsRef.current.find((item) => item.id === itemId);
+
+      if (!targetItem || targetItem.typeCode !== "link") {
+        return;
+      }
+
+      const title = resolveLinkItemTitle(targetItem);
+
+      if (!hasMeaningfulItemContent(title)) {
+        return;
+      }
+
+      linkTitlePersistInFlightIdsRef.current.add(itemId);
+
+      try {
+        const response = await fetch(buildPageItemEndpoint(handle, itemId), {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "link",
+            data: {
+              title,
+            },
+          }),
+        });
+
+        const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+        if (!response.ok || payload.status !== "success") {
+          throw new Error(payload.status === "error" ? payload.message : "Failed to update item.");
+        }
+
+        const updatedItem = normalizeCreatedItem(payload.item);
+
+        setItems((prevItems) =>
+          prevItems.map((item) => {
+            if (item.id !== itemId) {
+              return item;
+            }
+
+            return {
+              ...item,
+              data: updatedItem.data,
+              updatedAt: updatedItem.updatedAt,
+            };
+          }),
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to update item.";
+
+        toast.error("Failed to update item", {
+          description: message,
+        });
+      } finally {
+        linkTitlePersistInFlightIdsRef.current.delete(itemId);
+
+        if (linkTitlePersistQueuedIdsRef.current.has(itemId)) {
+          linkTitlePersistQueuedIdsRef.current.delete(itemId);
+          void persistItemLinkTitle(itemId);
         }
       }
     },
@@ -604,6 +913,24 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     [persistItemMemo],
   );
 
+  const scheduleLinkTitlePersist = useCallback(
+    (itemId: string) => {
+      const activeTimerId = linkTitleSaveTimerMapRef.current.get(itemId);
+
+      if (activeTimerId) {
+        window.clearTimeout(activeTimerId);
+      }
+
+      const nextTimerId = window.setTimeout(() => {
+        linkTitleSaveTimerMapRef.current.delete(itemId);
+        void persistItemLinkTitle(itemId);
+      }, ITEM_COMPOSER_AUTOSAVE_DEBOUNCE_MS);
+
+      linkTitleSaveTimerMapRef.current.set(itemId, nextTimerId);
+    },
+    [persistItemLinkTitle],
+  );
+
   const cancelMemoPersist = useCallback((itemId: string) => {
     const activeTimerId = memoSaveTimerMapRef.current.get(itemId);
 
@@ -613,6 +940,17 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     }
 
     memoPersistQueuedIdsRef.current.delete(itemId);
+  }, []);
+
+  const cancelLinkTitlePersist = useCallback((itemId: string) => {
+    const activeTimerId = linkTitleSaveTimerMapRef.current.get(itemId);
+
+    if (activeTimerId) {
+      window.clearTimeout(activeTimerId);
+      linkTitleSaveTimerMapRef.current.delete(itemId);
+    }
+
+    linkTitlePersistQueuedIdsRef.current.delete(itemId);
   }, []);
 
   const handleOpenComposer = useCallback(() => {
@@ -658,6 +996,24 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     [scheduleMemoPersist],
   );
 
+  const handleItemLinkTitleChange = useCallback(
+    (itemId: string, nextValue: string) => {
+      const normalizedValue = normalizeLinkTitleInput(nextValue);
+
+      setItems((prevItems) => updateLinkItemTitle(prevItems, itemId, normalizedValue));
+      scheduleLinkTitlePersist(itemId);
+    },
+    [scheduleLinkTitlePersist],
+  );
+
+  const handleItemLinkTitleSubmit = useCallback(
+    (itemId: string) => {
+      cancelLinkTitlePersist(itemId);
+      void persistItemLinkTitle(itemId);
+    },
+    [cancelLinkTitlePersist, persistItemLinkTitle],
+  );
+
   const handleItemResize = useCallback(
     (itemId: string, nextSizeCode: PageItemSizeCode) => {
       const targetItem = itemsRef.current.find((item) => item.id === itemId);
@@ -688,7 +1044,10 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
 
       itemDeleteInFlightIdsRef.current.add(itemId);
       cancelMemoPersist(itemId);
+      cancelLinkTitlePersist(itemId);
       itemLastSyncedSizeCodeMapRef.current.delete(itemId);
+      linkTitlePersistQueuedIdsRef.current.delete(itemId);
+      linkTitlePersistInFlightIdsRef.current.delete(itemId);
       itemSizePersistQueuedIdsRef.current.delete(itemId);
       itemSizePersistInFlightIdsRef.current.delete(itemId);
       setItems(nextItems);
@@ -717,7 +1076,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         }
       })();
     },
-    [cancelMemoPersist, handle],
+    [cancelLinkTitlePersist, cancelMemoPersist, handle],
   );
 
   return {
@@ -726,7 +1085,10 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     focusRequestId,
     handleOpenComposer,
     handleDraftChange,
+    handleCreateLinkItemFromOg,
     handleItemMemoChange,
+    handleItemLinkTitleChange,
+    handleItemLinkTitleSubmit,
     handleItemResize,
     handleRemoveItem,
   };

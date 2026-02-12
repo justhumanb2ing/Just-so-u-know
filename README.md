@@ -64,13 +64,19 @@ bun dev
 - 비공개 페이지는 소유자만 접근할 수 있으며, 비소유자 접근 시 라우트 세그먼트 `error.tsx`가 렌더링된다.
 - 방문자 화면도 저장된 전체 타입 아이템 목록을 읽기 전용으로 확인할 수 있다.
 - 소유자 화면의 아이템 생성 입력은 하단 고정 컴포넌트(`page-item-composer-bar`)로 분리되어 동작한다.
-- 소유자 화면 하단 바의 `Add Link` 팝오버에서 링크 URL을 입력해 `GET /api/page/og`로 OG를 조회할 수 있다. (`http/https` 미입력 시 `https://` 자동 보정, 성공 시 팝오버 닫힘 + 입력 초기화)
+- 소유자 화면 하단 바의 `Add Link` 팝오버에서 링크 URL을 입력해 `GET /api/page/og`로 OG를 조회할 수 있다. (`http/https` 미입력 시 `https://` 자동 보정)
+- OG 조회 성공 시 `data.url`/`data.title`/`data.favicon`을 기준으로 `link` 아이템이 즉시 생성되며, 생성 성공 시 팝오버 닫힘 + 입력 초기화가 수행된다.
+- OG 응답의 `title` 또는 `data.url`이 비어있으면 링크 아이템 저장을 시도하지 않는다.
 - OG 조회 실패 시 에러 toast를 표시한다.
 - `memo` 아이템은 카드 본문에서 `textarea`로 직접 수정되며, 비소유자는 동일 UI를 비활성화 상태로만 확인할 수 있다.
+- `link` 아이템은 favicon(`48x48`)과 title만 렌더링한다. favicon 클릭 시 외부 링크로 이동하며, favicon이 없으면 `/no-favicon.png`를 사용한다.
+- 소유자는 `link` 아이템 title을 `textarea`로 수정할 수 있고, `800ms` 디바운스로 자동 저장된다.
+- 소유자 `link` title textarea에서 Enter는 줄바꿈이 아닌 즉시 저장 트리거로 동작한다.
 - 소유자 화면의 아이템 카드 우상단에는 hover 시에만 삭제 버튼이 노출되며, 클릭하면 아이템이 DB에서 물리 삭제된다.
 - 소유자 화면의 아이템 카드 hover 액션에 사이즈 버튼 그룹(`wide-short`, `wide-tall`, `wide-full`)이 노출된다.
 - 사이즈 버튼 그룹 컨테이너는 `bg-foreground`이며, 현재 선택된 옵션은 `bg-background text-foreground` 상태로 표시된다.
 - 사이즈 옵션 클릭 시 카드 높이가 즉시 변경되고, `PATCH /api/pages/{handle}/items/{itemId}` 요청으로 DB `size_code`가 즉시 반영된다.
+- `link` 아이템의 hover 사이즈 버튼은 비활성화 상태로 렌더링된다.
 - `memo` 수정 반영은 생성과 동일하게 `800ms` 디바운스로 자동 저장된다.
 
 ### 검증 커맨드
@@ -85,6 +91,8 @@ bun run build
 psql "$DIRECT_URL" -f schema/migrations/20260210170000_create_page_table_and_onboarding_rpc.sql
 psql "$DIRECT_URL" -f schema/migrations/20260210190000_disable_page_rls_for_better_auth.sql
 psql "$DIRECT_URL" -f schema/migrations/20260210200000_rename_page_title_to_name.sql
+psql "$DIRECT_URL" -f schema/migrations/20260212130000_create_page_item_schema.sql
+psql "$DIRECT_URL" -f schema/migrations/20260212173000_create_link_item_function.sql
 ```
 
 ## 문서

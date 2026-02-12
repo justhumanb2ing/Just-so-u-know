@@ -1,14 +1,24 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { type PageItem, resolveMemoItemContent } from "@/hooks/use-page-item-composer";
+import {
+  type PageItem,
+  resolveLinkItemFavicon,
+  resolveLinkItemTitle,
+  resolveLinkItemUrl,
+  resolveMemoItemContent,
+} from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
 
 type PageItemRendererProps = {
   item: PageItem;
   canEditMemo?: boolean;
   onMemoChange?: (itemId: string, nextValue: string) => void;
+  canEditLinkTitle?: boolean;
+  onLinkTitleChange?: (itemId: string, nextValue: string) => void;
+  onLinkTitleSubmit?: (itemId: string) => void;
 };
 
 type PageItemData = Record<string, unknown>;
@@ -18,6 +28,7 @@ export type PageItemRenderer = (props: PageItemRendererProps) => ReactNode;
 
 const FALLBACK_EMPTY_TEXT = "No content";
 const FALLBACK_UNSUPPORTED_TEXT = "Unsupported data format";
+const DEFAULT_FAVICON_SRC = "/no-favicon.png";
 
 function toObjectData(data: unknown): PageItemData | null {
   if (!data || typeof data !== "object") {
@@ -55,7 +66,7 @@ function pickFirstPrimitiveText(data: PageItemData) {
 
 const PAGE_ITEM_TEXT_RESOLVER_MAP: Record<string, PageItemTextResolver> = {
   memo: (data) => pickFirstText(data, ["content"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
-  link: (data) => pickFirstText(data, ["label", "title", "url"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
+  link: (data) => pickFirstText(data, ["title", "url"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
   image: (data) => pickFirstText(data, ["alt", "caption", "title", "src"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
 };
 
@@ -87,7 +98,7 @@ function MemoItemRenderer({ item, canEditMemo = false, onMemoChange }: PageItemR
       disabled={isDisabled}
       onChange={(event) => onMemoChange?.(item.id, event.target.value)}
       className={cn(
-        "scrollbar-hide wrap-break-word h-full min-h-0 w-full resize-none overflow-y-auto whitespace-pre-wrap rounded-sm border-0 p-2 text-base! leading-relaxed shadow-none focus-visible:ring-0",
+        "scrollbar-hide wrap-break-word h-full min-h-0 w-full resize-none overflow-y-auto whitespace-pre-wrap rounded-sm border-0 p-2 font-medium text-base! leading-relaxed shadow-none focus-visible:ring-0",
         isDisabled
           ? "cursor-default bg-transparent hover:bg-transparent focus-visible:bg-transparent disabled:cursor-default disabled:bg-transparent disabled:opacity-100"
           : "hover:bg-muted focus-visible:bg-muted",
@@ -96,11 +107,56 @@ function MemoItemRenderer({ item, canEditMemo = false, onMemoChange }: PageItemR
   );
 }
 
-function LinkItemRenderer({ item }: PageItemRendererProps) {
+function LinkItemRenderer({ item, canEditLinkTitle = false, onLinkTitleChange, onLinkTitleSubmit }: PageItemRendererProps) {
+  const title = resolveLinkItemTitle(item);
+  const url = resolveLinkItemUrl(item);
+  const faviconSrc = resolveLinkItemFavicon(item) ?? DEFAULT_FAVICON_SRC;
+  const isEditable = canEditLinkTitle && Boolean(onLinkTitleChange);
+  const displayTitle = isEditable ? title : title || FALLBACK_UNSUPPORTED_TEXT;
+
+  const handleTitleEnter = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!isEditable) {
+      return;
+    }
+
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    onLinkTitleSubmit?.(item.id);
+  };
+
   return (
-    <p className="wrap-break-word underline/20 line-clamp-2 h-fit w-full whitespace-pre-wrap text-base">
-      {resolvePageItemDisplayText(item)}
-    </p>
+    <div className="flex h-full w-full items-center gap-3">
+      {url ? (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+          {/* biome-ignore lint/performance/noImgElement: 요구사항에 따라 favicon은 img 태그로 렌더링한다. */}
+          <img src={faviconSrc} alt={`${title || "Link"} favicon`} width={48} height={48} className="size-12 rounded-sm object-cover" />
+        </a>
+      ) : (
+        <>
+          {/* biome-ignore lint/performance/noImgElement: 요구사항에 따라 favicon은 img 태그로 렌더링한다. */}
+          <img src={faviconSrc} alt={`${title || "Link"} favicon`} width={48} height={48} className="size-12 rounded-sm object-cover" />
+        </>
+      )}
+      <div className="flex min-w-0 flex-1 items-center justify-center">
+        <Input
+          value={displayTitle}
+          placeholder="Title"
+          readOnly={!isEditable}
+          onChange={isEditable ? (event) => onLinkTitleChange?.(item.id, event.target.value) : undefined}
+          onKeyDown={isEditable ? handleTitleEnter : undefined}
+          tabIndex={isEditable ? 0 : -1}
+          className={cn(
+            "h-10 min-h-0 w-full overflow-hidden truncate rounded-sm border-0 bg-transparent p-2 font-medium text-base! leading-normal shadow-none",
+            isEditable
+              ? "hover:bg-muted focus-visible:bg-muted focus-visible:ring-0"
+              : "cursor-default hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0",
+          )}
+        />
+      </div>
+    </div>
   );
 }
 
