@@ -7,6 +7,7 @@
 - `schema/migrations/20260210170000_create_page_table_and_onboarding_rpc.sql`
 - `schema/migrations/20260210190000_disable_page_rls_for_better_auth.sql`
 - `schema/migrations/20260210200000_rename_page_title_to_name.sql`
+- `schema/migrations/20260212130000_create_page_item_schema.sql`
 - `app/api/page/image/init-upload/route.ts`
 - `app/api/page/image/complete-upload/route.ts`
 - `app/api/page/image/delete/route.ts`
@@ -26,10 +27,37 @@
 - 사용자별 `is_primary=true`는 1개만 허용(partial unique index)
 - 예약어 체크(`page_handle_reserved_check`)
 
+## 아이템 스키마
+- `public.item_type`
+  - `code`(PK), `is_active`, `created_at`
+  - 기본 시드: `memo`, `image`, `video`, `link`, `map`
+- `public.item_size`
+  - `code`(PK), `is_active`, `created_at`
+  - 기본 시드: `wide-short`, `wide-tall`, `wide-full`
+- `public.page_item`
+  - 컬럼: `id`, `page_id`, `type_code`, `size_code`, `order_key`, `data`, `is_visible`, `lock_version`, `created_at`, `updated_at`
+  - `page_id`는 `public.page(id)` FK(`on delete cascade`)
+  - `type_code`는 `public.item_type(code)` FK
+  - `size_code`는 `public.item_size(code)` FK
+  - `data`는 `jsonb`이며 객체 형태만 허용(`jsonb_typeof(data) = 'object'`)
+  - `order_key` 길이 제한: 1~64자
+  - `lock_version`은 0 이상만 허용
+  - `(page_id, order_key)` 유니크 제약
+- 인덱스
+  - `page_item_page_visible_order_idx(page_id, is_visible, order_key)`
+  - `page_item_page_type_idx(page_id, type_code)`
+
 ## 함수/트리거
 - `set_page_updated_at`: update 시 `updated_at` 자동 갱신
 - `set_page_primary_default`: 기존 페이지가 있으면 `is_primary=false` 보정
 - `create_page_for_user`: 입력 정규화, 예약어/길이 검증, advisory lock, 원자 삽입
+- `create_memo_item_for_owned_page`: memo 생성 전용 RPC
+  - 입력: `p_user_id`, `p_handle`, `p_content`
+  - `handle + user_id`로 소유 페이지를 확인한 뒤 페이지 단위 advisory lock을 획득한다.
+  - `p_content`의 줄바꿈(`\r`, `\n`)은 공백으로 정규화하고 trim 처리한다.
+  - 정규화 결과가 빈 문자열이면 예외(`memo content is required`)를 발생시킨다.
+  - 기존 마지막 `order_key`를 기준으로 12자리 증가 키를 생성해 항상 맨 뒤에 삽입한다.
+  - `type_code='memo'`, `size_code='wide-short'`, `data={"content": ...}`로 저장한다.
 
 ## 공개 페이지 프로필 수정 동작
 - 수정 대상: `handle`, `name`, `bio`
@@ -68,4 +96,5 @@
 
 ## RLS 정책
 - 현재 `public.page`는 RLS 비활성화 상태
+- `public.item_type`, `public.item_size`, `public.page_item`도 동일하게 RLS 비활성화 상태
 - 이유: Better Auth `user.id`(text) + Direct Postgres 연결 구조에서 `auth.uid()` 기반 정책을 신뢰하기 어려움
