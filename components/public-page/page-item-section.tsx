@@ -22,6 +22,8 @@ type ItemListProps = {
   items: PageItem[];
   withBottomSpacing?: boolean;
   draftItem?: ReactNode;
+  canEditMemo?: boolean;
+  onMemoChange?: (itemId: string, nextValue: string) => void;
 };
 
 type DraftItemCardProps = {
@@ -68,7 +70,7 @@ function DraftItemCard({ draft, focusRequestId, onDraftChange }: DraftItemCardPr
   );
 }
 
-function ItemList({ items, withBottomSpacing = false, draftItem }: ItemListProps) {
+function ItemList({ items, withBottomSpacing = false, draftItem, canEditMemo = false, onMemoChange }: ItemListProps) {
   if (items.length === 0 && !draftItem) {
     return null;
   }
@@ -85,11 +87,11 @@ function ItemList({ items, withBottomSpacing = false, draftItem }: ItemListProps
             data-item-type={item.typeCode}
             data-size-code={item.sizeCode}
             className={cn(
-              "flex flex-col justify-center gap-2 overflow-hidden rounded-[16px] border p-3 px-6",
+              "flex flex-col justify-center gap-2 overflow-hidden rounded-[16px] border p-3",
               getItemCardHeightClass(item.sizeCode),
             )}
           >
-            <ItemRenderer item={item} />
+            <ItemRenderer item={item} canEditMemo={canEditMemo} onMemoChange={onMemoChange} />
           </article>
         );
       })}
@@ -112,7 +114,13 @@ export function EditablePageItemSection({ handle, initialItems = [] }: EditableP
 
   return (
     <section className="flex flex-col gap-3">
-      <ItemList items={controller.items} withBottomSpacing draftItem={draftItem} />
+      <ItemList
+        items={controller.items}
+        withBottomSpacing
+        draftItem={draftItem}
+        canEditMemo
+        onMemoChange={controller.handleItemMemoChange}
+      />
       <ItemComposerBar hasDraft={Boolean(controller.draft)} onOpenComposer={controller.handleOpenComposer} />
     </section>
   );

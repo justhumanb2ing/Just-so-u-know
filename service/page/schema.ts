@@ -33,3 +33,16 @@ export const pageItemCreateSchema = z.object({
 });
 
 export type PageItemCreateInput = z.infer<typeof pageItemCreateSchema>;
+
+/**
+ * 페이지 아이템 수정 API 입력을 검증한다.
+ * 현재는 memo 타입 content 수정만 허용한다.
+ */
+export const pageItemUpdateSchema = z.object({
+  type: z.literal("memo"),
+  data: z.object({
+    content: memoContentSchema,
+  }),
+});
+
+export type PageItemUpdateInput = z.infer<typeof pageItemUpdateSchema>;

@@ -1,10 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { PageItem } from "@/hooks/use-page-item-composer";
+import { Textarea } from "@/components/ui/textarea";
+import { type PageItem, resolveMemoItemContent } from "@/hooks/use-page-item-composer";
 
 type PageItemRendererProps = {
   item: PageItem;
+  canEditMemo?: boolean;
+  onMemoChange?: (itemId: string, nextValue: string) => void;
 };
 
 type PageItemData = Record<string, unknown>;
@@ -74,8 +77,17 @@ export function resolvePageItemDisplayText(item: PageItem) {
   return pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT;
 }
 
-function MemoItemRenderer({ item }: PageItemRendererProps) {
-  return <p className="wrap-break-word line-clamp-1 h-fit w-full whitespace-pre-wrap text-base">{resolvePageItemDisplayText(item)}</p>;
+function MemoItemRenderer({ item, canEditMemo = false, onMemoChange }: PageItemRendererProps) {
+  const isReadOnly = !canEditMemo || !onMemoChange;
+
+  return (
+    <Textarea
+      value={resolveMemoItemContent(item)}
+      readOnly={isReadOnly}
+      onChange={(event) => onMemoChange?.(item.id, event.target.value)}
+      className="scrollbar-hide wrap-break-word h-full min-h-0 w-full resize-none overflow-y-auto whitespace-pre-wrap rounded-sm border-0 p-2 text-base! leading-relaxed shadow-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-0"
+    />
+  );
 }
 
 function LinkItemRenderer({ item }: PageItemRendererProps) {

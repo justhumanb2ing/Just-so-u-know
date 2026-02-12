@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { normalizeStoredHandleFromPath, pageItemCreateSchema } from "@/service/page/schema";
+import { normalizeStoredHandleFromPath, pageItemCreateSchema, pageItemUpdateSchema } from "@/service/page/schema";
 
 describe("page item schema", () => {
   test("경로 handle을 저장 포맷으로 정규화한다", () => {
@@ -49,5 +49,27 @@ describe("page item schema", () => {
 
     // Assert
     expect(result.success).toBe(false);
+  });
+
+  test("아이템 수정 스키마는 memo content 개행을 \\n으로 정규화한다", () => {
+    // Arrange
+    const payload = {
+      type: "memo",
+      data: {
+        content: "Hello\r\nWorld",
+      },
+    };
+
+    // Act
+    const result = pageItemUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      type: "memo",
+      data: {
+        content: "Hello\nWorld",
+      },
+    });
   });
 });

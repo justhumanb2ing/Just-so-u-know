@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  buildPageItemEndpoint,
   buildPageItemsEndpoint,
   hasMeaningfulItemContent,
   normalizeCreatedItem,
@@ -7,6 +8,8 @@ import {
   normalizeItemInput,
   normalizePageItemSizeCode,
   resolveDraftAfterPersistSuccess,
+  resolveMemoItemContent,
+  updateMemoItemContent,
 } from "@/hooks/use-page-item-composer";
 
 describe("usePageItemComposer helpers", () => {
@@ -52,6 +55,18 @@ describe("usePageItemComposer helpers", () => {
 
     // Assert
     expect(result).toBe("/api/pages/%40hello%20world/items");
+  });
+
+  test("아이템 수정 API 경로는 handle/itemId를 URL 인코딩해 생성한다", () => {
+    // Arrange
+    const storedHandle = "@hello world";
+    const itemId = "item/1";
+
+    // Act
+    const result = buildPageItemEndpoint(storedHandle, itemId);
+
+    // Assert
+    expect(result).toBe("/api/pages/%40hello%20world/items/item%2F1");
   });
 
   test("초기 아이템 목록은 sizeCode를 정규화하고 orderKey 기준으로 정렬한다", () => {
@@ -120,5 +135,63 @@ describe("usePageItemComposer helpers", () => {
 
     // Assert
     expect(result).toBeNull();
+  });
+
+  test("memo content 추출 시 줄바꿈을 \\n으로 정규화한다", () => {
+    // Arrange
+    const item = {
+      id: "item-1",
+      typeCode: "memo",
+      sizeCode: "wide-short",
+      orderKey: 1,
+      data: {
+        content: "Hello\r\nWorld",
+      },
+      createdAt: "2026-02-12T00:00:00.000Z",
+      updatedAt: "2026-02-12T00:00:00.000Z",
+    } as const;
+
+    // Act
+    const result = resolveMemoItemContent(item);
+
+    // Assert
+    expect(result).toBe("Hello\nWorld");
+  });
+
+  test("memo content 수정 시 대상 memo만 낙관적으로 갱신한다", () => {
+    // Arrange
+    const items = [
+      {
+        id: "item-1",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 1,
+        data: {
+          content: "before",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-2",
+        typeCode: "link",
+        sizeCode: "wide-short",
+        orderKey: 2,
+        data: {
+          url: "https://example.com",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+    ];
+
+    // Act
+    const result = updateMemoItemContent(items, "item-1", "after");
+
+    // Assert
+    expect(result[0]?.data).toEqual({
+      content: "after",
+    });
+    expect(result[1]).toEqual(items[1]);
   });
 });

@@ -42,6 +42,13 @@ export type CreateOwnedMemoItemInput = {
   content: string;
 };
 
+export type UpdateOwnedMemoItemInput = {
+  storedHandle: string;
+  userId: string;
+  itemId: string;
+  content: string;
+};
+
 const queryVisiblePageItemsByStoredHandle = cache(async (storedHandle: string): Promise<VisiblePageItem[]> => {
   const result = await sql<VisiblePageItemRow>`
     select
@@ -114,4 +121,41 @@ export async function createOwnedMemoItem({ storedHandle, userId, content }: Cre
   }
 
   return createdItem;
+}
+
+/**
+ * 소유한 페이지의 memo 아이템 content를 수정한다.
+ * 페이지 소유권과 아이템 타입(memo) 조건을 동시에 만족해야 갱신된다.
+ */
+export async function updateOwnedMemoItem({
+  storedHandle,
+  userId,
+  itemId,
+  content,
+}: UpdateOwnedMemoItemInput): Promise<PageItemRow | null> {
+  const result = await sql<PageItemRow>`
+    update public.page_item
+    set
+      data = jsonb_set(page_item.data, '{content}', to_jsonb(${content}::text), true),
+      lock_version = page_item.lock_version + 1
+    from public.page
+    where public.page.id = page_item.page_id
+      and public.page.handle = ${storedHandle}
+      and public.page.user_id = ${userId}
+      and page_item.id = ${itemId}::uuid
+      and page_item.type_code = 'memo'
+    returning
+      page_item.id,
+      page_item.page_id as "pageId",
+      page_item.type_code as "typeCode",
+      page_item.size_code as "sizeCode",
+      page_item.order_key as "orderKey",
+      page_item.data,
+      page_item.is_visible as "isVisible",
+      page_item.lock_version as "lockVersion",
+      page_item.created_at as "createdAt",
+      page_item.updated_at as "updatedAt"
+  `.execute(kysely);
+
+  return result.rows[0] ?? null;
 }
