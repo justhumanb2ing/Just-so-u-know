@@ -94,6 +94,10 @@
   - 클라이언트 Enter 입력 시 즉시 저장
   - 입력 중 `400ms` 디바운스로 자동 저장
 - 저장 성공 시 `set_page_updated_at` 트리거로 `updated_at`이 자동 갱신된다.
+- 소유자 편집 화면 우하단에는 전역 저장 상태 인디케이터가 고정 표시된다.
+- DB write 요청이 하나라도 진행 중이면 `Saving...`을 표시한다.
+- 마지막 DB write가 성공으로 종료되면 `Saved!`를 표시하고 `2초` 후 자동으로 숨긴다.
+- 마지막 DB write가 실패로 종료되면 `Save failed`를 표시하고 `2초` 후 자동으로 숨긴다.
 
 ## 공개 페이지 이미지 업로드 동작
 - 버킷: `page-thumbnail`
@@ -224,6 +228,7 @@
   - favicon이 없으면 `/no-favicon.png`를 사용한다.
   - title은 중앙 정렬로 렌더링한다.
 - 저장된 아이템은 `sizeCode`를 기준으로 렌더링 크기를 결정한다.
+- 저장 상태 인디케이터 집계 대상은 아이템 생성/수정/삭제/사이즈 변경과 프로필 저장(name/bio, image complete/delete)을 모두 포함한다.
 
 ## 하단 고정 아이템 생성 바 동작
 - 아이템 생성 UI는 `page-item-composer-bar`로 분리되어 화면 하단에 고정된다.

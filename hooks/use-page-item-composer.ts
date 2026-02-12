@@ -3,6 +3,7 @@
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useTrackPageDbWrite } from "@/hooks/use-page-save-status";
 import { PAGE_ITEM_SIZE_CODES, type PageItemSizeCode } from "@/service/page/item-size";
 import type { CrawlResponse } from "@/service/page/og-crawl";
 
@@ -462,6 +463,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
   const [draft, setDraft] = useState<ItemDraftState | null>(null);
   const [items, setItems] = useState<PageItem[]>(() => normalizedInitialItemsRef.current ?? []);
   const [focusRequestId, setFocusRequestId] = useState(0);
+  const trackPageDbWrite = useTrackPageDbWrite();
   const draftRef = useRef<ItemDraftState | null>(null);
   const itemsRef = useRef<PageItem[]>(items);
   const memoSaveTimerMapRef = useRef<Map<string, number>>(new Map());
@@ -531,24 +533,28 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     });
 
     try {
-      const response = await fetch(buildPageItemsEndpoint(handle), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          type: "memo",
-          data: {
-            content: currentDraft.content,
+      const payload = await trackPageDbWrite(async () => {
+        const response = await fetch(buildPageItemsEndpoint(handle), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        }),
+          body: JSON.stringify({
+            type: "memo",
+            data: {
+              content: currentDraft.content,
+            },
+          }),
+        });
+
+        const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+        if (!response.ok || payload.status !== "success") {
+          throw new Error(payload.status === "error" ? payload.message : "Failed to create item.");
+        }
+
+        return payload;
       });
-
-      const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
-
-      if (!response.ok || payload.status !== "success") {
-        throw new Error(payload.status === "error" ? payload.message : "Failed to create item.");
-      }
 
       const createdItem = normalizeCreatedItem(payload.item);
       itemLastSyncedSizeCodeMapRef.current.set(createdItem.id, createdItem.sizeCode);
@@ -573,7 +579,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         description: message,
       });
     }
-  }, [handle]);
+  }, [handle, trackPageDbWrite]);
 
   /**
    * OG 조회 결과를 기반으로 link 아이템을 생성한다.
@@ -590,26 +596,30 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       }
 
       try {
-        const response = await fetch(buildPageItemsEndpoint(handle), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            type: "link",
-            data: {
-              url: linkPayload.url,
-              title: linkPayload.title,
-              favicon: linkPayload.favicon,
+        const payload = await trackPageDbWrite(async () => {
+          const response = await fetch(buildPageItemsEndpoint(handle), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
             },
-          }),
+            body: JSON.stringify({
+              type: "link",
+              data: {
+                url: linkPayload.url,
+                title: linkPayload.title,
+                favicon: linkPayload.favicon,
+              },
+            }),
+          });
+
+          const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+          if (!response.ok || payload.status !== "success") {
+            throw new Error(payload.status === "error" ? payload.message : "Failed to create item.");
+          }
+
+          return payload;
         });
-
-        const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
-
-        if (!response.ok || payload.status !== "success") {
-          throw new Error(payload.status === "error" ? payload.message : "Failed to create item.");
-        }
 
         const createdItem = normalizeCreatedItem(payload.item);
         itemLastSyncedSizeCodeMapRef.current.set(createdItem.id, createdItem.sizeCode);
@@ -625,7 +635,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         return false;
       }
     },
-    [handle],
+    [handle, trackPageDbWrite],
   );
 
   useEffect(() => {
@@ -664,24 +674,28 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       memoPersistInFlightIdsRef.current.add(itemId);
 
       try {
-        const response = await fetch(buildPageItemEndpoint(handle, itemId), {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            type: "memo",
-            data: {
-              content,
+        const payload = await trackPageDbWrite(async () => {
+          const response = await fetch(buildPageItemEndpoint(handle, itemId), {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
             },
-          }),
+            body: JSON.stringify({
+              type: "memo",
+              data: {
+                content,
+              },
+            }),
+          });
+
+          const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+          if (!response.ok || payload.status !== "success") {
+            throw new Error(payload.status === "error" ? payload.message : "Failed to update item.");
+          }
+
+          return payload;
         });
-
-        const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
-
-        if (!response.ok || payload.status !== "success") {
-          throw new Error(payload.status === "error" ? payload.message : "Failed to update item.");
-        }
 
         const updatedItem = normalizeCreatedItem(payload.item);
 
@@ -712,7 +726,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         }
       }
     },
-    [handle],
+    [handle, trackPageDbWrite],
   );
 
   /**
@@ -741,24 +755,28 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       linkTitlePersistInFlightIdsRef.current.add(itemId);
 
       try {
-        const response = await fetch(buildPageItemEndpoint(handle, itemId), {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            type: "link",
-            data: {
-              title,
+        const payload = await trackPageDbWrite(async () => {
+          const response = await fetch(buildPageItemEndpoint(handle, itemId), {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
             },
-          }),
+            body: JSON.stringify({
+              type: "link",
+              data: {
+                title,
+              },
+            }),
+          });
+
+          const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+          if (!response.ok || payload.status !== "success") {
+            throw new Error(payload.status === "error" ? payload.message : "Failed to update item.");
+          }
+
+          return payload;
         });
-
-        const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
-
-        if (!response.ok || payload.status !== "success") {
-          throw new Error(payload.status === "error" ? payload.message : "Failed to update item.");
-        }
 
         const updatedItem = normalizeCreatedItem(payload.item);
 
@@ -790,7 +808,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         }
       }
     },
-    [handle],
+    [handle, trackPageDbWrite],
   );
 
   /**
@@ -820,24 +838,28 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       itemSizePersistInFlightIdsRef.current.add(itemId);
 
       try {
-        const response = await fetch(buildPageItemEndpoint(handle, itemId), {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            type: "size",
-            data: {
-              sizeCode: targetSizeCode,
+        const payload = await trackPageDbWrite(async () => {
+          const response = await fetch(buildPageItemEndpoint(handle, itemId), {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
             },
-          }),
+            body: JSON.stringify({
+              type: "size",
+              data: {
+                sizeCode: targetSizeCode,
+              },
+            }),
+          });
+
+          const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+          if (!response.ok || payload.status !== "success") {
+            throw new Error(payload.status === "error" ? payload.message : "Failed to resize item.");
+          }
+
+          return payload;
         });
-
-        const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
-
-        if (!response.ok || payload.status !== "success") {
-          throw new Error(payload.status === "error" ? payload.message : "Failed to resize item.");
-        }
 
         const updatedItem = normalizeCreatedItem(payload.item);
 
@@ -892,7 +914,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         }
       }
     },
-    [handle],
+    [handle, trackPageDbWrite],
   );
 
   const scheduleMemoPersist = useCallback(
@@ -1054,15 +1076,17 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
 
       void (async () => {
         try {
-          const response = await fetch(buildPageItemEndpoint(handle, itemId), {
-            method: "DELETE",
+          await trackPageDbWrite(async () => {
+            const response = await fetch(buildPageItemEndpoint(handle, itemId), {
+              method: "DELETE",
+            });
+
+            const payload = (await response.json()) as { status?: string; message?: string };
+
+            if (!response.ok || payload.status !== "success") {
+              throw new Error(typeof payload.message === "string" ? payload.message : "Failed to delete item.");
+            }
           });
-
-          const payload = (await response.json()) as { status?: string; message?: string };
-
-          if (!response.ok || payload.status !== "success") {
-            throw new Error(typeof payload.message === "string" ? payload.message : "Failed to delete item.");
-          }
         } catch (error) {
           const message = error instanceof Error ? error.message : "Failed to delete item.";
 
@@ -1076,7 +1100,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         }
       })();
     },
-    [cancelLinkTitlePersist, cancelMemoPersist, handle],
+    [cancelLinkTitlePersist, cancelMemoPersist, handle, trackPageDbWrite],
   );
 
   return {

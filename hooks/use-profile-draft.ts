@@ -4,6 +4,7 @@ import type { ChangeEvent, KeyboardEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { savePageProfileAction } from "@/app/[handle]/actions";
+import { usePageSaveStatusReporter } from "@/hooks/use-page-save-status";
 
 const SAVE_DEBOUNCE_MS = 400;
 const LINE_BREAK_PATTERN = /[\r\n]+/g;
@@ -44,6 +45,7 @@ function normalizeDraftForSave(draft: DraftState) {
 export function useProfileDraft({ handle, initialName, initialBio }: UseProfileDraftParams): ProfileDraftController {
   const [name, setName] = useState(initialName ?? "");
   const [bio, setBio] = useState(initialBio ?? "");
+  const { beginWrite, endWriteSuccess, endWriteError } = usePageSaveStatusReporter();
   const latestDraftRef = useRef<DraftState>({
     name: initialName ?? "",
     bio: initialBio ?? "",
@@ -65,37 +67,53 @@ export function useProfileDraft({ handle, initialName, initialBio }: UseProfileD
 
       const requestId = latestRequestIdRef.current + 1;
       latestRequestIdRef.current = requestId;
+      const writeToken = beginWrite();
+      let isWriteSuccess = false;
 
-      const result = await savePageProfileAction({
-        handle,
-        name: draftToSave.name,
-        bio: draftToSave.bio,
-      });
-
-      if (latestRequestIdRef.current !== requestId) {
-        return;
-      }
-
-      if (result.status === "error") {
-        toast.error("Failed to save profile", {
-          description: result.message || "Please try again.",
+      try {
+        const result = await savePageProfileAction({
+          handle,
+          name: draftToSave.name,
+          bio: draftToSave.bio,
         });
-        return;
-      }
 
-      const normalizedSavedDraft = {
-        name: result.name ?? "",
-        bio: result.bio ?? "",
-      };
-      savedDraftRef.current = normalizedSavedDraft;
+        if (result.status === "error") {
+          toast.error("Failed to save profile", {
+            description: result.message || "Please try again.",
+          });
+          return;
+        }
 
-      const latestDraft = normalizeDraftForSave(latestDraftRef.current);
-      if (latestDraft.name === draftToSave.name && latestDraft.bio === draftToSave.bio) {
-        setName(normalizedSavedDraft.name);
-        setBio(normalizedSavedDraft.bio);
+        isWriteSuccess = true;
+
+        if (latestRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        const normalizedSavedDraft = {
+          name: result.name ?? "",
+          bio: result.bio ?? "",
+        };
+        savedDraftRef.current = normalizedSavedDraft;
+
+        const latestDraft = normalizeDraftForSave(latestDraftRef.current);
+        if (latestDraft.name === draftToSave.name && latestDraft.bio === draftToSave.bio) {
+          setName(normalizedSavedDraft.name);
+          setBio(normalizedSavedDraft.bio);
+        }
+      } catch (error) {
+        toast.error("Failed to save profile", {
+          description: error instanceof Error ? error.message : "Please try again.",
+        });
+      } finally {
+        if (isWriteSuccess) {
+          endWriteSuccess(writeToken);
+        } else {
+          endWriteError(writeToken);
+        }
       }
     },
-    [handle],
+    [beginWrite, endWriteError, endWriteSuccess, handle],
   );
 
   useEffect(() => {

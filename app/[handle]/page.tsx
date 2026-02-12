@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { EditablePageProfile } from "@/components/public-page/editable-page-profile";
-import { EditablePageItemSection, ReadonlyPageItemSection } from "@/components/public-page/page-item-section";
+import { EditablePageContent } from "@/components/public-page/editable-page-content";
+import { ReadonlyPageItemSection } from "@/components/public-page/page-item-section";
 import {
   PUBLIC_PAGE_BIO_FIELD_CLASSNAME,
   PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME,
@@ -55,10 +55,13 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
     <main className="container mx-auto flex min-h-dvh justify-center gap-4 overflow-hidden">
       <section className="sm:floating-shadow min-h-full max-w-lg grow px-8 py-10 sm:mt-10 sm:rounded-t-[64px] sm:border-[0.5px] sm:px-10">
         {canEdit ? (
-          <div className="flex flex-col gap-8">
-            <EditablePageProfile handle={page.handle} initialName={page.name} initialBio={page.bio} initialImage={page.image} />
-            <EditablePageItemSection handle={page.handle} initialItems={pageItems} />
-          </div>
+          <EditablePageContent
+            handle={page.handle}
+            initialName={page.name}
+            initialBio={page.bio}
+            initialImage={page.image}
+            initialItems={pageItems}
+          />
         ) : (
           <section className={PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME}>
             {page.image ? (

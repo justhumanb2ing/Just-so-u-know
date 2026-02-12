@@ -3,6 +3,7 @@
 import type { ChangeEvent, RefObject } from "react";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useTrackPageDbWrite } from "@/hooks/use-page-save-status";
 import {
   isAllowedPageImageFileSize,
   isAllowedPageImageMimeType,
@@ -66,6 +67,7 @@ export function useProfileImageEditor({ handle, initialImage }: UseProfileImageE
   const [imageUrl, setImageUrl] = useState(initialImage);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
+  const trackPageDbWrite = useTrackPageDbWrite();
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const isImageBusy = isUploadingImage || isDeletingImage;
 
@@ -126,18 +128,22 @@ export function useProfileImageEditor({ handle, initialImage }: UseProfileImageE
           throw new Error("Failed to upload image.");
         }
 
-        const completeResponse = await fetch("/api/page/image/complete-upload", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ handle }),
-        });
-        const completePayload = await parseJsonResponse<CompleteImageUploadResponse | ApiErrorResponse>(completeResponse);
+        const completePayload = await trackPageDbWrite(async () => {
+          const completeResponse = await fetch("/api/page/image/complete-upload", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ handle }),
+          });
+          const completePayload = await parseJsonResponse<CompleteImageUploadResponse | ApiErrorResponse>(completeResponse);
 
-        if (!completeResponse.ok || !completePayload || completePayload.status === "error" || !("imageUrl" in completePayload)) {
-          throw new Error(completePayload?.status === "error" ? completePayload.message : "Failed to complete image upload.");
-        }
+          if (!completeResponse.ok || !completePayload || completePayload.status === "error" || !("imageUrl" in completePayload)) {
+            throw new Error(completePayload?.status === "error" ? completePayload.message : "Failed to complete image upload.");
+          }
+
+          return completePayload;
+        });
 
         setImageUrl(completePayload.imageUrl);
 
@@ -154,7 +160,7 @@ export function useProfileImageEditor({ handle, initialImage }: UseProfileImageE
         setIsUploadingImage(false);
       }
     },
-    [handle],
+    [handle, trackPageDbWrite],
   );
 
   const handleImageInputChange = useCallback(
@@ -191,18 +197,22 @@ export function useProfileImageEditor({ handle, initialImage }: UseProfileImageE
     setIsDeletingImage(true);
 
     try {
-      const response = await fetch("/api/page/image/delete", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ handle }),
-      });
-      const payload = await parseJsonResponse<DeleteImageResponse | ApiErrorResponse>(response);
+      const payload = await trackPageDbWrite(async () => {
+        const response = await fetch("/api/page/image/delete", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ handle }),
+        });
+        const payload = await parseJsonResponse<DeleteImageResponse | ApiErrorResponse>(response);
 
-      if (!response.ok || !payload || payload.status === "error") {
-        throw new Error(payload?.status === "error" ? payload.message : "Failed to delete image.");
-      }
+        if (!response.ok || !payload || payload.status === "error") {
+          throw new Error(payload?.status === "error" ? payload.message : "Failed to delete image.");
+        }
+
+        return payload;
+      });
 
       setImageUrl(null);
 
@@ -218,7 +228,7 @@ export function useProfileImageEditor({ handle, initialImage }: UseProfileImageE
     } finally {
       setIsDeletingImage(false);
     }
-  }, [handle, isImageBusy]);
+  }, [handle, isImageBusy, trackPageDbWrite]);
 
   return {
     imageUrl,
