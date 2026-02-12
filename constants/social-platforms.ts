@@ -4,6 +4,7 @@ export type SocialPlatformDefinition = {
   brandColor: `#${string}`;
   iconColor?: `#${string}`;
   iconBorderColor?: `#${string}`;
+  identifierType?: "username" | "channelId";
   profileUrlTemplate: string;
   disabled?: boolean;
 };
@@ -80,7 +81,8 @@ export const SOCIAL_PLATFORM_DEFINITIONS = [
     label: "Chzzk",
     brandColor: "#00FEA2",
     iconColor: "#111827",
-    profileUrlTemplate: "https://chzzk.naver.com/{username}",
+    identifierType: "channelId",
+    profileUrlTemplate: "https://chzzk.naver.com/{channelId}",
   },
   {
     platform: "buymeacoffee",
@@ -132,9 +134,13 @@ export const SOCIAL_PLATFORM_DEFINITIONS = [
 
 export type SocialPlatform = (typeof SOCIAL_PLATFORM_DEFINITIONS)[number]["platform"];
 
-export const SOCIAL_PLATFORM_BY_ID = Object.fromEntries(
-  SOCIAL_PLATFORM_DEFINITIONS.map((platform) => [platform.platform, platform]),
-) as Record<SocialPlatform, (typeof SOCIAL_PLATFORM_DEFINITIONS)[number]>;
+export const SOCIAL_PLATFORM_BY_ID = SOCIAL_PLATFORM_DEFINITIONS.reduce<Record<SocialPlatform, SocialPlatformDefinition>>(
+  (accumulator, platform) => {
+    accumulator[platform.platform] = platform;
+    return accumulator;
+  },
+  {} as Record<SocialPlatform, SocialPlatformDefinition>,
+);
 
 /**
  * 입력 username의 공백과 선행 @를 정규화한다.
@@ -144,14 +150,44 @@ export function normalizeSocialUsername(username: string) {
 }
 
 /**
- * 플랫폼 메타데이터와 username을 사용해 공개 프로필 URL을 생성한다.
+ * 플랫폼별 식별자 타입(username/channelId)을 반환한다.
  */
-export function buildSocialProfileUrl(platform: SocialPlatform, username: string) {
-  const normalizedUsername = normalizeSocialUsername(username);
+export function getSocialIdentifierType(platform: SocialPlatform) {
+  return SOCIAL_PLATFORM_BY_ID[platform].identifierType ?? "username";
+}
 
-  if (!normalizedUsername) {
+/**
+ * 플랫폼별 식별자 입력 placeholder를 반환한다.
+ */
+export function getSocialIdentifierPlaceholder(platform: SocialPlatform) {
+  return getSocialIdentifierType(platform) === "channelId" ? "channel ID" : "username";
+}
+
+/**
+ * 플랫폼별 식별자 입력값을 정규화한다.
+ * username은 선행 @를 제거하고, channelId는 trim만 수행한다.
+ */
+export function normalizeSocialIdentifier(platform: SocialPlatform, identifier: string) {
+  const normalized = identifier.trim();
+
+  if (getSocialIdentifierType(platform) === "channelId") {
+    return normalized;
+  }
+
+  return normalizeSocialUsername(normalized);
+}
+
+/**
+ * 플랫폼 메타데이터와 식별자(username/channelId)를 사용해 공개 프로필 URL을 생성한다.
+ */
+export function buildSocialProfileUrl(platform: SocialPlatform, identifier: string) {
+  const normalizedIdentifier = normalizeSocialIdentifier(platform, identifier);
+
+  if (!normalizedIdentifier) {
     return null;
   }
 
-  return SOCIAL_PLATFORM_BY_ID[platform].profileUrlTemplate.replace("{username}", encodeURIComponent(normalizedUsername));
+  const identifierToken = getSocialIdentifierType(platform) === "channelId" ? "{channelId}" : "{username}";
+
+  return SOCIAL_PLATFORM_BY_ID[platform].profileUrlTemplate.replace(identifierToken, encodeURIComponent(normalizedIdentifier));
 }

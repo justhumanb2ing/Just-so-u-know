@@ -58,7 +58,8 @@ bun dev
 - handle 입력 UI는 온보딩/핸들 변경에서 공통 컴포넌트를 사용한다.
 - handle 제출 에러가 발생하면 제출 버튼 영역이 에러 메시지로 대체되고, 입력값이 바뀌면 버튼이 다시 노출된다.
 - 소셜 플랫폼 메타데이터(브랜드 색상, URL 템플릿)는 `constants/social-platforms.ts`에서 중앙 관리한다.
-- `buildSocialProfileUrl(platform, username)`으로 `도메인/username` 형태의 링크를 일관되게 생성할 수 있다.
+- 치지직(`chzzk`)은 username이 아닌 `channel ID`를 식별자로 사용한다.
+- `buildSocialProfileUrl(platform, identifier)`로 플랫폼별 식별자(username/channel ID) 기반 링크를 일관되게 생성할 수 있다.
 - 프로필 이미지 업로드는 파일 선택 즉시 시작된다.
 - 업로드 전 클라이언트에서 `jpg/jpeg/png/webp`, 최대 `5MB` 검증을 수행한다.
 - 업로드 전 이미지를 `WebP(320x320, quality 0.85)`로 압축한다.

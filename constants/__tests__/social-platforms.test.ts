@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildSocialProfileUrl, normalizeSocialUsername, SOCIAL_PLATFORM_DEFINITIONS } from "@/constants/social-platforms";
+import {
+  buildSocialProfileUrl,
+  getSocialIdentifierType,
+  normalizeSocialIdentifier,
+  normalizeSocialUsername,
+  SOCIAL_PLATFORM_DEFINITIONS,
+} from "@/constants/social-platforms";
 
 describe("social-platforms", () => {
   it("플랫폼 키는 중복 없이 관리된다", () => {
@@ -13,12 +19,16 @@ describe("social-platforms", () => {
     expect(uniquePlatformCount).toBe(platforms.length);
   });
 
-  it("username 템플릿은 username 토큰을 반드시 포함한다", () => {
+  it("플랫폼 템플릿은 식별자 타입에 맞는 토큰을 반드시 포함한다", () => {
     // Arrange
-    const templates = SOCIAL_PLATFORM_DEFINITIONS.map((platform) => platform.profileUrlTemplate);
+    const tokenValidation = SOCIAL_PLATFORM_DEFINITIONS.map((platform) => {
+      const expectedToken = getSocialIdentifierType(platform.platform) === "channelId" ? "{channelId}" : "{username}";
+
+      return platform.profileUrlTemplate.includes(expectedToken);
+    });
 
     // Act
-    const allTemplatesContainToken = templates.every((template) => template.includes("{username}"));
+    const allTemplatesContainToken = tokenValidation.every(Boolean);
 
     // Assert
     expect(allTemplatesContainToken).toBe(true);
@@ -33,6 +43,17 @@ describe("social-platforms", () => {
 
     // Assert
     expect(normalizedUsername).toBe("tsuki_dev");
+  });
+
+  it("chzzk 식별자는 channelId 규칙(공백 trim만 적용)으로 정규화한다", () => {
+    // Arrange
+    const rawChannelId = "  @ch-123  ";
+
+    // Act
+    const normalizedChannelId = normalizeSocialIdentifier("chzzk", rawChannelId);
+
+    // Assert
+    expect(normalizedChannelId).toBe("@ch-123");
   });
 
   it("플랫폼별 템플릿으로 공개 URL을 생성한다", () => {
@@ -57,5 +78,17 @@ describe("social-platforms", () => {
 
     // Assert
     expect(profileUrl).toBeNull();
+  });
+
+  it("channelId 기반 플랫폼은 channelId 토큰으로 공개 URL을 생성한다", () => {
+    // Arrange
+    const platform = "chzzk";
+    const channelId = "channel_01";
+
+    // Act
+    const profileUrl = buildSocialProfileUrl(platform, channelId);
+
+    // Assert
+    expect(profileUrl).toBe("https://chzzk.naver.com/channel_01");
   });
 });

@@ -11,9 +11,8 @@ import {
   PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME,
   PUBLIC_PAGE_ITEM_RESIZE_GROUP_CLASSNAME,
 } from "@/components/public-page/profile-field-styles";
-import { buttonVariants as uiButtonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { buttonVariants } from "@/components/ui/test-button";
 import { Textarea } from "@/components/ui/textarea";
 import { useOgCrawl } from "@/hooks/use-og-crawl";
 import type { InitialPageItem, PageItem } from "@/hooks/use-page-item-composer";
@@ -196,7 +195,7 @@ function EditableItemActionControls({ item, itemActions }: { item: PageItem; ite
                 itemActions.onResize(item.id, option.sizeCode);
               }}
               className={cn(
-                uiButtonVariants({ size: "icon-xs", variant: "ghost" }),
+                buttonVariants({ size: "icon-xs", variant: "ghost" }),
                 "size-7 rounded-[4px]! border-0 p-0 text-background hover:bg-background/20 hover:text-background",
                 isSelected && "bg-background text-foreground hover:bg-background hover:text-foreground",
                 isOptionDisabled && "cursor-not-allowed opacity-45 hover:bg-transparent hover:text-background",

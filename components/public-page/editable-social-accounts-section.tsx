@@ -7,7 +7,12 @@ import { Tooltip, TooltipPanel, TooltipTrigger } from "@/components/animate-ui/c
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SocialPlatform, SocialPlatformDefinition } from "@/constants/social-platforms";
-import { normalizeSocialUsername, SOCIAL_PLATFORM_BY_ID, SOCIAL_PLATFORM_DEFINITIONS } from "@/constants/social-platforms";
+import {
+  getSocialIdentifierPlaceholder,
+  normalizeSocialIdentifier,
+  SOCIAL_PLATFORM_BY_ID,
+  SOCIAL_PLATFORM_DEFINITIONS,
+} from "@/constants/social-platforms";
 import { cn } from "@/lib/utils";
 import { SOCIAL_PLATFORM_ICON_MAP, type SocialPlatformIconComponent } from "../icons/social-platform-icon-map";
 import { ScrollArea } from "../ui/scroll-area";
@@ -110,7 +115,7 @@ const SOCIAL_PLATFORM_OPTIONS: SocialPlatformOption[] = SOCIAL_PLATFORM_DEFINITI
 
 type SocialPlatformRowProps = {
   option: SocialPlatformOption;
-  initialUsername: string;
+  initialIdentifier: string;
 };
 
 export type EditableSocialAccountInitialItem = {
@@ -145,10 +150,10 @@ function getReadableTextColor(backgroundHexColor: string) {
 }
 
 /**
- * 서버에서 받은 소셜 계정을 플랫폼 기준으로 병합해, 각 플랫폼의 첫 번째 username만 초기값으로 사용한다.
+ * 서버에서 받은 소셜 계정을 플랫폼 기준으로 병합해, 각 플랫폼의 첫 번째 식별자만 초기값으로 사용한다.
  */
-function buildInitialUsernameByPlatform(initialItems: EditableSocialAccountInitialItem[]) {
-  const usernameByPlatform = new Map<SocialPlatform, string>();
+function buildInitialIdentifierByPlatform(initialItems: EditableSocialAccountInitialItem[]) {
+  const identifierByPlatform = new Map<SocialPlatform, string>();
 
   for (const item of initialItems) {
     if (!Object.hasOwn(SOCIAL_PLATFORM_BY_ID, item.platform)) {
@@ -157,27 +162,38 @@ function buildInitialUsernameByPlatform(initialItems: EditableSocialAccountIniti
 
     const platform = item.platform as SocialPlatform;
 
-    if (usernameByPlatform.has(platform)) {
+    if (identifierByPlatform.has(platform)) {
       continue;
     }
 
-    const normalizedUsername = normalizeSocialUsername(item.username);
+    const normalizedIdentifier = normalizeSocialIdentifier(platform, item.username);
 
-    if (!normalizedUsername) {
+    if (!normalizedIdentifier) {
       continue;
     }
 
-    usernameByPlatform.set(platform, normalizedUsername);
+    identifierByPlatform.set(platform, normalizedIdentifier);
   }
 
-  return usernameByPlatform;
+  return identifierByPlatform;
 }
 
-function SocialPlatformRow({ option, initialUsername }: SocialPlatformRowProps) {
+function SocialPlatformRow({ option, initialIdentifier }: SocialPlatformRowProps) {
   const { platform, label, Icon, brandColor, iconClassName, iconButtonClassName, iconColor, disabled } = option;
-  const normalizedInitialUsername = normalizeSocialUsername(initialUsername);
-  const [inputValue, setInputValue] = useState(normalizedInitialUsername);
-  const [isSubmitted, setIsSubmitted] = useState(Boolean(normalizedInitialUsername));
+  const identifierPlaceholder = getSocialIdentifierPlaceholder(platform);
+  const normalizedInitialIdentifier = normalizeSocialIdentifier(platform, initialIdentifier);
+  const [inputValue, setInputValue] = useState(normalizedInitialIdentifier);
+  const [isSubmitted, setIsSubmitted] = useState(Boolean(normalizedInitialIdentifier));
+  const hasInputValue = inputValue.trim().length > 0;
+
+  const handleSubmitInput = () => {
+    if (!hasInputValue) {
+      return;
+    }
+
+    setInputValue(normalizeSocialIdentifier(platform, inputValue));
+    setIsSubmitted(true);
+  };
 
   const handleConfirmInput = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter") {
@@ -185,13 +201,7 @@ function SocialPlatformRow({ option, initialUsername }: SocialPlatformRowProps) 
     }
 
     event.preventDefault();
-
-    if (!inputValue.trim()) {
-      return;
-    }
-
-    setInputValue(normalizeSocialUsername(inputValue));
-    setIsSubmitted(true);
+    handleSubmitInput();
   };
 
   const handleEditInput = () => {
@@ -209,7 +219,7 @@ function SocialPlatformRow({ option, initialUsername }: SocialPlatformRowProps) 
               size="icon-lg"
               variant="default"
               disabled={disabled}
-              className={cn(disabled && "opacity-50", "size-11! rounded-md shadow-xs", iconButtonClassName)}
+              className={cn(disabled && "opacity-50", "phantom-border size-11! rounded-md shadow-xs", iconButtonClassName)}
             />
           }
         >
@@ -237,7 +247,7 @@ function SocialPlatformRow({ option, initialUsername }: SocialPlatformRowProps) 
             <button
               type="button"
               disabled={disabled}
-              aria-label={`Edit ${label} username`}
+              aria-label={`Edit ${label} ${identifierPlaceholder}`}
               onClick={handleEditInput}
               className="absolute inset-y-0 end-3 inline-flex size-6 shrink-0 items-center justify-center self-center rounded-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -249,17 +259,32 @@ function SocialPlatformRow({ option, initialUsername }: SocialPlatformRowProps) 
             <Input
               name={`social-${platform}`}
               value={inputValue}
-              placeholder="username"
+              placeholder={identifierPlaceholder}
               disabled={disabled}
               autoComplete="off"
-              aria-label={`${label} username`}
+              aria-label={`${label} ${identifierPlaceholder}`}
               onChange={(event) => setInputValue(event.target.value)}
               onKeyDown={handleConfirmInput}
-              className="peer h-11 rounded-md border-none bg-[#F7F7F7] px-3 ps-8 text-sm text-zinc-800 shadow-none placeholder:text-zinc-400 focus-visible:border-zinc-300 focus-visible:ring-zinc-300/50 disabled:opacity-50"
+              className={cn(
+                "peer h-11 rounded-md border-none bg-[#F7F7F7] px-3 ps-8 text-sm text-zinc-800 shadow-none placeholder:text-zinc-400 focus-visible:border-zinc-300 focus-visible:ring-zinc-300/50 disabled:opacity-50",
+                hasInputValue && "pe-15",
+              )}
             />
             <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
               <AtSignIcon aria-hidden="true" size={16} className="text-zinc-700" />
             </div>
+            {hasInputValue ? (
+              <Button
+                type="button"
+                size="xs"
+                disabled={disabled}
+                aria-label={`Get ${label} ${identifierPlaceholder}`}
+                onClick={handleSubmitInput}
+                className="phantom-border absolute inset-y-0 end-2 my-auto h-7 rounded-sm px-2.5 text-xs shadow-xs"
+              >
+                Get
+              </Button>
+            ) : null}
           </>
         )}
       </div>
@@ -268,22 +293,22 @@ function SocialPlatformRow({ option, initialUsername }: SocialPlatformRowProps) 
 }
 
 /**
- * 소셜 username 입력 UI를 렌더링하는 편집 섹션.
+ * 소셜 식별자 입력 UI를 렌더링하는 편집 섹션.
  * 현재는 저장 로직 없이 입력 필드만 제공한다.
  */
 export function EditableSocialAccountsSection({ initialItems = [] }: { initialItems?: EditableSocialAccountInitialItem[] }) {
-  const initialUsernameByPlatform = buildInitialUsernameByPlatform(initialItems);
+  const initialIdentifierByPlatform = buildInitialIdentifierByPlatform(initialItems);
 
   return (
     <section className="phantom-shadow flex h-[820px] max-w-[424px] flex-col rounded-[2.5rem] border p-6 md:p-8">
-      <h2 className="font-bold text-xl leading-tight">Add your social platform into your page</h2>
+      <h2 className="font-bold text-xl leading-tight">Get your social platform into your page</h2>
       <div className="flex grow flex-col">
         <ScrollArea className="scrollbar-hide mt-8 h-96 grow border border-none" scrollFade scrollbarHidden>
           {SOCIAL_PLATFORM_OPTIONS.map((option) => (
             <SocialPlatformRow
               key={option.platform}
               option={option}
-              initialUsername={initialUsernameByPlatform.get(option.platform) ?? ""}
+              initialIdentifier={initialIdentifierByPlatform.get(option.platform) ?? ""}
             />
           ))}
         </ScrollArea>

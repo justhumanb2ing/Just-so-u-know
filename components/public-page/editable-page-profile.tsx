@@ -16,7 +16,7 @@ import {
   PUBLIC_PAGE_NAME_FIELD_CLASSNAME,
   PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME,
 } from "@/components/public-page/profile-field-styles";
-import { buttonVariants } from "@/components/ui/test-button";
+import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { ProfileDraftController } from "@/hooks/use-profile-draft";
 import { useProfileDraft } from "@/hooks/use-profile-draft";

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { Button } from "@/components/ui/test-button";
+import { Button } from "@/components/ui/button";
 import { PRIVATE_PAGE_ACCESS_DENIED_ERROR } from "./constants";
 
 type PublicPageErrorProps = {
