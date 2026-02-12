@@ -21,11 +21,17 @@ export function ItemComposerBar({ hasDraft, onOpenComposer, ogController }: Item
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false);
 
   return (
-    <div className="fixed inset-x-0 bottom-4 z-30 mx-auto w-full max-w-lg px-4">
-      <section className="space-y-2 rounded-[20px] border bg-background/90 p-3 shadow-xl backdrop-blur-sm">
+    <div className="fixed inset-x-0 bottom-4 z-30 mx-auto w-full max-w-md px-4">
+      <section className="space-y-2 rounded-[20px] border bg-background/80 p-2 shadow-xl backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <Popover open={isLinkPopoverOpen} onOpenChange={setIsLinkPopoverOpen}>
-            <PopoverTrigger render={<Button type="button" size="sm" variant="secondary" />}>Add Link</PopoverTrigger>
+            <PopoverTrigger
+              render={
+                <Button type="button" variant={"default"} className={"phantom-border"}>
+                  Link
+                </Button>
+              }
+            ></PopoverTrigger>
             <PopoverPanel sideOffset={8} className="w-[min(20rem,calc(100vw-2rem))] space-y-2 rounded-lg border-border/50 p-0">
               <form
                 className="w-full"
@@ -52,12 +58,11 @@ export function ItemComposerBar({ hasDraft, onOpenComposer, ogController }: Item
           </Popover>
           <Button
             type="button"
-            size="sm"
-            variant="outline"
+            variant="default"
             onClick={onOpenComposer}
-            className={cn("gap-1.5", hasDraft ? "border-primary/60" : undefined)}
+            className={cn("phantom-border gap-1.5", hasDraft ? "border-primary/60" : undefined)}
           >
-            Add Item
+            Memo
           </Button>
         </div>
       </section>

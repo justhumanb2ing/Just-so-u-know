@@ -15,6 +15,7 @@ export default function CTAButton() {
       variant={"default"}
       size={"lg"}
       className={"h-10"}
+      nativeButton={false}
       onMouseEnter={() => router.prefetch("/me")}
       render={
         <Link href="/me" prefetch={false}>
