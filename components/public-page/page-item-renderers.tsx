@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { type PageItem, resolveMemoItemContent } from "@/hooks/use-page-item-composer";
+import { cn } from "@/lib/utils";
 
 type PageItemRendererProps = {
   item: PageItem;
@@ -78,14 +79,19 @@ export function resolvePageItemDisplayText(item: PageItem) {
 }
 
 function MemoItemRenderer({ item, canEditMemo = false, onMemoChange }: PageItemRendererProps) {
-  const isReadOnly = !canEditMemo || !onMemoChange;
+  const isDisabled = !canEditMemo || !onMemoChange;
 
   return (
     <Textarea
       value={resolveMemoItemContent(item)}
-      readOnly={isReadOnly}
+      disabled={isDisabled}
       onChange={(event) => onMemoChange?.(item.id, event.target.value)}
-      className="scrollbar-hide wrap-break-word h-full min-h-0 w-full resize-none overflow-y-auto whitespace-pre-wrap rounded-sm border-0 p-2 text-base! leading-relaxed shadow-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-0"
+      className={cn(
+        "scrollbar-hide wrap-break-word h-full min-h-0 w-full resize-none overflow-y-auto whitespace-pre-wrap rounded-sm border-0 p-2 text-base! leading-relaxed shadow-none focus-visible:ring-0",
+        isDisabled
+          ? "cursor-default bg-transparent hover:bg-transparent focus-visible:bg-transparent disabled:cursor-default disabled:bg-transparent disabled:opacity-100"
+          : "hover:bg-muted focus-visible:bg-muted",
+      )}
     />
   );
 }
