@@ -6,13 +6,16 @@
 ## 파일 구조와 역할
 - `service/page/schema.ts`: 페이지 handle 정규화와 아이템 생성/수정 입력 검증
 - `service/page/items.ts`: 페이지 아이템 생성/수정/조회 DB 호출 로직
+- `service/page/og-crawl.ts`: 외부 OG 크롤러 endpoint 호출/응답 정규화
 - `service/page/__tests__/schema.test.ts`: 페이지 아이템 입력 검증 테스트
+- `service/page/__tests__/og-crawl.test.ts`: OG 크롤러 URL 구성/응답 정규화 테스트
 
 ## 핵심 설계 결정
 - `/api/pages/{handle}/items` 요청은 페이지 도메인 스키마에서 검증한다.
 - memo 생성은 DB 함수(`create_memo_item_for_owned_page`)로 위임해 정합성과 동시성을 DB에서 보장한다.
 - memo 수정은 `page + page_item` 조인 조건(`handle + user_id + item_id + memo 타입`)으로 소유권과 타입을 함께 검증한다.
 - 페이지 아이템 조회는 `page_item` + `page` 조인으로 handle 기준 조회하고, `is_visible=true` 조건의 모든 타입 아이템을 노출한다.
+- OG 조회는 외부 crawl endpoint를 `mode=static`으로 호출하고, 개발 환경에서만 timings 메타를 요청한다.
 
 ## 사용 패턴
 - API 라우트는 인증/HTTP 에러 매핑을 담당하고, 비즈니스 로직은 `service/page/*`에 위임한다.
