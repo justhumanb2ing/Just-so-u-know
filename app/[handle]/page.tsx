@@ -54,8 +54,8 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
   }
 
   return (
-    <main className="container mx-auto flex min-h-dvh justify-center gap-4 overflow-hidden">
-      <section className="md:floating-shadow min-h-full max-w-lg grow px-4 py-10 md:mt-10 md:rounded-t-[64px] md:border-[0.5px] md:px-10">
+    <main className="container mx-auto flex h-dvh min-h-0 justify-center gap-4 overflow-hidden">
+      <section className="md:floating-shadow scrollbar-hide max-h-dvh max-w-lg grow overflow-y-auto px-4 py-10 md:mt-10 md:max-h-[calc(100dvh-2.5rem)] md:rounded-t-[64px] md:border-[0.5px] md:px-10">
         {canEdit ? (
           <EditablePageContent
             handle={page.handle}
