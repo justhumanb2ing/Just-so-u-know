@@ -64,6 +64,7 @@ export type PageItemComposerController = {
   handleOpenComposer: () => void;
   handleDraftChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
   handleItemMemoChange: (itemId: string, nextValue: string) => void;
+  handleRemoveItem: (itemId: string) => void;
 };
 
 export type UsePageItemComposerParams = {
@@ -189,6 +190,42 @@ export function updateMemoItemContent(items: PageItem[], itemId: string, content
 }
 
 /**
+ * 아이템 목록에서 특정 아이템을 제거하고 제거된 항목을 함께 반환한다.
+ */
+export function removePageItemById(items: PageItem[], itemId: string) {
+  let removedItem: PageItem | null = null;
+
+  const nextItems = items.filter((item) => {
+    if (item.id !== itemId) {
+      return true;
+    }
+
+    removedItem = item;
+    return false;
+  });
+
+  return {
+    nextItems,
+    removedItem,
+  };
+}
+
+/**
+ * 삭제 실패 시 제거했던 아이템을 정렬 기준으로 복구한다.
+ */
+export function restoreRemovedPageItem(items: PageItem[], removedItem: PageItem | null) {
+  if (!removedItem) {
+    return items;
+  }
+
+  if (items.some((item) => item.id === removedItem.id)) {
+    return items;
+  }
+
+  return sortPageItems([...items, removedItem]);
+}
+
+/**
  * 서버에서 주입된 아이템 목록을 클라이언트 렌더링 타입으로 정규화한다.
  */
 export function normalizeInitialPageItems(items: InitialPageItem[]): PageItem[] {
@@ -227,6 +264,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
   const memoSaveTimerMapRef = useRef<Map<string, number>>(new Map());
   const memoPersistInFlightIdsRef = useRef<Set<string>>(new Set());
   const memoPersistQueuedIdsRef = useRef<Set<string>>(new Set());
+  const itemDeleteInFlightIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     draftRef.current = draft;
@@ -245,6 +283,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       memoSaveTimerMapRef.current.clear();
       memoPersistInFlightIdsRef.current.clear();
       memoPersistQueuedIdsRef.current.clear();
+      itemDeleteInFlightIdsRef.current.clear();
     };
   }, []);
 
@@ -419,6 +458,17 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     [persistItemMemo],
   );
 
+  const cancelMemoPersist = useCallback((itemId: string) => {
+    const activeTimerId = memoSaveTimerMapRef.current.get(itemId);
+
+    if (activeTimerId) {
+      window.clearTimeout(activeTimerId);
+      memoSaveTimerMapRef.current.delete(itemId);
+    }
+
+    memoPersistQueuedIdsRef.current.delete(itemId);
+  }, []);
+
   const handleOpenComposer = useCallback(() => {
     setDraft((prevDraft) => {
       if (prevDraft) {
@@ -462,6 +512,48 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     [scheduleMemoPersist],
   );
 
+  const handleRemoveItem = useCallback(
+    (itemId: string) => {
+      if (itemDeleteInFlightIdsRef.current.has(itemId)) {
+        return;
+      }
+
+      const { nextItems, removedItem } = removePageItemById(itemsRef.current, itemId);
+
+      if (!removedItem) {
+        return;
+      }
+
+      itemDeleteInFlightIdsRef.current.add(itemId);
+      cancelMemoPersist(itemId);
+      setItems(nextItems);
+
+      void (async () => {
+        try {
+          const response = await fetch(buildPageItemEndpoint(handle, itemId), {
+            method: "DELETE",
+          });
+
+          const payload = (await response.json()) as { status?: string; message?: string };
+
+          if (!response.ok || payload.status !== "success") {
+            throw new Error(typeof payload.message === "string" ? payload.message : "Failed to delete item.");
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Failed to delete item.";
+
+          setItems((prevItems) => restoreRemovedPageItem(prevItems, removedItem));
+          toast.error("Failed to delete item", {
+            description: message,
+          });
+        } finally {
+          itemDeleteInFlightIdsRef.current.delete(itemId);
+        }
+      })();
+    },
+    [cancelMemoPersist, handle],
+  );
+
   return {
     draft,
     items,
@@ -469,5 +561,6 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     handleOpenComposer,
     handleDraftChange,
     handleItemMemoChange,
+    handleRemoveItem,
   };
 }

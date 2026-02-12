@@ -15,14 +15,26 @@ import { canEditPageProfile, findPageByPathHandle, shouldDenyPrivatePageAccess }
 import { findVisiblePageItemsByPathHandle } from "@/service/page/items";
 import { PRIVATE_PAGE_ACCESS_DENIED_ERROR } from "./constants";
 
+/**
+ * 공개 페이지 렌더 중 세션 조회 실패가 발생해도 페이지 자체는 계속 렌더링되도록 null을 반환한다.
+ */
+async function resolveSessionOrNull(requestHeaders: Headers) {
+  try {
+    return await auth.api.getSession({
+      headers: requestHeaders,
+    });
+  } catch (error) {
+    console.error("[public-page] Failed to get session.", error);
+    return null;
+  }
+}
+
 export default async function PublicPage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
   const requestHeaders = await headers();
   const [page, session, pageItems] = await Promise.all([
     findPageByPathHandle(handle),
-    auth.api.getSession({
-      headers: requestHeaders,
-    }),
+    resolveSessionOrNull(requestHeaders),
     findVisiblePageItemsByPathHandle(handle),
   ]);
 

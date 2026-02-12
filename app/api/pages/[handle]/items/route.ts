@@ -24,17 +24,26 @@ function toPostgresErrorLike(error: unknown): PostgresErrorLike | null {
 }
 
 /**
+ * 요청 헤더로 세션 조회를 시도하고, 조회 실패 예외는 비로그인 상태로 처리한다.
+ */
+async function resolveSessionOrNull(requestHeaders: Headers) {
+  try {
+    return await auth.api.getSession({
+      headers: requestHeaders,
+    });
+  } catch (error) {
+    console.error("[pages/items] Failed to get session.", error);
+    return null;
+  }
+}
+
+/**
  * 공개/소유자 권한에 맞는 페이지 아이템 조회를 처리한다.
  */
 export async function GET(_request: Request, context: CreateItemRouteContext) {
   const { handle } = await context.params;
   const requestHeaders = await headers();
-  const [page, session] = await Promise.all([
-    findPageByPathHandle(handle),
-    auth.api.getSession({
-      headers: requestHeaders,
-    }),
-  ]);
+  const [page, session] = await Promise.all([findPageByPathHandle(handle), resolveSessionOrNull(requestHeaders)]);
 
   if (!page) {
     return Response.json(
@@ -99,9 +108,7 @@ function mapCreateItemError(error: unknown) {
  * 현재는 memo 타입 생성만 지원한다.
  */
 export async function POST(request: Request, context: CreateItemRouteContext) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await resolveSessionOrNull(request.headers);
 
   if (!session) {
     return Response.json(

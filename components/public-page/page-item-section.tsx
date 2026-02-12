@@ -1,13 +1,23 @@
 "use client";
 
+import { TrashIcon } from "lucide-react";
+import { motion } from "motion/react";
 import type { ChangeEvent, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { ItemComposerBar } from "@/components/public-page/page-item-composer-bar";
 import { getPageItemRenderer } from "@/components/public-page/page-item-renderers";
+import { PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME } from "@/components/public-page/profile-field-styles";
+import { buttonVariants } from "@/components/ui/test-button";
 import { Textarea } from "@/components/ui/textarea";
 import type { InitialPageItem, PageItem } from "@/hooks/use-page-item-composer";
 import { normalizeInitialPageItems, usePageItemComposer } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
+
+const ITEM_REMOVE_TAP = { scale: 0.92 } as const;
+const ITEM_BUTTON_TRANSITION = {
+  duration: 0.12,
+  ease: "easeOut",
+} as const;
 
 type EditablePageItemSectionProps = {
   handle: string;
@@ -24,6 +34,7 @@ type ItemListProps = {
   draftItem?: ReactNode;
   canEditMemo?: boolean;
   onMemoChange?: (itemId: string, nextValue: string) => void;
+  onItemRemove?: (itemId: string) => void;
 };
 
 type DraftItemCardProps = {
@@ -70,7 +81,7 @@ function DraftItemCard({ draft, focusRequestId, onDraftChange }: DraftItemCardPr
   );
 }
 
-function ItemList({ items, withBottomSpacing = false, draftItem, canEditMemo = false, onMemoChange }: ItemListProps) {
+function ItemList({ items, withBottomSpacing = false, draftItem, canEditMemo = false, onMemoChange, onItemRemove }: ItemListProps) {
   if (items.length === 0 && !draftItem) {
     return null;
   }
@@ -87,10 +98,26 @@ function ItemList({ items, withBottomSpacing = false, draftItem, canEditMemo = f
             data-item-type={item.typeCode}
             data-size-code={item.sizeCode}
             className={cn(
-              "flex flex-col justify-center gap-2 overflow-hidden rounded-[16px] border p-3",
+              "group relative flex flex-col justify-center gap-2 rounded-[16px] border p-3",
               getItemCardHeightClass(item.sizeCode),
             )}
           >
+            {onItemRemove ? (
+              <motion.button
+                type="button"
+                className={cn(buttonVariants({ size: "icon-lg" }), PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onItemRemove(item.id);
+                }}
+                aria-label="Remove item"
+                whileTap={ITEM_REMOVE_TAP}
+                transition={ITEM_BUTTON_TRANSITION}
+              >
+                <TrashIcon className="size-4" strokeWidth={3} />
+              </motion.button>
+            ) : null}
             <ItemRenderer item={item} canEditMemo={canEditMemo} onMemoChange={onMemoChange} />
           </article>
         );
@@ -120,6 +147,7 @@ export function EditablePageItemSection({ handle, initialItems = [] }: EditableP
         draftItem={draftItem}
         canEditMemo
         onMemoChange={controller.handleItemMemoChange}
+        onItemRemove={controller.handleRemoveItem}
       />
       <ItemComposerBar hasDraft={Boolean(controller.draft)} onOpenComposer={controller.handleOpenComposer} />
     </section>

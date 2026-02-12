@@ -7,8 +7,10 @@ import {
   normalizeInitialPageItems,
   normalizeItemInput,
   normalizePageItemSizeCode,
+  removePageItemById,
   resolveDraftAfterPersistSuccess,
   resolveMemoItemContent,
+  restoreRemovedPageItem,
   updateMemoItemContent,
 } from "@/hooks/use-page-item-composer";
 
@@ -193,5 +195,85 @@ describe("usePageItemComposer helpers", () => {
       content: "after",
     });
     expect(result[1]).toEqual(items[1]);
+  });
+
+  test("아이템 제거 시 제거된 아이템과 남은 목록을 함께 반환한다", () => {
+    // Arrange
+    const items = [
+      {
+        id: "item-1",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 1,
+        data: {
+          content: "first",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-2",
+        typeCode: "link",
+        sizeCode: "wide-short",
+        orderKey: 2,
+        data: {
+          url: "https://example.com",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+    ];
+
+    // Act
+    const result = removePageItemById(items, "item-1");
+
+    // Assert
+    expect(result.nextItems).toEqual([items[1]]);
+    expect(result.removedItem).toEqual(items[0]);
+  });
+
+  test("삭제 실패 복구 시 제거 아이템을 orderKey 기준으로 다시 정렬해 삽입한다", () => {
+    // Arrange
+    const removedItem = {
+      id: "item-1",
+      typeCode: "memo",
+      sizeCode: "wide-short",
+      orderKey: 1,
+      data: {
+        content: "first",
+      },
+      createdAt: "2026-02-12T00:00:00.000Z",
+      updatedAt: "2026-02-12T00:00:00.000Z",
+    } as const;
+    const items = [
+      {
+        id: "item-3",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 3,
+        data: {
+          content: "third",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-2",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 2,
+        data: {
+          content: "second",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+    ];
+
+    // Act
+    const result = restoreRemovedPageItem(items, removedItem);
+
+    // Assert
+    expect(result.map((item) => item.id)).toEqual(["item-1", "item-2", "item-3"]);
   });
 });

@@ -49,6 +49,12 @@ export type UpdateOwnedMemoItemInput = {
   content: string;
 };
 
+export type DeleteOwnedPageItemInput = {
+  storedHandle: string;
+  userId: string;
+  itemId: string;
+};
+
 const queryVisiblePageItemsByStoredHandle = cache(async (storedHandle: string): Promise<VisiblePageItem[]> => {
   const result = await sql<VisiblePageItemRow>`
     select
@@ -144,6 +150,34 @@ export async function updateOwnedMemoItem({
       and public.page.user_id = ${userId}
       and page_item.id = ${itemId}::uuid
       and page_item.type_code = 'memo'
+    returning
+      page_item.id,
+      page_item.page_id as "pageId",
+      page_item.type_code as "typeCode",
+      page_item.size_code as "sizeCode",
+      page_item.order_key as "orderKey",
+      page_item.data,
+      page_item.is_visible as "isVisible",
+      page_item.lock_version as "lockVersion",
+      page_item.created_at as "createdAt",
+      page_item.updated_at as "updatedAt"
+  `.execute(kysely);
+
+  return result.rows[0] ?? null;
+}
+
+/**
+ * 소유한 페이지의 아이템 1개를 물리 삭제한다.
+ * handle + userId 소유권 조건과 itemId를 동시에 만족해야 삭제된다.
+ */
+export async function deleteOwnedPageItem({ storedHandle, userId, itemId }: DeleteOwnedPageItemInput): Promise<PageItemRow | null> {
+  const result = await sql<PageItemRow>`
+    delete from public.page_item
+    using public.page
+    where public.page.id = page_item.page_id
+      and public.page.handle = ${storedHandle}
+      and public.page.user_id = ${userId}
+      and page_item.id = ${itemId}::uuid
     returning
       page_item.id,
       page_item.page_id as "pageId",
