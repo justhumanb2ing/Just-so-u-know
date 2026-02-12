@@ -83,6 +83,7 @@ bun dev
 - 사이즈 옵션 클릭 시 카드 높이가 즉시 변경되고, `PATCH /api/pages/{handle}/items/{itemId}` 요청으로 DB `size_code`가 즉시 반영된다.
 - `link` 아이템의 hover 사이즈 버튼은 비활성화 상태로 렌더링된다.
 - `memo` 수정 반영은 생성과 동일하게 `800ms` 디바운스로 자동 저장된다.
+- 소유자 편집 화면의 소셜 계정 섹션은 `page_social_items`를 서버에서 조회해 플랫폼별 username 초기값을 채운다.
 
 ### 검증 커맨드
 ```bash

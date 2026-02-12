@@ -7,7 +7,7 @@ import { Tooltip, TooltipPanel, TooltipTrigger } from "@/components/animate-ui/c
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SocialPlatform, SocialPlatformDefinition } from "@/constants/social-platforms";
-import { SOCIAL_PLATFORM_DEFINITIONS } from "@/constants/social-platforms";
+import { normalizeSocialUsername, SOCIAL_PLATFORM_BY_ID, SOCIAL_PLATFORM_DEFINITIONS } from "@/constants/social-platforms";
 import { cn } from "@/lib/utils";
 import { SOCIAL_PLATFORM_ICON_MAP, type SocialPlatformIconComponent } from "../icons/social-platform-icon-map";
 import { ScrollArea } from "../ui/scroll-area";
@@ -110,6 +110,12 @@ const SOCIAL_PLATFORM_OPTIONS: SocialPlatformOption[] = SOCIAL_PLATFORM_DEFINITI
 
 type SocialPlatformRowProps = {
   option: SocialPlatformOption;
+  initialUsername: string;
+};
+
+export type EditableSocialAccountInitialItem = {
+  platform: string;
+  username: string;
 };
 
 /**
@@ -138,10 +144,40 @@ function getReadableTextColor(backgroundHexColor: string) {
   return brightness > 150 ? "#111827" : "#FFFFFF";
 }
 
-function SocialPlatformRow({ option }: SocialPlatformRowProps) {
+/**
+ * 서버에서 받은 소셜 계정을 플랫폼 기준으로 병합해, 각 플랫폼의 첫 번째 username만 초기값으로 사용한다.
+ */
+function buildInitialUsernameByPlatform(initialItems: EditableSocialAccountInitialItem[]) {
+  const usernameByPlatform = new Map<SocialPlatform, string>();
+
+  for (const item of initialItems) {
+    if (!Object.hasOwn(SOCIAL_PLATFORM_BY_ID, item.platform)) {
+      continue;
+    }
+
+    const platform = item.platform as SocialPlatform;
+
+    if (usernameByPlatform.has(platform)) {
+      continue;
+    }
+
+    const normalizedUsername = normalizeSocialUsername(item.username);
+
+    if (!normalizedUsername) {
+      continue;
+    }
+
+    usernameByPlatform.set(platform, normalizedUsername);
+  }
+
+  return usernameByPlatform;
+}
+
+function SocialPlatformRow({ option, initialUsername }: SocialPlatformRowProps) {
   const { platform, label, Icon, brandColor, iconClassName, iconButtonClassName, iconColor, disabled } = option;
-  const [inputValue, setInputValue] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const normalizedInitialUsername = normalizeSocialUsername(initialUsername);
+  const [inputValue, setInputValue] = useState(normalizedInitialUsername);
+  const [isSubmitted, setIsSubmitted] = useState(Boolean(normalizedInitialUsername));
 
   const handleConfirmInput = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter") {
@@ -154,6 +190,7 @@ function SocialPlatformRow({ option }: SocialPlatformRowProps) {
       return;
     }
 
+    setInputValue(normalizeSocialUsername(inputValue));
     setIsSubmitted(true);
   };
 
@@ -234,14 +271,20 @@ function SocialPlatformRow({ option }: SocialPlatformRowProps) {
  * 소셜 username 입력 UI를 렌더링하는 편집 섹션.
  * 현재는 저장 로직 없이 입력 필드만 제공한다.
  */
-export function EditableSocialAccountsSection() {
+export function EditableSocialAccountsSection({ initialItems = [] }: { initialItems?: EditableSocialAccountInitialItem[] }) {
+  const initialUsernameByPlatform = buildInitialUsernameByPlatform(initialItems);
+
   return (
     <section className="phantom-shadow flex h-[820px] max-w-[424px] flex-col rounded-[2.5rem] border p-6 md:p-8">
       <h2 className="font-bold text-xl leading-tight">Add your social platform into your page</h2>
       <div className="flex grow flex-col">
         <ScrollArea className="scrollbar-hide mt-8 h-96 grow border border-none" scrollFade scrollbarHidden>
           {SOCIAL_PLATFORM_OPTIONS.map((option) => (
-            <SocialPlatformRow key={option.platform} option={option} />
+            <SocialPlatformRow
+              key={option.platform}
+              option={option}
+              initialUsername={initialUsernameByPlatform.get(option.platform) ?? ""}
+            />
           ))}
         </ScrollArea>
         <Button type="button" size="lg" className="mt-8 h-14! w-full rounded-full font-semibold text-lg!">

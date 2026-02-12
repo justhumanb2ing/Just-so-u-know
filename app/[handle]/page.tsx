@@ -15,6 +15,7 @@ import {
 import { auth } from "@/lib/auth/auth";
 import { canEditPageProfile, findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
 import { findVisiblePageItemsByPathHandle } from "@/service/page/items";
+import { findVisiblePageSocialItemsByPathHandle } from "@/service/page/social-items";
 import { PRIVATE_PAGE_ACCESS_DENIED_ERROR } from "./constants";
 
 /**
@@ -46,6 +47,7 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
 
   const isOwner = page.userId === session?.user.id;
   const canEdit = canEditPageProfile({ isOwner });
+  const pageSocialItems = canEdit ? await findVisiblePageSocialItemsByPathHandle(handle) : [];
 
   if (shouldDenyPrivatePageAccess({ isPublic: page.isPublic, isOwner })) {
     throw new Error(PRIVATE_PAGE_ACCESS_DENIED_ERROR);
@@ -61,6 +63,7 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
             initialBio={page.bio}
             initialImage={page.image}
             initialItems={pageItems}
+            initialSocialItems={pageSocialItems}
           />
         ) : (
           <section className={PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME}>
