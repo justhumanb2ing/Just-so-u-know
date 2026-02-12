@@ -1,12 +1,18 @@
 "use client";
 
-import { TrashIcon } from "lucide-react";
+import { RectangleHorizontalIcon, SquareIcon, TrashIcon } from "lucide-react";
 import { motion } from "motion/react";
 import type { ChangeEvent, ReactNode } from "react";
 import { useEffect, useRef } from "react";
+import { Rectangle } from "@/components/icons/rectangle";
 import { ItemComposerBar } from "@/components/public-page/page-item-composer-bar";
 import { getPageItemRenderer } from "@/components/public-page/page-item-renderers";
-import { PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME } from "@/components/public-page/profile-field-styles";
+import {
+  PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME,
+  PUBLIC_PAGE_ITEM_RESIZE_GROUP_CLASSNAME,
+} from "@/components/public-page/profile-field-styles";
+import { buttonVariants as uiButtonVariants } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { buttonVariants } from "@/components/ui/test-button";
 import { Textarea } from "@/components/ui/textarea";
 import type { InitialPageItem, PageItem } from "@/hooks/use-page-item-composer";
@@ -15,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 const ITEM_REMOVE_TAP = { scale: 0.92 } as const;
 const ITEM_BUTTON_TRANSITION = {
-  duration: 0.12,
+  duration: 0.06,
   ease: "easeOut",
 } as const;
 
@@ -32,9 +38,8 @@ type ItemListProps = {
   items: PageItem[];
   withBottomSpacing?: boolean;
   draftItem?: ReactNode;
-  canEditMemo?: boolean;
+  itemActions?: EditableItemActions;
   onMemoChange?: (itemId: string, nextValue: string) => void;
-  onItemRemove?: (itemId: string) => void;
 };
 
 type DraftItemCardProps = {
@@ -45,7 +50,34 @@ type DraftItemCardProps = {
   onDraftChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
 };
 
-function getItemCardHeightClass(sizeCode: PageItem["sizeCode"]) {
+type EditableItemActions = {
+  onRemove: (itemId: string) => void;
+  onResize: (itemId: string, nextSizeCode: PageItem["sizeCode"]) => void;
+};
+
+const PAGE_ITEM_RESIZE_OPTIONS: Array<{
+  sizeCode: PageItem["sizeCode"];
+  ariaLabel: string;
+  icon: ReactNode;
+}> = [
+  {
+    sizeCode: "wide-short",
+    ariaLabel: "Set wide short size",
+    icon: <RectangleHorizontalIcon className="size-4" strokeWidth={2.5} />,
+  },
+  {
+    sizeCode: "wide-tall",
+    ariaLabel: "Set wide tall size",
+    icon: <Rectangle className="size-5" />,
+  },
+  {
+    sizeCode: "wide-full",
+    ariaLabel: "Set wide full size",
+    icon: <SquareIcon className="size-4" strokeWidth={2.5} />,
+  },
+];
+
+function getItemCardSizeClass(sizeCode: PageItem["sizeCode"]) {
   if (sizeCode === "wide-short") {
     return "h-16";
   }
@@ -54,7 +86,7 @@ function getItemCardHeightClass(sizeCode: PageItem["sizeCode"]) {
     return "h-28";
   }
 
-  return "h-44";
+  return "aspect-square";
 }
 
 function DraftItemCard({ draft, focusRequestId, onDraftChange }: DraftItemCardProps) {
@@ -81,7 +113,62 @@ function DraftItemCard({ draft, focusRequestId, onDraftChange }: DraftItemCardPr
   );
 }
 
-function ItemList({ items, withBottomSpacing = false, draftItem, canEditMemo = false, onMemoChange, onItemRemove }: ItemListProps) {
+function EditableItemActionControls({ item, itemActions }: { item: PageItem; itemActions: EditableItemActions }) {
+  return (
+    <>
+      <motion.button
+        type="button"
+        className={cn(buttonVariants({ size: "icon-lg" }), PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME)}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          itemActions.onRemove(item.id);
+        }}
+        aria-label="Remove item"
+        whileTap={ITEM_REMOVE_TAP}
+        transition={ITEM_BUTTON_TRANSITION}
+      >
+        <TrashIcon className="size-4" strokeWidth={3} />
+      </motion.button>
+      <ButtonGroup
+        aria-label="Item size options"
+        orientation={"horizontal"}
+        className={cn(
+          PUBLIC_PAGE_ITEM_RESIZE_GROUP_CLASSNAME,
+          "phantom-border gap-1 rounded-sm p-1.5 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+        )}
+      >
+        {PAGE_ITEM_RESIZE_OPTIONS.map((option) => {
+          const isSelected = option.sizeCode === item.sizeCode;
+
+          return (
+            <motion.button
+              key={option.sizeCode}
+              type="button"
+              aria-label={option.ariaLabel}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                itemActions.onResize(item.id, option.sizeCode);
+              }}
+              className={cn(
+                uiButtonVariants({ size: "icon-xs", variant: "ghost" }),
+                "size-7 rounded-[4px]! border-0 p-0 text-background hover:bg-background/20 hover:text-background",
+                isSelected && "bg-background text-foreground hover:bg-background hover:text-foreground",
+              )}
+              whileTap={ITEM_REMOVE_TAP}
+              transition={ITEM_BUTTON_TRANSITION}
+            >
+              {option.icon}
+            </motion.button>
+          );
+        })}
+      </ButtonGroup>
+    </>
+  );
+}
+
+function ItemList({ items, withBottomSpacing = false, draftItem, itemActions, onMemoChange }: ItemListProps) {
   if (items.length === 0 && !draftItem) {
     return null;
   }
@@ -99,26 +186,11 @@ function ItemList({ items, withBottomSpacing = false, draftItem, canEditMemo = f
             data-size-code={item.sizeCode}
             className={cn(
               "group relative flex flex-col justify-center gap-2 rounded-[16px] border p-3",
-              getItemCardHeightClass(item.sizeCode),
+              getItemCardSizeClass(item.sizeCode),
             )}
           >
-            {onItemRemove ? (
-              <motion.button
-                type="button"
-                className={cn(buttonVariants({ size: "icon-lg" }), PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME)}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onItemRemove(item.id);
-                }}
-                aria-label="Remove item"
-                whileTap={ITEM_REMOVE_TAP}
-                transition={ITEM_BUTTON_TRANSITION}
-              >
-                <TrashIcon className="size-4" strokeWidth={3} />
-              </motion.button>
-            ) : null}
-            <ItemRenderer item={item} canEditMemo={canEditMemo} onMemoChange={onMemoChange} />
+            {itemActions ? <EditableItemActionControls item={item} itemActions={itemActions} /> : null}
+            <ItemRenderer item={item} canEditMemo={Boolean(itemActions)} onMemoChange={onMemoChange} />
           </article>
         );
       })}
@@ -138,6 +210,10 @@ export function EditablePageItemSection({ handle, initialItems = [] }: EditableP
   const draftItem = controller.draft ? (
     <DraftItemCard draft={controller.draft} focusRequestId={controller.focusRequestId} onDraftChange={controller.handleDraftChange} />
   ) : null;
+  const itemActions: EditableItemActions = {
+    onRemove: controller.handleRemoveItem,
+    onResize: controller.handleItemResize,
+  };
 
   return (
     <section className="flex flex-col gap-3">
@@ -145,9 +221,8 @@ export function EditablePageItemSection({ handle, initialItems = [] }: EditableP
         items={controller.items}
         withBottomSpacing
         draftItem={draftItem}
-        canEditMemo
+        itemActions={itemActions}
         onMemoChange={controller.handleItemMemoChange}
-        onItemRemove={controller.handleRemoveItem}
       />
       <ItemComposerBar hasDraft={Boolean(controller.draft)} onOpenComposer={controller.handleOpenComposer} />
     </section>

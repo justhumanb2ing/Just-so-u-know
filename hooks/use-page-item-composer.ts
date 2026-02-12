@@ -3,14 +3,14 @@
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { PAGE_ITEM_SIZE_CODES, type PageItemSizeCode } from "@/service/page/item-size";
 
 export const ITEM_COMPOSER_AUTOSAVE_DEBOUNCE_MS = 800;
-export const DEFAULT_PAGE_ITEM_SIZE_CODE = "wide-short" as const;
+export const DEFAULT_PAGE_ITEM_SIZE_CODE: PageItemSizeCode = "wide-short";
 
 const WINDOWS_LINE_BREAK_PATTERN = /\r\n?/g;
-const PAGE_ITEM_SIZE_CODES = ["wide-short", "wide-tall", "wide-full"] as const;
 
-export type PageItemSizeCode = (typeof PAGE_ITEM_SIZE_CODES)[number];
+export type { PageItemSizeCode } from "@/service/page/item-size";
 
 export type InitialPageItem = {
   id: string;
@@ -64,6 +64,7 @@ export type PageItemComposerController = {
   handleOpenComposer: () => void;
   handleDraftChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
   handleItemMemoChange: (itemId: string, nextValue: string) => void;
+  handleItemResize: (itemId: string, nextSizeCode: PageItemSizeCode) => void;
   handleRemoveItem: (itemId: string) => void;
 };
 
@@ -190,9 +191,37 @@ export function updateMemoItemContent(items: PageItem[], itemId: string, content
 }
 
 /**
+ * 아이템 목록에서 특정 아이템의 sizeCode를 낙관적으로 갱신한다.
+ */
+export function updatePageItemSize(items: PageItem[], itemId: string, nextSizeCode: PageItemSizeCode) {
+  let hasChanged = false;
+
+  const nextItems = items.map((item) => {
+    if (item.id !== itemId || item.sizeCode === nextSizeCode) {
+      return item;
+    }
+
+    hasChanged = true;
+
+    return {
+      ...item,
+      sizeCode: nextSizeCode,
+    };
+  });
+
+  return hasChanged ? nextItems : items;
+}
+
+/**
  * 아이템 목록에서 특정 아이템을 제거하고 제거된 항목을 함께 반환한다.
  */
-export function removePageItemById(items: PageItem[], itemId: string) {
+export function removePageItemById(
+  items: PageItem[],
+  itemId: string,
+): {
+  nextItems: PageItem[];
+  removedItem: PageItem | null;
+} {
   let removedItem: PageItem | null = null;
 
   const nextItems = items.filter((item) => {
@@ -256,14 +285,25 @@ export function normalizeCreatedItem(item: PersistedPageItemApiResponse["item"])
  * 현재는 memo 타입 생성/수정만 지원하지만, 호출부는 타입 확장을 고려한 아이템 컨트롤러로 사용한다.
  */
 export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemComposerParams): PageItemComposerController {
+  const normalizedInitialItemsRef = useRef<PageItem[] | null>(null);
+
+  if (!normalizedInitialItemsRef.current) {
+    normalizedInitialItemsRef.current = normalizeInitialPageItems(initialItems);
+  }
+
   const [draft, setDraft] = useState<ItemDraftState | null>(null);
-  const [items, setItems] = useState<PageItem[]>(() => normalizeInitialPageItems(initialItems));
+  const [items, setItems] = useState<PageItem[]>(() => normalizedInitialItemsRef.current ?? []);
   const [focusRequestId, setFocusRequestId] = useState(0);
   const draftRef = useRef<ItemDraftState | null>(null);
   const itemsRef = useRef<PageItem[]>(items);
   const memoSaveTimerMapRef = useRef<Map<string, number>>(new Map());
   const memoPersistInFlightIdsRef = useRef<Set<string>>(new Set());
   const memoPersistQueuedIdsRef = useRef<Set<string>>(new Set());
+  const itemSizePersistInFlightIdsRef = useRef<Set<string>>(new Set());
+  const itemSizePersistQueuedIdsRef = useRef<Set<string>>(new Set());
+  const itemLastSyncedSizeCodeMapRef = useRef<Map<string, PageItemSizeCode>>(
+    new Map((normalizedInitialItemsRef.current ?? []).map((item) => [item.id, item.sizeCode])),
+  );
   const itemDeleteInFlightIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -283,6 +323,9 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       memoSaveTimerMapRef.current.clear();
       memoPersistInFlightIdsRef.current.clear();
       memoPersistQueuedIdsRef.current.clear();
+      itemSizePersistInFlightIdsRef.current.clear();
+      itemSizePersistQueuedIdsRef.current.clear();
+      itemLastSyncedSizeCodeMapRef.current.clear();
       itemDeleteInFlightIdsRef.current.clear();
     };
   }, []);
@@ -330,6 +373,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       }
 
       const createdItem = normalizeCreatedItem(payload.item);
+      itemLastSyncedSizeCodeMapRef.current.set(createdItem.id, createdItem.sizeCode);
 
       setItems((prevItems) => sortPageItems([...prevItems, createdItem]));
       setDraft((prevDraft) => resolveDraftAfterPersistSuccess(prevDraft, currentDraft.id));
@@ -440,6 +484,108 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     [handle],
   );
 
+  /**
+   * 아이템 사이즈를 서버에 저장한다.
+   * 동일 아이템은 단일 in-flight 요청만 허용하고, 중복 요청은 마지막 상태로 재실행한다.
+   */
+  const persistItemSize = useCallback(
+    async (itemId: string, explicitSizeCode?: PageItemSizeCode) => {
+      if (itemSizePersistInFlightIdsRef.current.has(itemId)) {
+        itemSizePersistQueuedIdsRef.current.add(itemId);
+        return;
+      }
+
+      const targetItem = itemsRef.current.find((item) => item.id === itemId);
+
+      if (!targetItem) {
+        return;
+      }
+
+      const targetSizeCode = explicitSizeCode ?? targetItem.sizeCode;
+      const lastSyncedSizeCode = itemLastSyncedSizeCodeMapRef.current.get(itemId);
+
+      if (lastSyncedSizeCode === targetSizeCode) {
+        return;
+      }
+
+      itemSizePersistInFlightIdsRef.current.add(itemId);
+
+      try {
+        const response = await fetch(buildPageItemEndpoint(handle, itemId), {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "size",
+            data: {
+              sizeCode: targetSizeCode,
+            },
+          }),
+        });
+
+        const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+        if (!response.ok || payload.status !== "success") {
+          throw new Error(payload.status === "error" ? payload.message : "Failed to resize item.");
+        }
+
+        const updatedItem = normalizeCreatedItem(payload.item);
+
+        itemLastSyncedSizeCodeMapRef.current.set(itemId, updatedItem.sizeCode);
+        setItems((prevItems) =>
+          prevItems.map((item) => {
+            if (item.id !== itemId) {
+              return item;
+            }
+
+            return {
+              ...item,
+              sizeCode: updatedItem.sizeCode,
+              updatedAt: updatedItem.updatedAt,
+            };
+          }),
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to resize item.";
+        const rollbackSizeCode = itemLastSyncedSizeCodeMapRef.current.get(itemId);
+
+        if (rollbackSizeCode) {
+          setItems((prevItems) => {
+            let hasChanged = false;
+
+            const nextItems = prevItems.map((item) => {
+              if (item.id !== itemId || item.sizeCode !== targetSizeCode) {
+                return item;
+              }
+
+              hasChanged = true;
+
+              return {
+                ...item,
+                sizeCode: rollbackSizeCode,
+              };
+            });
+
+            return hasChanged ? nextItems : prevItems;
+          });
+        }
+
+        toast.error("Failed to resize item", {
+          description: message,
+        });
+      } finally {
+        itemSizePersistInFlightIdsRef.current.delete(itemId);
+
+        if (itemSizePersistQueuedIdsRef.current.has(itemId)) {
+          itemSizePersistQueuedIdsRef.current.delete(itemId);
+          void persistItemSize(itemId);
+        }
+      }
+    },
+    [handle],
+  );
+
   const scheduleMemoPersist = useCallback(
     (itemId: string) => {
       const activeTimerId = memoSaveTimerMapRef.current.get(itemId);
@@ -512,6 +658,20 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     [scheduleMemoPersist],
   );
 
+  const handleItemResize = useCallback(
+    (itemId: string, nextSizeCode: PageItemSizeCode) => {
+      const targetItem = itemsRef.current.find((item) => item.id === itemId);
+
+      if (!targetItem || targetItem.sizeCode === nextSizeCode) {
+        return;
+      }
+
+      setItems((prevItems) => updatePageItemSize(prevItems, itemId, nextSizeCode));
+      void persistItemSize(itemId, nextSizeCode);
+    },
+    [persistItemSize],
+  );
+
   const handleRemoveItem = useCallback(
     (itemId: string) => {
       if (itemDeleteInFlightIdsRef.current.has(itemId)) {
@@ -524,8 +684,13 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         return;
       }
 
+      const removedItemLastSyncedSizeCode = itemLastSyncedSizeCodeMapRef.current.get(itemId) ?? removedItem.sizeCode;
+
       itemDeleteInFlightIdsRef.current.add(itemId);
       cancelMemoPersist(itemId);
+      itemLastSyncedSizeCodeMapRef.current.delete(itemId);
+      itemSizePersistQueuedIdsRef.current.delete(itemId);
+      itemSizePersistInFlightIdsRef.current.delete(itemId);
       setItems(nextItems);
 
       void (async () => {
@@ -542,6 +707,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         } catch (error) {
           const message = error instanceof Error ? error.message : "Failed to delete item.";
 
+          itemLastSyncedSizeCodeMapRef.current.set(itemId, removedItemLastSyncedSizeCode);
           setItems((prevItems) => restoreRemovedPageItem(prevItems, removedItem));
           toast.error("Failed to delete item", {
             description: message,
@@ -561,6 +727,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     handleOpenComposer,
     handleDraftChange,
     handleItemMemoChange,
+    handleItemResize,
     handleRemoveItem,
   };
 }

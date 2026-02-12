@@ -72,4 +72,42 @@ describe("page item schema", () => {
       },
     });
   });
+
+  test("아이템 수정 스키마는 sizeCode를 허용 목록으로 검증한다", () => {
+    // Arrange
+    const payload = {
+      type: "size",
+      data: {
+        sizeCode: "wide-full",
+      },
+    };
+
+    // Act
+    const result = pageItemUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      type: "size",
+      data: {
+        sizeCode: "wide-full",
+      },
+    });
+  });
+
+  test("아이템 수정 스키마는 잘못된 sizeCode를 거부한다", () => {
+    // Arrange
+    const payload = {
+      type: "size",
+      data: {
+        sizeCode: "invalid-size",
+      },
+    };
+
+    // Act
+    const result = pageItemUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
 });

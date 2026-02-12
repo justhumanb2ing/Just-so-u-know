@@ -1,6 +1,7 @@
 import { sql } from "kysely";
 import { cache } from "react";
 import { kysely } from "@/lib/kysely";
+import type { PageItemSizeCode } from "@/service/page/item-size";
 import { normalizeStoredHandleFromPath } from "@/service/page/schema";
 
 export type PageItemRow = {
@@ -53,6 +54,13 @@ export type DeleteOwnedPageItemInput = {
   storedHandle: string;
   userId: string;
   itemId: string;
+};
+
+export type UpdateOwnedPageItemSizeInput = {
+  storedHandle: string;
+  userId: string;
+  itemId: string;
+  sizeCode: PageItemSizeCode;
 };
 
 const queryVisiblePageItemsByStoredHandle = cache(async (storedHandle: string): Promise<VisiblePageItem[]> => {
@@ -150,6 +158,42 @@ export async function updateOwnedMemoItem({
       and public.page.user_id = ${userId}
       and page_item.id = ${itemId}::uuid
       and page_item.type_code = 'memo'
+    returning
+      page_item.id,
+      page_item.page_id as "pageId",
+      page_item.type_code as "typeCode",
+      page_item.size_code as "sizeCode",
+      page_item.order_key as "orderKey",
+      page_item.data,
+      page_item.is_visible as "isVisible",
+      page_item.lock_version as "lockVersion",
+      page_item.created_at as "createdAt",
+      page_item.updated_at as "updatedAt"
+  `.execute(kysely);
+
+  return result.rows[0] ?? null;
+}
+
+/**
+ * 소유한 페이지의 아이템 size_code를 수정한다.
+ * 페이지 소유권 조건과 itemId를 동시에 만족해야 갱신된다.
+ */
+export async function updateOwnedPageItemSize({
+  storedHandle,
+  userId,
+  itemId,
+  sizeCode,
+}: UpdateOwnedPageItemSizeInput): Promise<PageItemRow | null> {
+  const result = await sql<PageItemRow>`
+    update public.page_item
+    set
+      size_code = ${sizeCode},
+      lock_version = page_item.lock_version + 1
+    from public.page
+    where public.page.id = page_item.page_id
+      and public.page.handle = ${storedHandle}
+      and public.page.user_id = ${userId}
+      and page_item.id = ${itemId}::uuid
     returning
       page_item.id,
       page_item.page_id as "pageId",

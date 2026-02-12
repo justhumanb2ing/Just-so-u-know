@@ -12,6 +12,7 @@ import {
   resolveMemoItemContent,
   restoreRemovedPageItem,
   updateMemoItemContent,
+  updatePageItemSize,
 } from "@/hooks/use-page-item-composer";
 
 describe("usePageItemComposer helpers", () => {
@@ -194,6 +195,41 @@ describe("usePageItemComposer helpers", () => {
     expect(result[0]?.data).toEqual({
       content: "after",
     });
+    expect(result[1]).toEqual(items[1]);
+  });
+
+  test("sizeCode 수정 시 대상 아이템만 낙관적으로 갱신한다", () => {
+    // Arrange
+    const items = [
+      {
+        id: "item-1",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 1,
+        data: {
+          content: "before",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-2",
+        typeCode: "link",
+        sizeCode: "wide-full",
+        orderKey: 2,
+        data: {
+          url: "https://example.com",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+    ] as const;
+
+    // Act
+    const result = updatePageItemSize([...items], "item-1", "wide-tall");
+
+    // Assert
+    expect(result[0]?.sizeCode).toBe("wide-tall");
     expect(result[1]).toEqual(items[1]);
   });
 

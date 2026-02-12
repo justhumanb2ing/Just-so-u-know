@@ -12,6 +12,7 @@
 - `app/api/page/image/complete-upload/route.ts`
 - `app/api/page/image/delete/route.ts`
 - `app/api/pages/[handle]/items/route.ts`
+- `app/api/pages/[handle]/items/[itemId]/route.ts`
 - `app/[handle]/page.tsx`
 - `service/page/schema.ts`
 - `service/page/items.ts`
@@ -125,6 +126,24 @@
   - 성공 시 `200 OK` + 삭제된 아이템 1개 반환
   - 실패 시 `401/403/404/422/500` 상태 코드로 정규화된 에러를 반환한다.
 
+## 페이지 아이템 수정 API 동작
+- 엔드포인트: `PATCH /api/pages/{handle}/items/{itemId}`
+- 인증: Better Auth 세션 필수
+- 접근 제어:
+  - 페이지 소유자만 수정 가능
+  - 비소유자는 `403`을 반환한다.
+- 요청 스키마:
+  - `type: "memo"` + `data.content`로 memo 본문 수정
+  - `type: "size"` + `data.sizeCode`(`wide-short | wide-tall | wide-full`)로 카드 크기 수정
+- 처리 정책:
+  - `handle`은 경로 파라미터를 저장 포맷(`@handle`)으로 정규화해 검증한다.
+  - `itemId`는 UUID 포맷으로 검증한다.
+  - DB에서 `page.handle + page.user_id + page_item.id` 조건으로 매칭되는 1건만 갱신한다.
+  - `sizeCode`는 `public.item_size(code)` FK 제약으로 정합성을 보장한다.
+- 응답:
+  - 성공 시 `200 OK` + 수정된 아이템 1개 반환
+  - 실패 시 `401/403/404/422/500` 상태 코드로 정규화된 에러를 반환한다.
+
 ## 페이지 아이템 조회 API 동작
 - 엔드포인트: `GET /api/pages/{handle}/items`
 - 접근 제어:
@@ -148,7 +167,9 @@
   - 텍스트 본문은 줄바꿈(`\n`)을 보존해 저장/표시한다.
   - 자동 저장 전에 내용을 모두 지워도 draft는 유지한다.
   - 저장된 아이템 카드 우상단에 hover 시 삭제 버튼이 노출된다.
+  - 저장된 아이템 카드 좌상단에 hover 시 사이즈 버튼 그룹이 노출된다.
   - 삭제 버튼 클릭 시 목록에서 즉시 제거(낙관적 업데이트) 후 서버 물리 삭제를 요청한다.
+  - 사이즈 버튼 클릭 시 목록에서 즉시 사이즈를 변경(낙관적 업데이트)하고 서버에 즉시 동기화한다.
 - 저장 성공 시:
   - 생성된 아이템을 로컬 목록에 append해 즉시 화면에 반영한다.
   - 자동 저장 후에도 draft textarea는 유지되어 포커스를 잃지 않는다.
@@ -156,6 +177,7 @@
 - 저장 실패 시:
   - draft를 유지하고 toast 에러를 표시한다.
   - 아이템 삭제 실패 시 제거했던 항목을 기존 `orderKey` 기준으로 복구하고 toast 에러를 표시한다.
+  - 아이템 사이즈 변경 실패 시 마지막 서버 동기화 size로 롤백하고 toast 에러를 표시한다.
 - 아이템 카드 렌더링 제약:
   - draft/저장 상태 모두 카드 높이는 `h-16`으로 고정하고 overflow를 숨긴다.
   - draft textarea는 카드 내부 세로 중앙에 위치한다.

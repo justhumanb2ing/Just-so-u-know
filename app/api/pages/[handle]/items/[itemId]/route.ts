@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { auth } from "@/lib/auth/auth";
 import { findPageByPathHandle } from "@/service/onboarding/public-page";
-import { deleteOwnedPageItem, updateOwnedMemoItem } from "@/service/page/items";
+import { deleteOwnedPageItem, updateOwnedMemoItem, updateOwnedPageItemSize } from "@/service/page/items";
 import { normalizeStoredHandleFromPath, pageItemUpdateSchema } from "@/service/page/schema";
 
 export const runtime = "nodejs";
@@ -16,7 +16,7 @@ type PostgresErrorLike = {
   message?: string;
 };
 
-const itemIdSchema = z.string().uuid({
+const itemIdSchema = z.uuid({
   message: "Invalid item id.",
 });
 
@@ -43,7 +43,7 @@ function toPostgresErrorLike(error: unknown): PostgresErrorLike | null {
 }
 
 /**
- * memo 아이템 수정 중 발생한 DB 예외를 HTTP 상태 코드/메시지로 정규화한다.
+ * 아이템 수정 중 발생한 DB 예외를 HTTP 상태 코드/메시지로 정규화한다.
  */
 function mapUpdateItemError(error: unknown) {
   const postgresError = toPostgresErrorLike(error);
@@ -54,6 +54,13 @@ function mapUpdateItemError(error: unknown) {
     return {
       status: 422,
       message,
+    };
+  }
+
+  if (code === "23503") {
+    return {
+      status: 422,
+      message: "Invalid item size.",
     };
   }
 
@@ -85,7 +92,8 @@ function mapDeleteItemError(error: unknown) {
 }
 
 /**
- * 소유한 페이지의 memo 아이템을 수정한다.
+ * 소유한 페이지의 아이템을 수정한다.
+ * 현재는 memo content 수정과 size_code 수정을 지원한다.
  */
 export async function PATCH(request: Request, context: UpdateItemRouteContext) {
   const requestHeaders = await headers();
@@ -177,12 +185,20 @@ export async function PATCH(request: Request, context: UpdateItemRouteContext) {
   }
 
   try {
-    const updatedItem = await updateOwnedMemoItem({
-      storedHandle,
-      userId: session.user.id,
-      itemId: parsedItemId.data,
-      content: parsedBody.data.data.content,
-    });
+    const updatedItem =
+      parsedBody.data.type === "memo"
+        ? await updateOwnedMemoItem({
+            storedHandle,
+            userId: session.user.id,
+            itemId: parsedItemId.data,
+            content: parsedBody.data.data.content,
+          })
+        : await updateOwnedPageItemSize({
+            storedHandle,
+            userId: session.user.id,
+            itemId: parsedItemId.data,
+            sizeCode: parsedBody.data.data.sizeCode,
+          });
 
     if (!updatedItem) {
       return Response.json(

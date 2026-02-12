@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PAGE_ITEM_SIZE_CODES } from "@/service/page/item-size";
 
 const STORED_HANDLE_PATTERN = /^@[a-z0-9]{3,20}$/;
 const WINDOWS_LINE_BREAK_PATTERN = /\r\n?/g;
@@ -21,6 +22,10 @@ const memoContentSchema = z
     message: "Memo content is required.",
   });
 
+const pageItemSizeCodeSchema = z.enum(PAGE_ITEM_SIZE_CODES, {
+  message: "Invalid item size.",
+});
+
 /**
  * 페이지 아이템 생성 API 입력을 검증한다.
  * 현재는 memo 타입만 허용한다.
@@ -34,15 +39,24 @@ export const pageItemCreateSchema = z.object({
 
 export type PageItemCreateInput = z.infer<typeof pageItemCreateSchema>;
 
-/**
- * 페이지 아이템 수정 API 입력을 검증한다.
- * 현재는 memo 타입 content 수정만 허용한다.
- */
-export const pageItemUpdateSchema = z.object({
+const pageItemMemoUpdateSchema = z.object({
   type: z.literal("memo"),
   data: z.object({
     content: memoContentSchema,
   }),
 });
+
+const pageItemSizeUpdateSchema = z.object({
+  type: z.literal("size"),
+  data: z.object({
+    sizeCode: pageItemSizeCodeSchema,
+  }),
+});
+
+/**
+ * 페이지 아이템 수정 API 입력을 검증한다.
+ * 현재는 memo content 수정과 size_code 수정을 지원한다.
+ */
+export const pageItemUpdateSchema = z.discriminatedUnion("type", [pageItemMemoUpdateSchema, pageItemSizeUpdateSchema]);
 
 export type PageItemUpdateInput = z.infer<typeof pageItemUpdateSchema>;

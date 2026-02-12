@@ -36,3 +36,5 @@ export const PUBLIC_PAGE_HOVER_REMOVE_BUTTON_BASE_CLASSNAME =
 export const PUBLIC_PAGE_IMAGE_REMOVE_BUTTON_CLASSNAME = `${PUBLIC_PAGE_HOVER_REMOVE_BUTTON_BASE_CLASSNAME} right-2 bottom-2 group-focus-within:pointer-events-auto group-focus-within:opacity-100`;
 
 export const PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME = `${PUBLIC_PAGE_HOVER_REMOVE_BUTTON_BASE_CLASSNAME} -right-3 -top-3`;
+
+export const PUBLIC_PAGE_ITEM_RESIZE_GROUP_CLASSNAME = `${PUBLIC_PAGE_HOVER_REMOVE_BUTTON_BASE_CLASSNAME} -bottom-4 left-1/2 -translate-x-1/2 border-0 bg-foreground p-1`;

@@ -66,6 +66,9 @@ bun dev
 - 소유자 화면의 아이템 생성 입력은 하단 고정 컴포넌트(`page-item-composer-bar`)로 분리되어 동작한다.
 - `memo` 아이템은 카드 본문에서 `textarea`로 직접 수정되며, 비소유자는 동일 UI를 비활성화 상태로만 확인할 수 있다.
 - 소유자 화면의 아이템 카드 우상단에는 hover 시에만 삭제 버튼이 노출되며, 클릭하면 아이템이 DB에서 물리 삭제된다.
+- 소유자 화면의 아이템 카드 hover 액션에 사이즈 버튼 그룹(`wide-short`, `wide-tall`, `wide-full`)이 노출된다.
+- 사이즈 버튼 그룹 컨테이너는 `bg-foreground`이며, 현재 선택된 옵션은 `bg-background text-foreground` 상태로 표시된다.
+- 사이즈 옵션 클릭 시 카드 높이가 즉시 변경되고, `PATCH /api/pages/{handle}/items/{itemId}` 요청으로 DB `size_code`가 즉시 반영된다.
 - `memo` 수정 반영은 생성과 동일하게 `800ms` 디바운스로 자동 저장된다.
 
 ### 검증 커맨드
