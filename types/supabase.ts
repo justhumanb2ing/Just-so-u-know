@@ -351,6 +351,33 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      create_link_item_for_owned_page: {
+        Args: {
+          p_favicon?: string;
+          p_handle: string;
+          p_title: string;
+          p_url: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          data: Json;
+          id: string;
+          is_visible: boolean;
+          lock_version: number;
+          order_key: number;
+          page_id: string;
+          size_code: Database["public"]["Enums"]["page_item_size"];
+          type_code: string;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "page_item";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       create_memo_item_for_owned_page: {
         Args: { p_content: string; p_handle: string; p_user_id: string };
         Returns: {

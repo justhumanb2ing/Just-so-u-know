@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { normalizeStoredHandleFromPath, pageItemCreateSchema, pageItemUpdateSchema } from "@/service/page/schema";
+import {
+  normalizeStoredHandleFromPath,
+  pageItemCreateSchema,
+  pageItemUpdateSchema,
+  pageSocialItemsUpsertSchema,
+} from "@/service/page/schema";
 
 describe("page item schema", () => {
   test("경로 handle을 저장 포맷으로 정규화한다", () => {
@@ -106,6 +111,41 @@ describe("page item schema", () => {
 
     // Act
     const result = pageItemUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
+  test("소셜 계정 저장 스키마는 빈 식별자를 제외하고 플랫폼 기준으로 병합한다", () => {
+    // Arrange
+    const payload = {
+      items: [
+        { platform: "x", username: "  @first  " },
+        { platform: "github", username: "   " },
+        { platform: "x", username: "  @second  " },
+        { platform: "chzzk", username: "  @channel-id  " },
+      ],
+    };
+
+    // Act
+    const result = pageSocialItemsUpsertSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data.items).toEqual([
+      { platform: "x", username: "second" },
+      { platform: "chzzk", username: "@channel-id" },
+    ]);
+  });
+
+  test("소셜 계정 저장 스키마는 허용되지 않은 플랫폼 값을 거부한다", () => {
+    // Arrange
+    const payload = {
+      items: [{ platform: "not-supported", username: "tester" }],
+    };
+
+    // Act
+    const result = pageSocialItemsUpsertSchema.safeParse(payload);
 
     // Assert
     expect(result.success).toBe(false);

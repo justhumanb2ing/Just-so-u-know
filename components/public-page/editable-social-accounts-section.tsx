@@ -2,7 +2,7 @@
 
 import { AtSignIcon, CircleCheckIcon, XIcon as CloseIcon } from "lucide-react";
 import type { KeyboardEvent } from "react";
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Tooltip, TooltipPanel, TooltipTrigger } from "@/components/animate-ui/components/base/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   SOCIAL_PLATFORM_BY_ID,
   SOCIAL_PLATFORM_DEFINITIONS,
 } from "@/constants/social-platforms";
+import { usePageSocialAccounts } from "@/hooks/use-page-social-accounts";
 import { cn } from "@/lib/utils";
 import { SOCIAL_PLATFORM_ICON_MAP, type SocialPlatformIconComponent } from "../icons/social-platform-icon-map";
 import { ScrollArea } from "../ui/scroll-area";
@@ -116,6 +117,11 @@ const SOCIAL_PLATFORM_OPTIONS: SocialPlatformOption[] = SOCIAL_PLATFORM_DEFINITI
 type SocialPlatformRowProps = {
   option: SocialPlatformOption;
   initialIdentifier: string;
+  pendingDelete?: boolean;
+  disabled?: boolean;
+  onCommit: (platform: SocialPlatform, identifier: string) => void;
+  onUncommit: (platform: SocialPlatform, currentIdentifier: string) => void;
+  onDraftChange: (platform: SocialPlatform, identifier: string) => void;
 };
 
 export type EditableSocialAccountInitialItem = {
@@ -178,25 +184,38 @@ function buildInitialIdentifierByPlatform(initialItems: EditableSocialAccountIni
   return identifierByPlatform;
 }
 
-function SocialPlatformRow({ option, initialIdentifier }: SocialPlatformRowProps) {
-  const { platform, label, Icon, brandColor, iconClassName, iconButtonClassName, iconColor, disabled } = option;
+function SocialPlatformRow({
+  option,
+  initialIdentifier,
+  pendingDelete,
+  disabled,
+  onCommit,
+  onUncommit,
+  onDraftChange,
+}: SocialPlatformRowProps) {
+  const { platform, label, Icon, brandColor, iconClassName, iconButtonClassName, iconColor, disabled: optionDisabled } = option;
   const identifierPlaceholder = getSocialIdentifierPlaceholder(platform);
   const normalizedInitialIdentifier = normalizeSocialIdentifier(platform, initialIdentifier);
   const [inputValue, setInputValue] = useState(normalizedInitialIdentifier);
   const [isSubmitted, setIsSubmitted] = useState(Boolean(normalizedInitialIdentifier));
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const isRowDisabled = Boolean(disabled || optionDisabled);
   const hasInputValue = inputValue.trim().length > 0;
 
   const handleSubmitInput = () => {
-    if (!hasInputValue) {
+    const normalizedIdentifier = normalizeSocialIdentifier(platform, inputValue);
+
+    if (!normalizedIdentifier) {
       return;
     }
 
-    setInputValue(normalizeSocialIdentifier(platform, inputValue));
+    setInputValue(normalizedIdentifier);
     setIsSubmitted(true);
+    onCommit(platform, normalizedIdentifier);
   };
 
   const handleConfirmInput = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== "Enter") {
+    if (event.key !== "Enter" || event.nativeEvent.isComposing) {
       return;
     }
 
@@ -206,98 +225,230 @@ function SocialPlatformRow({ option, initialIdentifier }: SocialPlatformRowProps
 
   const handleEditInput = () => {
     setIsSubmitted(false);
+    onUncommit(platform, inputValue);
+    requestAnimationFrame(() => {
+      const inputElement = inputRef.current;
+      if (!inputElement) {
+        return;
+      }
+
+      inputElement.focus();
+      const cursorPosition = inputElement.value.length;
+      inputElement.setSelectionRange(cursorPosition, cursorPosition);
+    });
   };
 
   const readableTextColor = getReadableTextColor(brandColor);
 
   return (
-    <div className="mb-3 flex min-w-0 items-center gap-3">
-      <Tooltip delay={100}>
-        <TooltipTrigger
-          render={
-            <Button
-              size="icon-lg"
-              variant="default"
-              disabled={disabled}
-              className={cn(disabled && "opacity-50", "phantom-border size-11! rounded-md shadow-xs", iconButtonClassName)}
-            />
-          }
-        >
-          <Icon aria-hidden="true" color={iconColor} className={iconClassName} />
-        </TooltipTrigger>
-        <TooltipPanel side="top" align="center">
-          {label}
-        </TooltipPanel>
-      </Tooltip>
-
-      <div className="relative min-w-0 flex-1">
-        {isSubmitted ? (
-          <div
-            className="relative flex h-11 w-full items-center overflow-hidden rounded-md border px-3 text-sm"
-            style={{
-              backgroundColor: brandColor,
-              borderColor: brandColor,
-              color: readableTextColor,
-            }}
-          >
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden pe-8">
-              <CircleCheckIcon aria-hidden="true" size={18} className="shrink-0 fill-white" style={{ stroke: brandColor }} />
-              <span className="block min-w-0 flex-1 truncate font-medium">{inputValue}</span>
-            </div>
-            <button
-              type="button"
-              disabled={disabled}
-              aria-label={`Edit ${label} ${identifierPlaceholder}`}
-              onClick={handleEditInput}
-              className="absolute inset-y-0 end-3 inline-flex size-6 shrink-0 items-center justify-center self-center rounded-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <CloseIcon aria-hidden="true" size={16} strokeWidth={3} className="shrink-0" style={{ color: readableTextColor }} />
-            </button>
-          </div>
-        ) : (
-          <>
-            <Input
-              name={`social-${platform}`}
-              value={inputValue}
-              placeholder={identifierPlaceholder}
-              disabled={disabled}
-              autoComplete="off"
-              aria-label={`${label} ${identifierPlaceholder}`}
-              onChange={(event) => setInputValue(event.target.value)}
-              onKeyDown={handleConfirmInput}
-              className={cn(
-                "peer h-11 rounded-md border-none bg-[#F7F7F7] px-3 ps-8 text-sm text-zinc-800 shadow-none placeholder:text-zinc-400 focus-visible:border-zinc-300 focus-visible:ring-zinc-300/50 disabled:opacity-50",
-                hasInputValue && "pe-15",
-              )}
-            />
-            <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
-              <AtSignIcon aria-hidden="true" size={16} className="text-zinc-700" />
-            </div>
-            {hasInputValue ? (
+    <div className="mb-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <Tooltip delay={100}>
+          <TooltipTrigger
+            render={
               <Button
+                size="icon-lg"
+                variant="default"
+                disabled={isRowDisabled}
+                className={cn(isRowDisabled && "opacity-50", "phantom-border size-11! rounded-md shadow-xs", iconButtonClassName)}
+              />
+            }
+          >
+            <Icon aria-hidden="true" color={iconColor} className={iconClassName} />
+          </TooltipTrigger>
+          <TooltipPanel side="top" align="center">
+            {label}
+          </TooltipPanel>
+        </Tooltip>
+
+        <div className="relative min-w-0 flex-1">
+          {isSubmitted ? (
+            <div
+              className="relative flex h-11 w-full items-center overflow-hidden rounded-md border px-3 text-sm"
+              style={{
+                backgroundColor: brandColor,
+                borderColor: brandColor,
+                color: readableTextColor,
+              }}
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden pe-8">
+                <CircleCheckIcon
+                  aria-hidden="true"
+                  size={18}
+                  className="shrink-0 fill-white"
+                  style={{ stroke: brandColor === "#FFFFFF" ? "#000000" : brandColor }}
+                />
+                <span className="block min-w-0 flex-1 truncate font-medium">{inputValue}</span>
+              </div>
+              <button
                 type="button"
-                size="xs"
-                disabled={disabled}
-                aria-label={`Get ${label} ${identifierPlaceholder}`}
-                onClick={handleSubmitInput}
-                className="phantom-border absolute inset-y-0 end-2 my-auto h-7 rounded-sm px-2.5 text-xs shadow-xs"
+                disabled={isRowDisabled}
+                aria-label={`Edit ${label} ${identifierPlaceholder}`}
+                onClick={handleEditInput}
+                className="absolute inset-y-0 end-3 inline-flex size-6 shrink-0 items-center justify-center self-center rounded-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Get
-              </Button>
-            ) : null}
-          </>
-        )}
+                <CloseIcon aria-hidden="true" size={16} strokeWidth={3} className="shrink-0" style={{ color: readableTextColor }} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <Input
+                ref={inputRef}
+                name={`social-${platform}`}
+                value={inputValue}
+                placeholder={identifierPlaceholder}
+                disabled={isRowDisabled}
+                autoComplete="off"
+                aria-label={`${label} ${identifierPlaceholder}`}
+                onChange={(event) => {
+                  const nextInputValue = event.target.value;
+                  setInputValue(nextInputValue);
+                  onDraftChange(platform, nextInputValue);
+                }}
+                onKeyDown={handleConfirmInput}
+                className={cn(
+                  "peer h-11 rounded-md border-none bg-[#F7F7F7] px-3 ps-8 text-sm text-zinc-800 shadow-none placeholder:text-zinc-400 focus-visible:border-zinc-300 focus-visible:ring-zinc-300/50 disabled:opacity-50",
+                  hasInputValue && "pe-15",
+                )}
+              />
+              <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
+                <AtSignIcon aria-hidden="true" size={16} className="text-zinc-700" />
+              </div>
+              {hasInputValue ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  disabled={isRowDisabled}
+                  aria-label={`Get ${label} ${identifierPlaceholder}`}
+                  onClick={handleSubmitInput}
+                  className="phantom-border absolute inset-y-0 end-2 my-auto h-7 rounded-sm px-2.5 text-xs shadow-xs"
+                >
+                  Get
+                </Button>
+              ) : null}
+            </>
+          )}
+        </div>
       </div>
+      {pendingDelete ? <p className="mt-1 pl-14 text-[11px] text-amber-600">Will be removed on save</p> : null}
     </div>
   );
 }
 
 /**
  * 소셜 식별자 입력 UI를 렌더링하는 편집 섹션.
- * 현재는 저장 로직 없이 입력 필드만 제공한다.
+ * Enter/Get으로 확정한 플랫폼을 Add Selected Platforms에서 일괄 저장한다.
  */
-export function EditableSocialAccountsSection({ initialItems = [] }: { initialItems?: EditableSocialAccountInitialItem[] }) {
-  const initialIdentifierByPlatform = buildInitialIdentifierByPlatform(initialItems);
+export function EditableSocialAccountsSection({
+  handle,
+  initialItems = [],
+}: {
+  handle: string;
+  initialItems?: EditableSocialAccountInitialItem[];
+}) {
+  const initialIdentifierByPlatform = useMemo(() => buildInitialIdentifierByPlatform(initialItems), [initialItems]);
+  const [persistedIdentifierByPlatform, setPersistedIdentifierByPlatform] = useState<Map<SocialPlatform, string>>(
+    () => new Map(initialIdentifierByPlatform),
+  );
+  const [selectedIdentifierByPlatform, setSelectedIdentifierByPlatform] = useState<Map<SocialPlatform, string>>(
+    () => new Map(initialIdentifierByPlatform),
+  );
+  const [draftIdentifierByPlatform, setDraftIdentifierByPlatform] = useState<Map<SocialPlatform, string>>(new Map());
+  const { isSaving, saveSocialPlatformChanges } = usePageSocialAccounts({ handle });
+
+  const handleCommit = useCallback((platform: SocialPlatform, identifier: string) => {
+    setSelectedIdentifierByPlatform((prevState) => {
+      const nextState = new Map(prevState);
+      nextState.set(platform, identifier);
+      return nextState;
+    });
+    setDraftIdentifierByPlatform((prevState) => {
+      if (!prevState.has(platform)) {
+        return prevState;
+      }
+
+      const nextState = new Map(prevState);
+      nextState.delete(platform);
+      return nextState;
+    });
+  }, []);
+
+  const handleUncommit = useCallback((platform: SocialPlatform, currentIdentifier: string) => {
+    setSelectedIdentifierByPlatform((prevState) => {
+      if (!prevState.has(platform)) {
+        return prevState;
+      }
+
+      const nextState = new Map(prevState);
+      nextState.delete(platform);
+      return nextState;
+    });
+    setDraftIdentifierByPlatform((prevState) => {
+      const nextState = new Map(prevState);
+      nextState.set(platform, normalizeSocialIdentifier(platform, currentIdentifier));
+      return nextState;
+    });
+  }, []);
+
+  const handleDraftChange = useCallback((platform: SocialPlatform, identifier: string) => {
+    setDraftIdentifierByPlatform((prevState) => {
+      const nextState = new Map(prevState);
+      nextState.set(platform, normalizeSocialIdentifier(platform, identifier));
+      return nextState;
+    });
+  }, []);
+
+  const upsertItemsToSave = useMemo(
+    () =>
+      Array.from(selectedIdentifierByPlatform, ([platform, username]) => ({
+        platform,
+        username,
+      })).filter((item) => persistedIdentifierByPlatform.get(item.platform) !== item.username),
+    [persistedIdentifierByPlatform, selectedIdentifierByPlatform],
+  );
+  const deletePlatformSet = useMemo(() => {
+    const nextSet = new Set<SocialPlatform>();
+
+    for (const [platform, draftIdentifier] of draftIdentifierByPlatform) {
+      if (draftIdentifier.length > 0) {
+        continue;
+      }
+
+      if (!persistedIdentifierByPlatform.has(platform)) {
+        continue;
+      }
+
+      nextSet.add(platform);
+    }
+
+    return nextSet;
+  }, [draftIdentifierByPlatform, persistedIdentifierByPlatform]);
+  const deletePlatformsToSave = useMemo(() => Array.from(deletePlatformSet), [deletePlatformSet]);
+  const hasPendingChanges = upsertItemsToSave.length > 0 || deletePlatformsToSave.length > 0;
+
+  const handleSaveSelectedPlatforms = useCallback(async () => {
+    const isSaved = await saveSocialPlatformChanges({
+      upserts: upsertItemsToSave,
+      deletes: deletePlatformsToSave,
+    });
+
+    if (!isSaved) {
+      return;
+    }
+
+    setPersistedIdentifierByPlatform((prevState) => {
+      const nextState = new Map(prevState);
+
+      for (const item of upsertItemsToSave) {
+        nextState.set(item.platform, item.username);
+      }
+      for (const platform of deletePlatformsToSave) {
+        nextState.delete(platform);
+      }
+
+      return nextState;
+    });
+  }, [deletePlatformsToSave, saveSocialPlatformChanges, upsertItemsToSave]);
 
   return (
     <section className="phantom-shadow flex h-[820px] max-w-[424px] flex-col rounded-[2.5rem] border p-6 md:p-8">
@@ -308,12 +459,25 @@ export function EditableSocialAccountsSection({ initialItems = [] }: { initialIt
             <SocialPlatformRow
               key={option.platform}
               option={option}
+              pendingDelete={deletePlatformSet.has(option.platform)}
+              disabled={isSaving}
               initialIdentifier={initialIdentifierByPlatform.get(option.platform) ?? ""}
+              onCommit={handleCommit}
+              onUncommit={handleUncommit}
+              onDraftChange={handleDraftChange}
             />
           ))}
         </ScrollArea>
-        <Button type="button" size="lg" className="mt-8 h-14! w-full rounded-full font-semibold text-lg!">
-          Add Selected Platforms
+        <Button
+          type="button"
+          size="lg"
+          disabled={isSaving || !hasPendingChanges}
+          onClick={() => {
+            void handleSaveSelectedPlatforms();
+          }}
+          className="mt-8 h-14! w-full rounded-full font-semibold text-lg!"
+        >
+          {isSaving ? "Saving..." : "Get Platforms"}
         </Button>
       </div>
     </section>

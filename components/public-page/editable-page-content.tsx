@@ -35,7 +35,7 @@ export function EditablePageContent({
       <div className="flex flex-col gap-8">
         <EditablePageProfile handle={handle} initialName={initialName} initialBio={initialBio} initialImage={initialImage} />
         <EditablePageItemSection handle={handle} initialItems={initialItems} />
-        <EditableSocialAccountsSection initialItems={initialSocialItems} />
+        <EditableSocialAccountsSection handle={handle} initialItems={initialSocialItems} />
       </div>
       <PageSaveStatusIndicator />
     </PageSaveStatusProvider>

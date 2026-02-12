@@ -48,4 +48,40 @@ describe("page social items service", () => {
     // Assert
     expect(result.map((item) => item.id)).toEqual(["a", "c", "b"]);
   });
+
+  test("createdAt이 Date 객체여도 sortOrder/createdAt/id 순서로 정렬된다", () => {
+    // Arrange
+    const items = [
+      {
+        id: "b",
+        platform: "x",
+        username: "beta",
+        sortOrder: 1,
+        createdAt: new Date("2026-02-12T10:10:00.000Z"),
+        updatedAt: new Date("2026-02-12T10:10:00.000Z"),
+      },
+      {
+        id: "c",
+        platform: "github",
+        username: "gamma",
+        sortOrder: 1,
+        createdAt: new Date("2026-02-12T10:11:00.000Z"),
+        updatedAt: new Date("2026-02-12T10:11:00.000Z"),
+      },
+      {
+        id: "a",
+        platform: "instagram",
+        username: "alpha",
+        sortOrder: 1,
+        createdAt: new Date("2026-02-12T10:10:00.000Z"),
+        updatedAt: new Date("2026-02-12T10:10:00.000Z"),
+      },
+    ];
+
+    // Act
+    const result = sortVisiblePageSocialItems(items);
+
+    // Assert
+    expect(result.map((item) => item.id)).toEqual(["a", "b", "c"]);
+  });
 });

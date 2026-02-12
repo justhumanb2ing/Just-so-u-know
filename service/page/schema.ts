@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeSocialIdentifier, SOCIAL_PLATFORM_DEFINITIONS, type SocialPlatform } from "@/constants/social-platforms";
 import { PAGE_ITEM_SIZE_CODES } from "@/service/page/item-size";
 
 const STORED_HANDLE_PATTERN = /^@[a-z0-9]{3,20}$/;
@@ -74,6 +75,22 @@ const pageItemSizeCodeSchema = z.enum(PAGE_ITEM_SIZE_CODES, {
   message: "Invalid item size.",
 });
 
+const SOCIAL_PLATFORM_CODES = SOCIAL_PLATFORM_DEFINITIONS.map((platform) => platform.platform) as [SocialPlatform, ...SocialPlatform[]];
+
+const socialPlatformSchema = z.enum(SOCIAL_PLATFORM_CODES, {
+  message: "Invalid social platform.",
+});
+
+const pageSocialItemSchema = z
+  .object({
+    platform: socialPlatformSchema,
+    username: z.string(),
+  })
+  .transform((value) => ({
+    platform: value.platform,
+    username: normalizeSocialIdentifier(value.platform, value.username),
+  }));
+
 const pageItemMemoCreateSchema = z.object({
   type: z.literal("memo"),
   data: z.object({
@@ -130,3 +147,32 @@ export const pageItemUpdateSchema = z.discriminatedUnion("type", [
 ]);
 
 export type PageItemUpdateInput = z.infer<typeof pageItemUpdateSchema>;
+
+/**
+ * 소셜 계정 일괄 저장 입력을 검증/정규화한다.
+ * 빈 식별자는 제외하고, 동일 플랫폼 중복 입력은 마지막 값으로 병합한다.
+ */
+export const pageSocialItemsUpsertSchema = z
+  .object({
+    items: z.array(pageSocialItemSchema).max(SOCIAL_PLATFORM_DEFINITIONS.length, { message: "Too many social platform items." }),
+  })
+  .transform((value) => {
+    const dedupedItemsByPlatform = new Map<SocialPlatform, string>();
+
+    for (const item of value.items) {
+      if (item.username.length === 0) {
+        continue;
+      }
+
+      dedupedItemsByPlatform.set(item.platform, item.username);
+    }
+
+    return {
+      items: Array.from(dedupedItemsByPlatform, ([platform, username]) => ({
+        platform,
+        username,
+      })),
+    };
+  });
+
+export type PageSocialItemsUpsertInput = z.infer<typeof pageSocialItemsUpsertSchema>;

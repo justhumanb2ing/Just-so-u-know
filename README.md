@@ -85,6 +85,12 @@ bun dev
 - `link` 아이템의 hover 사이즈 버튼은 비활성화 상태로 렌더링된다.
 - `memo` 수정 반영은 생성과 동일하게 `800ms` 디바운스로 자동 저장된다.
 - 소유자 편집 화면의 소셜 계정 섹션은 `page_social_items`를 서버에서 조회해 플랫폼별 username 초기값을 채운다.
+- 소셜 플랫폼 입력에서 Enter/Get은 DB 저장이 아니라 해당 플랫폼의 "선택 완료" 상태만 확정한다.
+- 소셜 계정 DB 저장은 `Add Selected Platforms` 버튼 클릭 시 확정된 플랫폼만 일괄 요청으로 처리한다.
+- 확정된 플랫폼 중 식별자가 빈 값이면 저장 대상에서 제외한다.
+- 기존 저장 플랫폼을 `x`로 편집 상태로 전환한 뒤 입력을 비우면 삭제 대기 상태(`Will be removed on save`)로 표시된다.
+- 삭제 대기 상태는 `Add Selected Platforms` 배치 저장 시 `is_visible=false`로 반영된다.
+- 소셜 계정 저장 API는 `(page_id, platform)` 유니크 제약을 기준으로 upsert 처리한다.
 
 ### 검증 커맨드
 ```bash
@@ -100,6 +106,8 @@ psql "$DIRECT_URL" -f schema/migrations/20260210190000_disable_page_rls_for_bett
 psql "$DIRECT_URL" -f schema/migrations/20260210200000_rename_page_title_to_name.sql
 psql "$DIRECT_URL" -f schema/migrations/20260212130000_create_page_item_schema.sql
 psql "$DIRECT_URL" -f schema/migrations/20260212173000_create_link_item_function.sql
+psql "$DIRECT_URL" -f schema/migrations/20260212213000_add_page_social_items_unique_platform.sql
+psql "$DIRECT_URL" -f schema/migrations/20260212223000_relax_page_social_platform_format_check.sql
 ```
 
 ## 문서

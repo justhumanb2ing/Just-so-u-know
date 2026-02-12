@@ -9,21 +9,27 @@
 - `schema/migrations/20260210200000_rename_page_title_to_name.sql`
 - `schema/migrations/20260212130000_create_page_item_schema.sql`
 - `schema/migrations/20260212173000_create_link_item_function.sql`
+- `schema/migrations/20260212213000_add_page_social_items_unique_platform.sql`
+- `schema/migrations/20260212223000_relax_page_social_platform_format_check.sql`
 - `app/api/page/image/init-upload/route.ts`
 - `app/api/page/image/complete-upload/route.ts`
 - `app/api/page/image/delete/route.ts`
 - `app/api/page/og/route.ts`
 - `app/api/pages/[handle]/items/route.ts`
 - `app/api/pages/[handle]/items/[itemId]/route.ts`
+- `app/api/pages/[handle]/social-items/route.ts`
 - `app/[handle]/page.tsx`
 - `service/page/schema.ts`
 - `service/page/items.ts`
+- `service/page/social-items.ts`
 - `service/page/og-crawl.ts`
 - `hooks/use-page-item-composer.ts`
+- `hooks/use-page-social-accounts.ts`
 - `hooks/use-og-crawl.ts`
 - `components/public-page/page-item-section.tsx`
 - `components/public-page/page-item-composer-bar.tsx`
 - `components/public-page/editable-page-profile.tsx`
+- `components/public-page/editable-social-accounts-section.tsx`
 
 ## 테이블 스키마
 - 컬럼: `name`, `handle`, `bio`, `image`, `is_public`, `is_primary`, `created_at`, `updated_at`, `user_id`
@@ -58,6 +64,15 @@
 - 인덱스
   - `page_item_page_visible_order_idx(page_id, is_visible, order_key)`
   - `page_item_page_type_idx(page_id, type_code)`
+
+## 소셜 계정 스키마
+- `public.page_social_items`
+  - 컬럼: `id`, `page_id`, `platform`, `username`, `sort_order`, `is_visible`, `created_at`, `updated_at`
+  - `page_id`는 `public.page(id)` FK(`on delete cascade`)
+  - `platform`은 소문자 영문/숫자/밑줄, 길이 1~32의 소셜 플랫폼 코드 문자열
+  - `username`은 플랫폼 식별자(username/channel ID)
+- 정합성 제약
+  - `(page_id, platform)` 유니크 인덱스(`page_social_items_page_platform_unique_idx`)
 
 ## 함수/트리거
 - `set_page_updated_at`: update 시 `updated_at` 자동 갱신
@@ -175,6 +190,29 @@
 - 응답:
   - 성공 시 `200 OK` + `items` 배열 반환
   - 실패 시 `403/404` 상태 코드로 권한/존재 오류를 반환한다.
+
+## 페이지 소셜 계정 저장 API 동작
+- 엔드포인트: `POST /api/pages/{handle}/social-items`
+- 인증: Better Auth 세션 필수
+- 접근 제어:
+  - 페이지 소유자만 저장 가능
+  - 비소유자는 `403`을 반환한다.
+- 요청 스키마:
+  - `upserts: Array<{ platform, username }>`
+  - `deletes: Array<{ platform }>`
+  - 플랫폼별 식별자는 서버에서 정규화한다.
+  - `upserts`에서 빈 식별자는 저장 대상에서 제외한다.
+  - `upserts` 동일 플랫폼 중복 입력은 마지막 값으로 병합한다.
+  - `deletes` 동일 플랫폼 중복 입력은 1회로 병합한다.
+  - 같은 플랫폼이 `upserts`와 `deletes`에 동시에 포함되면 `upserts`를 우선한다.
+- 처리 정책:
+  - `handle`은 경로 파라미터를 저장 포맷(`@handle`)으로 정규화해 검증한다.
+  - 저장은 `(page_id, platform)` 유니크 제약 기반 upsert로 처리한다.
+  - 삭제는 물리 삭제 대신 `is_visible=false` soft delete로 처리한다.
+  - upsert 시 `is_visible=true`로 복구하며 `username`을 최신 값으로 갱신한다.
+- 응답:
+  - 성공 시 `200 OK` + upsert된 `items` 배열, soft delete된 `deletedPlatforms` 배열 반환
+  - 실패 시 `401/403/404/422/500` 상태 코드로 정규화된 에러를 반환한다.
 
 ## 링크 OG 조회 API 동작
 - 엔드포인트: `GET /api/page/og?url={absolute_url}`
