@@ -185,6 +185,37 @@ export async function updateOwnedPageHandle({
   return result.rows[0] ?? null;
 }
 
+export type ToggleOwnedPageVisibilityInput = {
+  storedHandle: string;
+  userId: string;
+};
+
+export type ToggleOwnedPageVisibilityResult = {
+  isPublic: boolean;
+  updatedAt: string;
+};
+
+/**
+ * 소유한 페이지의 공개 상태(is_public)를 원자적으로 토글한다.
+ */
+export async function toggleOwnedPageVisibility({
+  storedHandle,
+  userId,
+}: ToggleOwnedPageVisibilityInput): Promise<ToggleOwnedPageVisibilityResult | null> {
+  const result = await sql<ToggleOwnedPageVisibilityResult>`
+    update public.page
+    set
+      is_public = not is_public
+    where handle = ${storedHandle}
+      and user_id = ${userId}
+    returning
+      is_public as "isPublic",
+      updated_at as "updatedAt"
+  `.execute(kysely);
+
+  return result.rows[0] ?? null;
+}
+
 export type OwnedPageImageRow = {
   id: string;
   image: string | null;

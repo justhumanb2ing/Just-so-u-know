@@ -2,8 +2,8 @@
 
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
-import { updateOwnedPageHandle, updateOwnedPageProfile } from "@/service/onboarding/public-page";
-import { pageHandleChangeSchema, pageProfileUpdateSchema, toStoredHandle } from "@/service/onboarding/schema";
+import { toggleOwnedPageVisibility, updateOwnedPageHandle, updateOwnedPageProfile } from "@/service/onboarding/public-page";
+import { pageHandleChangeSchema, pageProfileUpdateSchema, storedHandleSchema, toStoredHandle } from "@/service/onboarding/schema";
 import { checkHandleAvailability } from "@/service/onboarding/service";
 
 export type SavePageProfileActionInput = {
@@ -36,6 +36,21 @@ export type ChangePageHandleActionState =
       status: "success";
       publicPath: string;
       storedHandle: string;
+    };
+
+export type TogglePageVisibilityActionInput = {
+  handle: string;
+};
+
+export type TogglePageVisibilityActionResult =
+  | {
+      status: "success";
+      isPublic: boolean;
+      savedAt: string;
+    }
+  | {
+      status: "error";
+      message: string;
     };
 
 type PostgresErrorLike = {
@@ -213,6 +228,56 @@ export async function changePageHandleAction(
     return {
       status: "error",
       message: resolveHandleChangeErrorMessage(error),
+    };
+  }
+}
+
+/**
+ * 페이지 소유자 요청만 허용해 공개 여부(is_public)를 토글한다.
+ */
+export async function togglePageVisibilityAction(rawInput: TogglePageVisibilityActionInput): Promise<TogglePageVisibilityActionResult> {
+  const requestHeaders = await headers();
+  const session = await auth.api.getSession({
+    headers: requestHeaders,
+  });
+
+  if (!session) {
+    return {
+      status: "error",
+      message: "You need to sign in first.",
+    };
+  }
+
+  const parsedHandle = storedHandleSchema.safeParse(toStringValue(rawInput.handle));
+  if (!parsedHandle.success) {
+    return {
+      status: "error",
+      message: parsedHandle.error.issues[0]?.message ?? "Invalid page handle input.",
+    };
+  }
+
+  try {
+    const updatedPage = await toggleOwnedPageVisibility({
+      storedHandle: parsedHandle.data,
+      userId: session.user.id,
+    });
+
+    if (!updatedPage) {
+      return {
+        status: "error",
+        message: "You do not have permission to update this page.",
+      };
+    }
+
+    return {
+      status: "success",
+      isPublic: updatedPage.isPublic,
+      savedAt: updatedPage.updatedAt,
+    };
+  } catch {
+    return {
+      status: "error",
+      message: "Failed to update page visibility.",
     };
   }
 }
