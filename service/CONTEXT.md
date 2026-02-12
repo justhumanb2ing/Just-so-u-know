@@ -1,7 +1,7 @@
 # CONTEXT
 
 ## 이 모듈이 하는 일
-- 온보딩 도메인의 검증/조회/트랜잭션 로직을 제공한다.
+- 온보딩/페이지 도메인의 검증/조회/트랜잭션 로직을 제공한다.
 
 ## 파일 구조와 역할
 - `service/onboarding/schema.ts`: zod 기반 입력/저장 포맷 검증
@@ -9,6 +9,9 @@
 - `service/onboarding/public-page.ts`: 공개 페이지 조회/정규화/소유자 프로필 수정
 - `service/onboarding/reserved-handles.ts`: 예약어 목록
 - `service/onboarding/__tests__/*`: 도메인 단위 테스트
+- `service/page/schema.ts`: 페이지 아이템 입력 검증과 path handle 정규화
+- `service/page/items.ts`: 페이지 아이템 DB 호출 로직
+- `service/page/__tests__/*`: 페이지 도메인 단위 테스트
 
 ## 핵심 설계 결정
 - handle 정책은 `schema.ts`를 단일 소스로 사용한다.

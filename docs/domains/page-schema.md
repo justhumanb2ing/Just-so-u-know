@@ -11,6 +11,9 @@
 - `app/api/page/image/init-upload/route.ts`
 - `app/api/page/image/complete-upload/route.ts`
 - `app/api/page/image/delete/route.ts`
+- `app/api/pages/[handle]/items/route.ts`
+- `service/page/schema.ts`
+- `service/page/items.ts`
 - `components/public-page/editable-page-profile.tsx`
 
 ## 테이블 스키마
@@ -88,6 +91,21 @@
 - 삭제(`DELETE /api/page/image/delete`)는 `page.image = null`과 Storage object 삭제를 모두 시도한다.
 - DB 반영은 성공했지만 Storage 삭제가 실패하면 partial success 응답을 반환해 UI에서 경고 toast를 띄운다.
 - 업로드 전 클라이언트에서 `jpg/jpeg/png/webp`, 최대 `5MB`를 검증하고, `WebP(320x320, quality 0.85)`로 변환한다.
+
+## 페이지 아이템 생성 API 동작
+- 엔드포인트: `POST /api/pages/{handle}/items`
+- 인증: Better Auth 세션 필수
+- 현재 지원 타입: `memo`
+- 요청 스키마:
+  - `type`: `"memo"`
+  - `data.content`: 문자열(서버에서 개행을 공백으로 정규화 후 trim)
+- 처리 정책:
+  - `handle`은 경로 파라미터를 저장 포맷(`@handle`)으로 정규화해 검증한다.
+  - DB RPC(`create_memo_item_for_owned_page`)를 호출해 소유권 검증과 정렬 키 생성을 원자적으로 처리한다.
+  - `memo`는 `size_code='wide-short'`로 고정한다.
+- 응답:
+  - 성공 시 `201 Created` + 생성된 아이템 1개 반환
+  - 실패 시 `401/403/404/422/500` 상태 코드로 정규화된 에러를 반환한다.
 
 ## 페이지 접근 제어 동작
 - 페이지가 비공개(`is_public=false`)이고 요청 사용자가 소유자가 아니면 `app/[handle]/error.tsx`를 렌더링한다.
