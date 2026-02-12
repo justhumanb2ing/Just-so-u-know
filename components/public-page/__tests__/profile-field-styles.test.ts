@@ -14,7 +14,7 @@ import {
 describe("profile field styles", () => {
   test("프로필 텍스트 필드 컨테이너는 editable 기준 간격 규칙을 유지한다", () => {
     // Arrange
-    const expectedContainerClassName = "flex flex-col gap-3";
+    const expectedContainerClassName = "flex flex-col gap-1.5";
 
     // Act
     const textFieldsContainerClassName = PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME;

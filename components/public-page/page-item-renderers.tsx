@@ -101,7 +101,7 @@ function MemoItemRenderer({ item, canEditMemo = false, onMemoChange }: PageItemR
         "scrollbar-hide wrap-break-word h-full min-h-0 w-full resize-none overflow-y-auto whitespace-pre-wrap rounded-sm border-0 p-2 font-medium text-base! leading-relaxed shadow-none focus-visible:ring-0",
         isDisabled
           ? "cursor-default bg-transparent hover:bg-transparent focus-visible:bg-transparent disabled:cursor-default disabled:bg-transparent disabled:opacity-100"
-          : "hover:bg-muted focus-visible:bg-muted",
+          : "hover:bg-input/60 focus-visible:bg-input/60",
       )}
     />
   );
@@ -132,12 +132,12 @@ function LinkItemRenderer({ item, canEditLinkTitle = false, onLinkTitleChange, o
       {url ? (
         <a href={url} target="_blank" rel="noopener noreferrer" className="shrink-0">
           {/* biome-ignore lint/performance/noImgElement: 요구사항에 따라 favicon은 img 태그로 렌더링한다. */}
-          <img src={faviconSrc} alt={`${title || "Link"} favicon`} width={48} height={48} className="size-12 rounded-sm object-cover" />
+          <img src={faviconSrc} alt={`${title || "Link"} favicon`} width={40} height={40} className="size-10 rounded-sm object-cover" />
         </a>
       ) : (
         <>
           {/* biome-ignore lint/performance/noImgElement: 요구사항에 따라 favicon은 img 태그로 렌더링한다. */}
-          <img src={faviconSrc} alt={`${title || "Link"} favicon`} width={48} height={48} className="size-12 rounded-sm object-cover" />
+          <img src={faviconSrc} alt={`${title || "Link"} favicon`} width={40} height={40} className="size-10 rounded-sm object-cover" />
         </>
       )}
       <div className="flex min-w-0 flex-1 items-center justify-center">
@@ -151,7 +151,7 @@ function LinkItemRenderer({ item, canEditLinkTitle = false, onLinkTitleChange, o
           className={cn(
             "h-10 min-h-0 w-full overflow-hidden truncate rounded-sm border-0 bg-transparent p-2 font-medium text-base! leading-normal shadow-none",
             isEditable
-              ? "hover:bg-muted focus-visible:bg-muted focus-visible:ring-0"
+              ? "hover:bg-input/60 focus-visible:bg-input/60 focus-visible:ring-0"
               : "cursor-default hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0",
           )}
         />

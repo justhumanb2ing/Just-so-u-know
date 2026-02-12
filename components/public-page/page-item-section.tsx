@@ -80,7 +80,7 @@ const PAGE_ITEM_RESIZE_OPTIONS: Array<{
   },
 ];
 
-const PAGE_ITEM_CARD_BASE_CLASSNAME = "group relative flex flex-col justify-center gap-2 rounded-[16px] border p-3";
+const PAGE_ITEM_CARD_BASE_CLASSNAME = "group relative flex flex-col justify-center gap-2 rounded-[16px] p-3 bg-muted/70";
 
 type PageItemCardStyleConfig = {
   className?: string;
@@ -138,13 +138,13 @@ function DraftItemCard({ draft, focusRequestId, onDraftChange }: DraftItemCardPr
   }, [focusRequestId]);
 
   return (
-    <article className="h-16 overflow-hidden rounded-[16px] border p-3">
+    <article className="h-16 overflow-hidden rounded-[16px] bg-muted/70 p-3">
       <Textarea
         ref={textareaRef}
         value={draft.content}
         placeholder="Write your content"
         onChange={onDraftChange}
-        className="scrollbar-hide wrap-break-word h-full min-h-0 w-full resize-none overflow-y-auto whitespace-pre-wrap rounded-sm border-0 p-2 text-base! leading-relaxed shadow-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-0"
+        className="scrollbar-hide wrap-break-word h-full min-h-0 w-full resize-none overflow-y-auto whitespace-pre-wrap rounded-sm border-0 p-2 text-base! leading-relaxed shadow-none hover:bg-input/60 focus-visible:bg-input/60 focus-visible:ring-0"
       />
     </article>
   );
@@ -227,7 +227,7 @@ function ItemList({
   }
 
   return (
-    <div className={cn("flex flex-col gap-6", withBottomSpacing ? "pb-40" : undefined)}>
+    <div className={cn("flex flex-col gap-3", withBottomSpacing ? "pb-40" : undefined)}>
       {items.map((item) => {
         const ItemRenderer = getPageItemRenderer(item.typeCode);
 
