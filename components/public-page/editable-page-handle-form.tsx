@@ -10,13 +10,13 @@ const INITIAL_CHANGE_PAGE_HANDLE_STATE: ChangePageHandleActionState = {
 };
 
 type EditablePageHandleFormProps = {
-  storedHandle: string;
+  handle: string;
 };
 
 /**
  * 공개 페이지 편집 화면에서 핸들 변경 제출을 담당한다.
  */
-export function EditablePageHandleForm({ storedHandle }: EditablePageHandleFormProps) {
+export function EditablePageHandleForm({ handle }: EditablePageHandleFormProps) {
   const router = useRouter();
   const [actionState, formAction, isSubmitting] = useActionState(changePageHandleAction, INITIAL_CHANGE_PAGE_HANDLE_STATE);
 
@@ -34,7 +34,7 @@ export function EditablePageHandleForm({ storedHandle }: EditablePageHandleFormP
       formAction={formAction}
       isSubmitting={isSubmitting}
       submitErrorMessage={actionState.status === "error" ? actionState.message : undefined}
-      hiddenFields={[{ name: "storedHandle", value: storedHandle }]}
+      hiddenFields={[{ name: "storedHandle", value: handle }]}
     />
   );
 }

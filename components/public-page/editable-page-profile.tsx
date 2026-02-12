@@ -3,7 +3,6 @@
 import { CircleFadingArrowUpIcon, LoaderIcon, TrashIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
-import { EditablePageMemoSection } from "@/components/public-page/editable-page-memo-section";
 import {
   PUBLIC_PAGE_BIO_CLASSNAME,
   PUBLIC_PAGE_FIELD_BASE_CLASSNAME,
@@ -33,7 +32,7 @@ const IMAGE_BUTTON_TRANSITION = {
 } as const;
 
 type EditablePageProfileProps = {
-  storedHandle: string;
+  handle: string;
   initialName: string | null;
   initialBio: string | null;
   initialImage: string | null;
@@ -141,9 +140,9 @@ function ProfileTextFields({ controller }: ProfileTextFieldsProps) {
 /**
  * 공개 페이지 프로필의 텍스트/이미지 편집 로직을 합성 구조로 분리한 엔트리 컴포넌트.
  */
-export function EditablePageProfile({ storedHandle, initialName, initialBio, initialImage }: EditablePageProfileProps) {
-  const profileDraft = useProfileDraft({ handle: storedHandle, initialName, initialBio });
-  const profileImage = useProfileImageEditor({ handle: storedHandle, initialImage });
+export function EditablePageProfile({ handle, initialName, initialBio, initialImage }: EditablePageProfileProps) {
+  const profileDraft = useProfileDraft({ handle, initialName, initialBio });
+  const profileImage = useProfileImageEditor({ handle, initialImage });
 
   return (
     <div className={PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME}>
@@ -151,7 +150,6 @@ export function EditablePageProfile({ storedHandle, initialName, initialBio, ini
         <ProfileImageField controller={profileImage} />
       </section>
       <ProfileTextFields controller={profileDraft} />
-      <EditablePageMemoSection storedHandle={storedHandle} />
     </div>
   );
 }

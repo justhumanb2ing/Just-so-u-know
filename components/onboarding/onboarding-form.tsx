@@ -18,7 +18,7 @@ export function OnboardingForm() {
   if (submitState.status === "success") {
     return (
       <div className="flex h-full flex-col justify-center">
-        <OnboardingComplete publicPath={submitState.publicPath} storedHandle={submitState.storedHandle} />
+        <OnboardingComplete publicPath={submitState.publicPath} handle={submitState.storedHandle} />
       </div>
     );
   }

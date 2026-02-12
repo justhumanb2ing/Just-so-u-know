@@ -1,5 +1,7 @@
 import { sql } from "kysely";
+import { cache } from "react";
 import { kysely } from "@/lib/kysely";
+import { normalizeStoredHandleFromPath } from "@/service/page/schema";
 
 export type PageItemRow = {
   id: string;
@@ -14,11 +16,72 @@ export type PageItemRow = {
   updatedAt: string;
 };
 
+export type VisiblePageItem = {
+  id: string;
+  typeCode: string;
+  sizeCode: string;
+  orderKey: number;
+  data: unknown;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type VisiblePageItemRow = {
+  id: string;
+  typeCode: string;
+  sizeCode: string;
+  orderKey: number;
+  data: unknown;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CreateOwnedMemoItemInput = {
   storedHandle: string;
   userId: string;
   content: string;
 };
+
+const queryVisiblePageItemsByStoredHandle = cache(async (storedHandle: string): Promise<VisiblePageItem[]> => {
+  const result = await sql<VisiblePageItemRow>`
+    select
+      page_item.id,
+      page_item.type_code as "typeCode",
+      page_item.size_code as "sizeCode",
+      page_item.order_key as "orderKey",
+      page_item.data,
+      page_item.created_at as "createdAt",
+      page_item.updated_at as "updatedAt"
+    from public.page_item
+    inner join public.page
+      on public.page.id = page_item.page_id
+    where public.page.handle = ${storedHandle}
+      and page_item.is_visible = true
+    order by page_item.order_key asc
+  `.execute(kysely);
+
+  return result.rows;
+});
+
+/**
+ * 저장 포맷 handle(@handle) 기준으로 노출 가능한 전체 아이템 목록을 조회한다.
+ */
+export async function findVisiblePageItemsByStoredHandle(storedHandle: string) {
+  return queryVisiblePageItemsByStoredHandle(storedHandle);
+}
+
+/**
+ * 경로 handle을 정규화한 뒤 노출 가능한 전체 아이템 목록을 조회한다.
+ */
+export async function findVisiblePageItemsByPathHandle(pathHandle: string) {
+  const storedHandle = normalizeStoredHandleFromPath(pathHandle);
+
+  if (!storedHandle) {
+    return [];
+  }
+
+  return queryVisiblePageItemsByStoredHandle(storedHandle);
+}
 
 /**
  * 소유한 페이지에 memo 아이템 1개를 생성한다.

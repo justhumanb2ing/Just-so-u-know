@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
-import { createOwnedMemoItem } from "@/service/page/items";
+import { findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
+import { createOwnedMemoItem, findVisiblePageItemsByStoredHandle } from "@/service/page/items";
 import { normalizeStoredHandleFromPath, pageItemCreateSchema } from "@/service/page/schema";
 
 export const runtime = "nodejs";
@@ -20,6 +21,49 @@ function toPostgresErrorLike(error: unknown): PostgresErrorLike | null {
   }
 
   return error as PostgresErrorLike;
+}
+
+/**
+ * 공개/소유자 권한에 맞는 페이지 아이템 조회를 처리한다.
+ */
+export async function GET(_request: Request, context: CreateItemRouteContext) {
+  const { handle } = await context.params;
+  const requestHeaders = await headers();
+  const [page, session] = await Promise.all([
+    findPageByPathHandle(handle),
+    auth.api.getSession({
+      headers: requestHeaders,
+    }),
+  ]);
+
+  if (!page) {
+    return Response.json(
+      {
+        status: "error",
+        message: "Page not found.",
+      },
+      { status: 404 },
+    );
+  }
+
+  const isOwner = page.userId === session?.user.id;
+
+  if (shouldDenyPrivatePageAccess({ isPublic: page.isPublic, isOwner })) {
+    return Response.json(
+      {
+        status: "error",
+        message: "You do not have permission to view this page.",
+      },
+      { status: 403 },
+    );
+  }
+
+  const items = await findVisiblePageItemsByStoredHandle(page.handle);
+
+  return Response.json({
+    status: "success",
+    items,
+  });
 }
 
 /**

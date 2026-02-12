@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/test-button";
 
 type OnboardingCompleteProps = {
   publicPath: string;
-  storedHandle: string;
+  handle: string;
 };
 
-export function OnboardingComplete({ publicPath, storedHandle }: OnboardingCompleteProps) {
+export function OnboardingComplete({ publicPath, handle }: OnboardingCompleteProps) {
   return (
     <motion.div
       className="space-y-12"
@@ -44,7 +44,7 @@ export function OnboardingComplete({ publicPath, storedHandle }: OnboardingCompl
           size={"lg"}
           variant={"default"}
           className={"w-full rounded-xl py-6 text-lg"}
-          render={<Link href={publicPath}>Go to {storedHandle}</Link>}
+          render={<Link href={publicPath}>Go to {handle}</Link>}
         ></Button>
       </motion.div>
     </motion.div>
