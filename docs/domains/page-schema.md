@@ -12,10 +12,12 @@
 - `app/api/page/image/complete-upload/route.ts`
 - `app/api/page/image/delete/route.ts`
 - `app/api/pages/[handle]/items/route.ts`
+- `app/[handle]/page.tsx`
 - `service/page/schema.ts`
 - `service/page/items.ts`
-- `hooks/use-page-memo-draft.ts`
-- `components/public-page/editable-page-memo-section.tsx`
+- `hooks/use-page-item-composer.ts`
+- `components/public-page/page-item-section.tsx`
+- `components/public-page/page-item-composer-bar.tsx`
 - `components/public-page/editable-page-profile.tsx`
 
 ## 테이블 스키마
@@ -109,26 +111,50 @@
   - 성공 시 `201 Created` + 생성된 아이템 1개 반환
   - 실패 시 `401/403/404/422/500` 상태 코드로 정규화된 에러를 반환한다.
 
-## memo draft UI 동작
+## 페이지 아이템 조회 API 동작
+- 엔드포인트: `GET /api/pages/{handle}/items`
+- 접근 제어:
+  - 공개 페이지(`is_public=true`): 비로그인 포함 조회 가능
+  - 비공개 페이지(`is_public=false`): 소유자만 조회 가능
+- 조회 정책:
+  - `page_item` + `page` 조인으로 handle 기준 아이템을 조회한다.
+  - `is_visible=true` 조건의 아이템을 타입 구분 없이 모두 반환한다.
+  - 정렬은 `order_key asc`를 사용한다.
+- 응답:
+  - 성공 시 `200 OK` + `items` 배열 반환
+  - 실패 시 `403/404` 상태 코드로 권한/존재 오류를 반환한다.
+
+## 페이지 아이템 섹션 UI 동작
 - 노출 대상: 페이지 소유자 편집 화면(`EditablePageProfile`)
 - 사용자 흐름:
-  - `Add Memo` 클릭 시 draft textarea를 즉시 생성하고 focus한다.
+  - 최초 렌더 시 서버에서 조회한 전체 `page_item` 목록을 초기 상태로 주입한다.
+  - `Add Item` 클릭 시 draft textarea를 즉시 생성하고 focus한다.
   - 입력 중 `800ms` 디바운스로 자동 저장을 시도한다.
   - `Enter` 입력은 저장 트리거가 아니라 줄바꿈으로 동작한다.
-  - memo 본문은 줄바꿈(`\n`)을 보존해 저장/표시한다.
+  - 텍스트 본문은 줄바꿈(`\n`)을 보존해 저장/표시한다.
   - 자동 저장 전에 내용을 모두 지워도 draft는 유지한다.
 - 저장 성공 시:
-  - 생성된 memo를 로컬 목록에 append해 즉시 화면에 반영한다.
+  - 생성된 아이템을 로컬 목록에 append해 즉시 화면에 반영한다.
   - 자동 저장 후에도 draft textarea는 유지되어 포커스를 잃지 않는다.
 - 저장 실패 시:
   - draft를 유지하고 toast 에러를 표시한다.
-- `wide-short` draft 에디터 제약:
+- 아이템 카드 렌더링 제약:
   - draft/저장 상태 모두 카드 높이는 `h-16`으로 고정하고 overflow를 숨긴다.
   - draft textarea는 카드 내부 세로 중앙에 위치한다.
   - draft textarea 높이는 부모 컨테이너(`h-full`)에 맞춰 렌더링하며 컨테이너를 넘지 않는다.
   - 카드 높이를 초과하는 내용은 textarea 내부 스크롤로 확인한다.
-  - 저장된 아이템 텍스트는 `line-clamp-1`과 `truncate`를 적용해 한 줄로만 노출한다.
-  - 저장된 아이템은 `sizeCode`를 기준으로 렌더링 크기를 결정하며, `wide-short`일 때 `h-16`을 적용한다.
+  - 저장된 아이템 텍스트는 `line-clamp-2`로 요약 노출한다.
+- 저장된 아이템은 `sizeCode`를 기준으로 렌더링 크기를 결정한다.
+
+## 하단 고정 아이템 생성 바 동작
+- 아이템 생성 UI는 `page-item-composer-bar`로 분리되어 화면 하단에 고정된다.
+- 초안 편집 textarea는 바 내부가 아니라 아이템 목록 영역에 draft 카드로 렌더링된다.
+- 현재 서버 생성 API는 `memo` 타입만 지원하며, UI/컴포넌트 명은 타입 중립적으로 유지한다.
+- 향후 `image/video/link/map` 타입 생성 UI를 같은 생성 바에서 확장할 수 있도록 구성한다.
+
+## 공개 페이지 아이템 표시 동작
+- 방문자 화면에서도 서버에서 조회한 전체 타입 아이템 목록을 읽기 전용으로 렌더링한다.
+- 비공개 페이지는 기존 접근 제어를 유지하며, 비소유자는 아이템을 포함한 페이지 전체를 볼 수 없다.
 
 ## 페이지 접근 제어 동작
 - 페이지가 비공개(`is_public=false`)이고 요청 사용자가 소유자가 아니면 `app/[handle]/error.tsx`를 렌더링한다.
