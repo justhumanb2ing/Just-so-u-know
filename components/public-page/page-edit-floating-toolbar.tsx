@@ -100,7 +100,7 @@ export function PageEditFloatingToolbar({ handle, initialIsPublic, initialSocial
         controlsId={socialAccountsSheetId}
         expanded={isSocialAccountsSheetOpen}
         label="Open social accounts drawer"
-        tooltipText="Social Accounts"
+        tooltipText="Social Platforms"
         onPreload={preloadSocialAccountsSheet}
         onOpen={handleOpenSocialAccountsSheet}
       >
@@ -111,7 +111,7 @@ export function PageEditFloatingToolbar({ handle, initialIsPublic, initialSocial
         controlsId={settingsSheetId}
         expanded={isSettingsSheetOpen}
         label="Open page settings drawer"
-        tooltipText="Page Settings"
+        tooltipText="Settings"
         onPreload={preloadSettingsSheet}
         onOpen={handleOpenSettingsSheet}
       >
