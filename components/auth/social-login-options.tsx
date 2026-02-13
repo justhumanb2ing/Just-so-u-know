@@ -60,7 +60,7 @@ export function SocialLoginOptions({ callbackURL = "/" }: SocialLoginOptionsProp
                   Login with {option.label}
                 </span>
                 {lastUsedLoginMethod === option.provider ? (
-                  <Badge variant="default" className="absolute -top-2.5 -right-2.5 ml-1">
+                  <Badge variant="default" className="absolute -top-1.5 -right-2.5 ml-1 px-2 text-xs">
                     Last used
                   </Badge>
                 ) : null}
