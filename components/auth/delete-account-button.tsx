@@ -75,6 +75,7 @@ export function DeleteAccountButton({
               type="button"
               variant={variant}
               size={size}
+              nativeButton={true}
               className={cn("h-auto px-0 py-0 text-muted-foreground text-xs", className)}
               disabled={isPending}
             />

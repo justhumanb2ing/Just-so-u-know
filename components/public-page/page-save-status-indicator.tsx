@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircleIcon, CheckCircle2Icon, LoaderIcon } from "lucide-react";
+import { AlertCircleIcon, LoaderIcon } from "lucide-react";
 import { usePageSaveStatusView } from "@/hooks/use-page-save-status";
 import { cn } from "@/lib/utils";
 
@@ -22,10 +22,9 @@ export function PageSaveStatusIndicator() {
     <aside className="pointer-events-none fixed right-5 bottom-5 z-40">
       <div
         className={cn(
-          "flex min-h-11 items-center gap-2 rounded-2xl border px-3.5 py-2 font-medium text-[13px] shadow-[0_18px_40px_-20px_rgba(15,23,42,0.8)] backdrop-blur-md transition-colors",
+          "flex min-h-11 items-center gap-2 rounded-2xl px-3.5 py-2 font-medium text-muted-foreground text-sm backdrop-blur-md transition-colors",
           isSaving && "border-slate-300/70 bg-background/95 text-foreground",
-          isSaved && "border-emerald-300/80 bg-emerald-50/95 text-emerald-700",
-          isError && "border-rose-300/80 bg-rose-50/95 text-rose-700",
+          isError && "border-rose-300/80 bg-rose-50/95 text-destructive",
         )}
       >
         {isSaving ? (
@@ -34,12 +33,7 @@ export function PageSaveStatusIndicator() {
             <span>Saving...</span>
           </>
         ) : null}
-        {isSaved ? (
-          <>
-            <CheckCircle2Icon className="size-4" />
-            <span>Saved!</span>
-          </>
-        ) : null}
+        {isSaved ? <span>Saved!</span> : null}
         {isError ? (
           <>
             <AlertCircleIcon className="size-4" />

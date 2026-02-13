@@ -56,6 +56,22 @@ function UserAvatar({ userImage, userName }: Pick<PublicPageAuthActionProps, "us
   );
 }
 
+function HomeButton({ size = "sm" }: Pick<PublicPageAuthActionProps, 'size'>) {
+  return (
+    <Button
+      variant="ghost"
+      size={size}
+      className="rounded-sm py-4 text-muted-foreground"
+      nativeButton={false}
+      render={
+        <Link href={"/"} prefetch={false}>
+          Home
+        </Link>
+      }
+    />
+  );
+}
+
 /**
  * 공개 페이지 상단 인증 CTA를 렌더링한다.
  */
@@ -69,32 +85,38 @@ export function PublicPageAuthAction({ hasSession, isOwnerPage, userImage, userN
 
   if (actionType === "my-page") {
     return (
+      <div className="flex items-center">
+        <Button
+          variant="ghost"
+          size={size}
+          className="rounded-sm py-4 text-muted-foreground"
+          nativeButton={false}
+          render={
+            <Link href="/me" prefetch={false}>
+              <UserAvatar userImage={userImage} userName={userName} />
+              <span className="text-xs">My Page</span>
+            </Link>
+          }
+        />
+        <HomeButton size={size} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center">
       <Button
         variant="ghost"
         size={size}
         className="rounded-sm py-4 text-muted-foreground"
         nativeButton={false}
         render={
-          <Link href="/me" prefetch={false}>
-            <UserAvatar userImage={userImage} userName={userName} />
-            <span className="text-xs">My Page</span>
+          <Link href={signInHref} prefetch={false}>
+            Sign In
           </Link>
         }
       />
-    );
-  }
-
-  return (
-    <Button
-      variant="ghost"
-      size={size}
-      className="rounded-sm py-4 text-muted-foreground"
-      nativeButton={false}
-      render={
-        <Link href={signInHref} prefetch={false}>
-          Sign In
-        </Link>
-      }
-    />
+      <HomeButton size={size} />
+    </div>
   );
 }

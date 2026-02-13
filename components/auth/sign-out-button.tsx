@@ -57,7 +57,7 @@ export function SignOutButton({ className, label = "Sign out", size = "sm", vari
         variant={variant}
         size={size}
         className={cn("h-auto px-0 py-0 text-muted-foreground text-xs", className)}
-        nativeButton={false}
+        nativeButton={true}
         onClick={handleSignOut}
         disabled={isPending}
       >
