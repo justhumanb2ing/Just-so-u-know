@@ -123,7 +123,7 @@ const PAGE_ITEM_CARD_STYLE_CONFIG_MAP: Record<string, PageItemCardStyleConfig> =
     className: "overflow-visible",
   },
   link: {
-    className: "overflow-visible p-2",
+    className: "overflow-visible p-2 flex flex-col justify-center",
   },
   image: {
     className: "overflow-visible",
