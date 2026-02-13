@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { PublicPageAuthAction } from "@/components/auth/public-page-auth-action";
 import { ConnectedSocialItems } from "@/components/public-page/connected-social-items";
 import {
   PUBLIC_PAGE_BIO_FIELD_CLASSNAME,
@@ -23,6 +24,9 @@ type ReadonlyPageVisitorSectionProps = {
   page: Pick<PublicPageRow, "handle" | "name" | "bio" | "image">;
   socialItems: VisiblePageSocialItem[];
   items: VisiblePageItem[];
+  hasSession: boolean;
+  userImage: string | null;
+  userName: string | null;
   shouldHideHandle: boolean;
 };
 
@@ -40,8 +44,17 @@ export function resolveShouldRenderReadonlyHandle({ shouldHideHandle }: ResolveS
 /**
  * 방문자 읽기 모드에서 프로필/소셜/아이템을 서버 컴포넌트로 조합해 렌더링한다.
  */
-export function ReadonlyPageVisitorSection({ page, socialItems, items, shouldHideHandle }: ReadonlyPageVisitorSectionProps) {
+export function ReadonlyPageVisitorSection({
+  page,
+  socialItems,
+  items,
+  hasSession,
+  userImage,
+  userName,
+  shouldHideHandle,
+}: ReadonlyPageVisitorSectionProps) {
   const shouldRenderHandle = resolveShouldRenderReadonlyHandle({ shouldHideHandle });
+  const visitorReturnTo = `/${page.handle}`;
 
   return (
     <>
@@ -71,7 +84,27 @@ export function ReadonlyPageVisitorSection({ page, socialItems, items, shouldHid
           <aside className="absolute top-10 right-4 md:top-18">
             <CopyUrlButton />
           </aside>
+          <aside className="mt-6 md:hidden">
+            <PublicPageAuthAction
+              hasSession={hasSession}
+              isOwnerPage={false}
+              userImage={userImage}
+              userName={userName}
+              size="lg"
+              returnTo={visitorReturnTo}
+            />
+          </aside>
         </section>
+        <aside className="fixed bottom-3 left-3 z-40 hidden supports-[padding:max(0px)]:bottom-[max(1rem,env(safe-area-inset-bottom))] md:block">
+          <PublicPageAuthAction
+            hasSession={hasSession}
+            isOwnerPage={false}
+            userImage={userImage}
+            userName={userName}
+            size="lg"
+            returnTo={visitorReturnTo}
+          />
+        </aside>
       </PublicPageShell>
     </>
   );

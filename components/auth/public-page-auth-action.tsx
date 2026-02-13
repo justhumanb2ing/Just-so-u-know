@@ -7,9 +7,12 @@ type PublicPageAuthActionProps = {
   isOwnerPage: boolean;
   userImage: string | null;
   userName: string | null;
+  size?: "sm" | "lg";
+  returnTo?: string;
 };
 
 export type PublicPageAuthActionType = "my-page" | "sign-in";
+type ResolvePublicPageSignInHrefParams = Pick<PublicPageAuthActionProps, "returnTo">;
 
 /**
  * 공개 페이지에서 Sign out을 제외한 인증 CTA 타입을 계산한다.
@@ -30,6 +33,18 @@ export function resolvePublicPageAuthActionType({
   return "my-page";
 }
 
+/**
+ * 공개 페이지 Sign in CTA href를 계산한다.
+ * returnTo가 있으면 로그인 후 복귀 경로를 포함한다.
+ */
+export function resolvePublicPageSignInHref({ returnTo }: ResolvePublicPageSignInHrefParams) {
+  if (!returnTo) {
+    return "/sign-in";
+  }
+
+  return `/sign-in?returnTo=${encodeURIComponent(returnTo)}`;
+}
+
 function UserAvatar({ userImage, userName }: Pick<PublicPageAuthActionProps, "userImage" | "userName">) {
   const fallbackText = (userName?.trim().charAt(0) || "U").toUpperCase();
 
@@ -44,8 +59,9 @@ function UserAvatar({ userImage, userName }: Pick<PublicPageAuthActionProps, "us
 /**
  * 공개 페이지 상단 인증 CTA를 렌더링한다.
  */
-export function PublicPageAuthAction({ hasSession, isOwnerPage, userImage, userName }: PublicPageAuthActionProps) {
+export function PublicPageAuthAction({ hasSession, isOwnerPage, userImage, userName, size = "sm", returnTo }: PublicPageAuthActionProps) {
   const actionType = resolvePublicPageAuthActionType({ hasSession, isOwnerPage });
+  const signInHref = resolvePublicPageSignInHref({ returnTo });
 
   if (actionType === null) {
     return null;
@@ -55,8 +71,9 @@ export function PublicPageAuthAction({ hasSession, isOwnerPage, userImage, userN
     return (
       <Button
         variant="ghost"
-        size="sm"
-        className="rounded-sm py-4"
+        size={size}
+        className="rounded-sm py-4 text-muted-foreground"
+        nativeButton={false}
         render={
           <Link href="/me" prefetch={false}>
             <UserAvatar userImage={userImage} userName={userName} />
@@ -70,10 +87,11 @@ export function PublicPageAuthAction({ hasSession, isOwnerPage, userImage, userN
   return (
     <Button
       variant="ghost"
-      size="sm"
-      className="rounded-sm py-4"
+      size={size}
+      className="rounded-sm py-4 text-muted-foreground"
+      nativeButton={false}
       render={
-        <Link href="/sign-in" prefetch={false}>
+        <Link href={signInHref} prefetch={false}>
           Sign In
         </Link>
       }
