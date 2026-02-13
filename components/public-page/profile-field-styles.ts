@@ -5,7 +5,7 @@ export const PUBLIC_PAGE_FIELD_BASE_CLASSNAME =
 
 export const PUBLIC_PAGE_NAME_CLASSNAME = "font-bold text-3xl leading-tight tracking-tighter md:text-4xl";
 
-export const PUBLIC_PAGE_BIO_CLASSNAME = "text-base md:text-lg";
+export const PUBLIC_PAGE_BIO_CLASSNAME = "text-base md:text-lg pl-1";
 
 export const PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME = "flex flex-col gap-1.5";
 

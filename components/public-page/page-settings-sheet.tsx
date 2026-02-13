@@ -1,6 +1,7 @@
 "use client";
 
-import { GlobeIcon, LoaderIcon, LockIcon } from "lucide-react";
+import { LoaderIcon } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import type { MouseEvent } from "react";
 import { useCallback, useState, useTransition } from "react";
 import { togglePageVisibilityAction } from "@/app/[handle]/actions";
@@ -28,7 +29,6 @@ export function PageSettingsSheet({ contentId, handle, initialIsPublic, open, on
   const [isPending, startTransition] = useTransition();
 
   const visibilityLabel = isPublic ? "Public" : "Private";
-  const visibilityDescription = isPublic ? "Anyone can open and view your page." : "Only you can access this page while signed in.";
 
   /**
    * Switch의 boolean 변경값과 Button 클릭 이벤트를 모두 받아 공개 상태 토글을 처리한다.
@@ -68,11 +68,11 @@ export function PageSettingsSheet({ contentId, handle, initialIsPublic, open, on
           <DrawerDescription className="sr-only">Update your page handle and visibility.</DrawerDescription>
         </DrawerHeader>
 
-        <div className="scrollbar-hide no-scrollbar flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto px-5 py-2 pb-12">
+        <div className="scrollbar-hide no-scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-2 pb-12">
           <section className="flex flex-col gap-4">
-            <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <h2 className="font-medium text-base">Who can see your page?</h2>
-              <p className="mt-1 text-muted-foreground text-xs">{visibilityDescription}</p>
+              {isPending && <LoaderIcon className="size-4 animate-spin text-neutral-400" />}
             </div>
             <Button
               type="button"
@@ -82,14 +82,20 @@ export function PageSettingsSheet({ contentId, handle, initialIsPublic, open, on
               onClick={handleVisibilityCheckedChange}
               aria-label="Toggle page visibility"
             >
-              {isPending ? (
-                <LoaderIcon aria-hidden="true" className="size-3.5 animate-spin" />
-              ) : isPublic ? (
-                <GlobeIcon aria-hidden="true" className="size-3.5 text-green-500" />
-              ) : (
-                <LockIcon aria-hidden="true" className="size-3.5 text-red-500" />
-              )}
-              {!isPending && <span className={cn("font-medium", isPublic ? "text-green-500" : "text-red-500")}>{visibilityLabel}</span>}
+              <span className={cn("relative block h-7 min-w-18 overflow-hidden text-center font-medium")}>
+                <AnimatePresence initial={false} mode="wait">
+                  <motion.span
+                    key={visibilityLabel}
+                    className="block font-semibold leading-7"
+                    initial={{ y: "100%", opacity: 0 }}
+                    animate={{ y: "0%", opacity: 1 }}
+                    exit={{ y: "-100%", opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                  >
+                    {visibilityLabel}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
             </Button>
           </section>
 

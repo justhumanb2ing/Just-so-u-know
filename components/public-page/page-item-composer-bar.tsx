@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Popover, PopoverPanel, PopoverTrigger } from "@/components/animate-ui/components/base/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,17 +13,54 @@ type ItemComposerBarProps = {
   hasDraft: boolean;
   onOpenComposer: () => void;
   ogController: OgCrawlController;
+  appearDelayMs?: number;
 };
 
 /**
  * 페이지 하단에 고정되는 아이템 작성 바.
  * 현재는 텍스트 아이템 작성과 링크 OG 조회를 함께 제공한다.
  */
-export function ItemComposerBar({ hasDraft, onOpenComposer, ogController }: ItemComposerBarProps) {
+export function ItemComposerBar({ hasDraft, onOpenComposer, ogController, appearDelayMs = 0 }: ItemComposerBarProps) {
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const shouldReduceMotion = useReducedMotion() ?? false;
 
-  return (
-    <div className="fixed inset-x-0 bottom-4 z-30 mx-auto w-full max-w-md px-4">
+  useEffect(() => {
+    setPortalRoot(document.body);
+  }, []);
+
+  useEffect(() => {
+    if (!portalRoot) {
+      return;
+    }
+
+    if (shouldReduceMotion || appearDelayMs <= 0) {
+      setIsVisible(true);
+      return;
+    }
+
+    setIsVisible(false);
+    const timerId = window.setTimeout(() => {
+      setIsVisible(true);
+    }, appearDelayMs);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [portalRoot, shouldReduceMotion, appearDelayMs]);
+
+  if (!portalRoot || !isVisible) {
+    return null;
+  }
+
+  return createPortal(
+    <motion.div
+      className="fixed inset-x-0 bottom-4 z-30 mx-auto w-full max-w-md px-4"
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 64 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 1.2, ease: [0.22, 1, 0.36, 1] }}
+    >
       <section className="space-y-2 rounded-[20px] border bg-background/80 p-2 shadow-xl backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <Popover open={isLinkPopoverOpen} onOpenChange={setIsLinkPopoverOpen}>
@@ -66,6 +105,7 @@ export function ItemComposerBar({ hasDraft, onOpenComposer, ogController }: Item
           </Button>
         </div>
       </section>
-    </div>
+    </motion.div>,
+    portalRoot,
   );
 }

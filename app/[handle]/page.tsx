@@ -1,20 +1,7 @@
 import { headers } from "next/headers";
-import Image from "next/image";
 import { notFound } from "next/navigation";
-import { EditablePageContent } from "@/components/public-page/editable-page-content";
-import { PageEditFloatingToolbar } from "@/components/public-page/page-edit-floating-toolbar";
-import { ReadonlyPageItemSection } from "@/components/public-page/page-item-section";
-import { PageSaveStatusIndicator } from "@/components/public-page/page-save-status-indicator";
-import {
-  PUBLIC_PAGE_BIO_FIELD_CLASSNAME,
-  PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME,
-  PUBLIC_PAGE_IMAGE_CONTENT_CLASSNAME,
-  PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE,
-  PUBLIC_PAGE_IMAGE_VIEW_CONTAINER_CLASSNAME,
-  PUBLIC_PAGE_NAME_FIELD_CLASSNAME,
-  PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME,
-} from "@/components/public-page/profile-field-styles";
-import { PageSaveStatusProvider } from "@/hooks/use-page-save-status";
+import { EditablePageOwnerSection } from "@/components/public-page/editable-page-owner-section";
+import { ReadonlyPageVisitorSection } from "@/components/public-page/readonly-page-visitor-section";
 import { auth } from "@/lib/auth/auth";
 import { canEditPageProfile, findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
 import { findVisiblePageItemsByPathHandle } from "@/service/page/items";
@@ -38,10 +25,11 @@ async function resolveSessionOrNull(requestHeaders: Headers) {
 export default async function PublicPage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
   const requestHeaders = await headers();
-  const [page, session, pageItems] = await Promise.all([
+  const [page, session, pageItems, pageSocialItems] = await Promise.all([
     findPageByPathHandle(handle),
     resolveSessionOrNull(requestHeaders),
     findVisiblePageItemsByPathHandle(handle),
+    findVisiblePageSocialItemsByPathHandle(handle),
   ]);
 
   if (!page) {
@@ -50,55 +38,26 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
 
   const isOwner = page.userId === session?.user.id;
   const canEdit = canEditPageProfile({ isOwner });
-  const pageSocialItems = canEdit ? await findVisiblePageSocialItemsByPathHandle(handle) : [];
 
   if (shouldDenyPrivatePageAccess({ isPublic: page.isPublic, isOwner })) {
     throw new Error(PRIVATE_PAGE_ACCESS_DENIED_ERROR);
   }
 
   return (
-    <main className="container mx-auto flex h-dvh min-h-0 justify-center gap-4 overflow-hidden">
+    <main className="container mx-auto flex h-dvh min-h-0 flex-col items-center justify-center gap-0 overflow-hidden">
       {canEdit ? (
-        <PageSaveStatusProvider>
-          <section className="md:floating-shadow scrollbar-hide max-h-dvh max-w-lg grow overflow-y-auto px-4 py-10 md:mt-10 md:max-h-[calc(100dvh-2.5rem)] md:rounded-t-[64px] md:border-[0.5px] md:px-10">
-            <EditablePageContent
-              handle={page.handle}
-              initialName={page.name}
-              initialBio={page.bio}
-              initialImage={page.image}
-              initialItems={pageItems}
-            />
-          </section>
-          <PageEditFloatingToolbar handle={page.handle} initialIsPublic={page.isPublic} initialSocialItems={pageSocialItems} />
-          <PageSaveStatusIndicator />
-        </PageSaveStatusProvider>
-      ) : null}
-
-      {!canEdit ? (
-        <section className="md:floating-shadow scrollbar-hide max-h-dvh max-w-lg grow overflow-y-auto px-4 py-10 md:mt-10 md:max-h-[calc(100dvh-2.5rem)] md:rounded-t-[64px] md:border-[0.5px] md:px-10">
-          <section className={PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME}>
-            {page.image ? (
-              <div className={PUBLIC_PAGE_IMAGE_VIEW_CONTAINER_CLASSNAME}>
-                <Image
-                  src={page.image}
-                  alt={`${page.name ?? page.handle} profile`}
-                  fill
-                  quality={75}
-                  unoptimized
-                  loading="eager"
-                  sizes={PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE}
-                  className={PUBLIC_PAGE_IMAGE_CONTENT_CLASSNAME}
-                />
-              </div>
-            ) : null}
-            <section className={PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME}>
-              <h1 className={PUBLIC_PAGE_NAME_FIELD_CLASSNAME}>{page.name ?? page.handle}</h1>
-              {page.bio ? <p className={PUBLIC_PAGE_BIO_FIELD_CLASSNAME}>{page.bio}</p> : null}
-            </section>
-            <ReadonlyPageItemSection items={pageItems} />
-          </section>
-        </section>
-      ) : null}
+        <EditablePageOwnerSection
+          handle={page.handle}
+          initialIsPublic={page.isPublic}
+          initialName={page.name}
+          initialBio={page.bio}
+          initialImage={page.image}
+          initialItems={pageItems}
+          initialSocialItems={pageSocialItems}
+        />
+      ) : (
+        <ReadonlyPageVisitorSection page={page} socialItems={pageSocialItems} items={pageItems} />
+      )}
     </main>
   );
 }

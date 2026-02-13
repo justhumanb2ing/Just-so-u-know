@@ -20,6 +20,8 @@ type SubmitOgLookupOptions = {
 };
 
 type UseOgCrawlParams = {
+  onLookupStart?: () => void;
+  onLookupError?: () => void;
   onLookupSuccess?: (crawlResponse: CrawlResponse) => Promise<boolean> | boolean;
 };
 
@@ -44,7 +46,7 @@ export function buildOgLookupEndpoint(linkUrl: string) {
  * 링크 URL로 OG를 조회하는 클라이언트 상태/이벤트를 관리한다.
  * 실패 시에만 toast를 노출한다.
  */
-export function useOgCrawl({ onLookupSuccess }: UseOgCrawlParams = {}): OgCrawlController {
+export function useOgCrawl({ onLookupStart, onLookupError, onLookupSuccess }: UseOgCrawlParams = {}): OgCrawlController {
   const [linkUrl, setLinkUrl] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [lastFetchedOg, setLastFetchedOg] = useState<CrawlResponse | null>(null);
@@ -63,6 +65,7 @@ export function useOgCrawl({ onLookupSuccess }: UseOgCrawlParams = {}): OgCrawlC
         return;
       }
 
+      onLookupStart?.();
       setIsPending(true);
 
       void (async () => {
@@ -83,6 +86,7 @@ export function useOgCrawl({ onLookupSuccess }: UseOgCrawlParams = {}): OgCrawlC
             const canCommit = await onLookupSuccess(payload.data);
 
             if (!canCommit) {
+              onLookupError?.();
               return;
             }
           }
@@ -91,6 +95,7 @@ export function useOgCrawl({ onLookupSuccess }: UseOgCrawlParams = {}): OgCrawlC
           options?.onSuccess?.();
         } catch (error) {
           const message = error instanceof Error ? error.message : "Failed to crawl OG.";
+          onLookupError?.();
 
           toast.error("Failed to crawl OG", {
             description: message,
@@ -100,7 +105,7 @@ export function useOgCrawl({ onLookupSuccess }: UseOgCrawlParams = {}): OgCrawlC
         }
       })();
     },
-    [isPending, linkUrl, onLookupSuccess],
+    [isPending, linkUrl, onLookupError, onLookupStart, onLookupSuccess],
   );
 
   return {

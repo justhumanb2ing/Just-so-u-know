@@ -36,12 +36,23 @@ export type PageItem = {
   updatedAt: string;
 };
 
-type ItemDraftState = {
+type MemoDraftState = {
   id: string;
+  kind: "memo";
   content: string;
   hasUserInput: boolean;
   isSaving: boolean;
 };
+
+type LinkDraftState = {
+  id: string;
+  kind: "link";
+  content: string;
+  hasUserInput: boolean;
+  isSaving: boolean;
+};
+
+type ItemDraftState = MemoDraftState | LinkDraftState;
 
 type PersistedPageItemApiResponse = {
   status: "success";
@@ -66,7 +77,9 @@ export type PageItemComposerController = {
   items: PageItem[];
   focusRequestId: number;
   handleOpenComposer: () => void;
+  handleOpenLinkDraft: () => void;
   handleDraftChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+  handleRemoveDraft: () => void;
   handleCreateLinkItemFromOg: (crawlResponse: CrawlResponse) => Promise<boolean>;
   handleItemMemoChange: (itemId: string, nextValue: string) => void;
   handleItemLinkTitleChange: (itemId: string, nextValue: string) => void;
@@ -613,7 +626,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
   const persistDraft = useCallback(async () => {
     const currentDraft = draftRef.current;
 
-    if (!currentDraft || currentDraft.isSaving) {
+    if (!currentDraft || currentDraft.kind !== "memo" || currentDraft.isSaving) {
       return;
     }
 
@@ -622,7 +635,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     }
 
     setDraft((prevDraft) => {
-      if (!prevDraft || prevDraft.id !== currentDraft.id) {
+      if (!prevDraft || prevDraft.kind !== "memo" || prevDraft.id !== currentDraft.id) {
         return prevDraft;
       }
 
@@ -669,7 +682,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       const message = error instanceof Error ? error.message : "Failed to create item.";
 
       setDraft((prevDraft) => {
-        if (!prevDraft || prevDraft.id !== currentDraft.id) {
+        if (!prevDraft || prevDraft.kind !== "memo" || prevDraft.id !== currentDraft.id) {
           return prevDraft;
         }
 
@@ -693,6 +706,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       const linkPayload = resolveLinkItemCreatePayloadFromCrawl(crawlResponse);
 
       if (!linkPayload) {
+        setDraft((prevDraft) => (prevDraft?.kind === "link" ? null : prevDraft));
         toast.error("Failed to save item", {
           description: "Link title and URL are required.",
         });
@@ -732,10 +746,12 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
           itemLastSyncedOrderIdsRef.current = resolvePageItemIds(nextItems);
           return nextItems;
         });
+        setDraft((prevDraft) => (prevDraft?.kind === "link" ? null : prevDraft));
 
         return true;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to create item.";
+        setDraft((prevDraft) => (prevDraft?.kind === "link" ? null : prevDraft));
 
         toast.error("Failed to save item", {
           description: message,
@@ -747,7 +763,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
   );
 
   useEffect(() => {
-    if (!draft || draft.isSaving || !draft.hasUserInput) {
+    if (!draft || draft.kind !== "memo" || draft.isSaving || !draft.hasUserInput) {
       return;
     }
 
@@ -1155,6 +1171,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
 
       return {
         id: createDraftId(),
+        kind: "memo",
         content: "",
         hasUserInput: false,
         isSaving: false,
@@ -1164,11 +1181,34 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     setFocusRequestId((prevValue) => prevValue + 1);
   }, []);
 
+  /**
+   * 링크 OG 조회/생성 중 표시할 링크 draft를 연다.
+   */
+  const handleOpenLinkDraft = useCallback(() => {
+    setDraft((prevDraft) => {
+      if (prevDraft?.kind === "memo" && hasMeaningfulItemContent(prevDraft.content)) {
+        return prevDraft;
+      }
+
+      if (prevDraft?.kind === "link") {
+        return prevDraft;
+      }
+
+      return {
+        id: createDraftId(),
+        kind: "link",
+        content: "",
+        hasUserInput: false,
+        isSaving: true,
+      };
+    });
+  }, []);
+
   const handleDraftChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
     const nextValue = normalizeItemInput(event.target.value);
 
     setDraft((prevDraft) => {
-      if (!prevDraft) {
+      if (!prevDraft || prevDraft.kind !== "memo") {
         return prevDraft;
       }
 
@@ -1178,6 +1218,13 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         hasUserInput: true,
       };
     });
+  }, []);
+
+  /**
+   * 작성 중인 draft를 화면에서 즉시 제거한다.
+   */
+  const handleRemoveDraft = useCallback(() => {
+    setDraft(null);
   }, []);
 
   const handleItemMemoChange = useCallback(
@@ -1301,7 +1348,9 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     items,
     focusRequestId,
     handleOpenComposer,
+    handleOpenLinkDraft,
     handleDraftChange,
+    handleRemoveDraft,
     handleCreateLinkItemFromOg,
     handleItemMemoChange,
     handleItemLinkTitleChange,

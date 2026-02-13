@@ -14,22 +14,24 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { RectangleHorizontalIcon, SquareIcon, TrashIcon } from "lucide-react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { ChangeEvent, ReactNode, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Rectangle } from "@/components/icons/rectangle";
 import { ItemComposerBar } from "@/components/public-page/page-item-composer-bar";
 import { getPageItemRenderer } from "@/components/public-page/page-item-renderers";
+import { buildItemEntryMotionConfig } from "@/components/public-page/page-motion";
 import {
   PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME,
   PUBLIC_PAGE_ITEM_RESIZE_GROUP_CLASSNAME,
 } from "@/components/public-page/profile-field-styles";
 import { buttonVariants } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useOgCrawl } from "@/hooks/use-og-crawl";
 import type { InitialPageItem, PageItem } from "@/hooks/use-page-item-composer";
-import { normalizeInitialPageItems, usePageItemComposer } from "@/hooks/use-page-item-composer";
+import { usePageItemComposer } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
 
 const ITEM_REMOVE_TAP = { scale: 0.92 } as const;
@@ -42,16 +44,15 @@ const NON_DRAGGABLE_SELECTOR = "input,textarea,a,button,[contenteditable='true']
 type EditablePageItemSectionProps = {
   handle: string;
   initialItems?: InitialPageItem[];
-};
-
-type ReadonlyPageItemSectionProps = {
-  items: InitialPageItem[];
+  composerAppearDelayMs?: number;
 };
 
 type ItemListProps = {
   items: PageItem[];
   withBottomSpacing?: boolean;
   draftItem?: ReactNode;
+  draftState?: DraftItemAnimationState | null;
+  dndContextId?: string;
   itemActions?: EditableItemActions;
   onMemoChange?: (itemId: string, nextValue: string) => void;
   onLinkTitleChange?: (itemId: string, nextValue: string) => void;
@@ -59,12 +60,19 @@ type ItemListProps = {
   onItemReorder?: (activeItemId: string, overItemId: string) => void;
 };
 
+type DraftItemAnimationState = {
+  isSaving: boolean;
+};
+
 type DraftItemCardProps = {
   draft: {
+    kind: "memo" | "link";
     content: string;
+    isSaving: boolean;
   };
   focusRequestId: number;
   onDraftChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+  onDraftRemove: () => void;
 };
 
 type EditableItemActions = {
@@ -165,6 +173,36 @@ function toItemId(identifier: UniqueIdentifier | null | undefined) {
   return null;
 }
 
+type ResolveSkippedItemEntryAnimationIdsParams = {
+  previousItemIds: string[];
+  nextItemIds: string[];
+  previousDraft: {
+    exists: boolean;
+    isSaving: boolean;
+  };
+  nextDraftExists: boolean;
+};
+
+/**
+ * 드래프트 저장 성공으로 실제 아이템이 추가된 프레임을 감지해
+ * "드래프트 -> 실아이템" 치환 시에는 신규 아이템 진입 애니메이션을 건너뛴다.
+ */
+export function resolveSkippedItemEntryAnimationIds({
+  previousItemIds,
+  nextItemIds,
+  previousDraft,
+  nextDraftExists,
+}: ResolveSkippedItemEntryAnimationIdsParams) {
+  if (!(previousDraft.exists && previousDraft.isSaving) || nextDraftExists) {
+    return [];
+  }
+
+  const previousItemIdSet = new Set(previousItemIds);
+  const addedItemIds = nextItemIds.filter((itemId) => !previousItemIdSet.has(itemId));
+
+  return addedItemIds.length > 0 ? addedItemIds : [];
+}
+
 function getItemCardSizeClass(sizeCode: PageItem["sizeCode"]) {
   if (sizeCode === "wide-short") {
     return "h-16";
@@ -184,19 +222,47 @@ function resolvePageItemCardClassName(item: PageItem) {
   return cn(PAGE_ITEM_CARD_BASE_CLASSNAME, sizeClass, styleConfig.className);
 }
 
-function DraftItemCard({ draft, focusRequestId, onDraftChange }: DraftItemCardProps) {
+function DraftItemCard({ draft, focusRequestId, onDraftChange, onDraftRemove }: DraftItemCardProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
-    if (focusRequestId <= 0) {
+    if (draft.kind !== "memo" || focusRequestId <= 0) {
       return;
     }
 
     textareaRef.current?.focus();
-  }, [focusRequestId]);
+  }, [draft.kind, focusRequestId]);
+
+  if (draft.kind === "link") {
+    return (
+      <article className="group relative h-16 overflow-visible rounded-[16px] bg-muted/70 p-2">
+        <div className="flex h-full w-full items-center gap-3">
+          <Skeleton className="size-10 shrink-0 rounded-sm" />
+          <div className="flex min-w-0 flex-1 items-center justify-center">
+            <Skeleton className="h-10 w-full rounded-sm" />
+          </div>
+        </div>
+      </article>
+    );
+  }
 
   return (
-    <article className="h-16 overflow-hidden rounded-[16px] bg-muted/70 p-3">
+    <article className="group relative h-16 overflow-visible rounded-[16px] bg-muted/70 p-3">
+      <motion.button
+        type="button"
+        className={cn(buttonVariants({ size: "icon-lg" }), PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME)}
+        aria-label="Remove draft item"
+        disabled={draft.isSaving}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onDraftRemove();
+        }}
+        whileTap={ITEM_REMOVE_TAP}
+        transition={ITEM_BUTTON_TRANSITION}
+      >
+        <TrashIcon className="size-4" strokeWidth={3} />
+      </motion.button>
       <Textarea
         ref={textareaRef}
         value={draft.content}
@@ -342,16 +408,46 @@ function ItemList({
   items,
   withBottomSpacing = false,
   draftItem,
+  draftState = null,
+  dndContextId,
   itemActions,
   onMemoChange,
   onLinkTitleChange,
   onLinkTitleSubmit,
   onItemReorder,
 }: ItemListProps) {
-  const sortableItemIds = useMemo(() => items.map((item) => item.id), [items]);
+  const itemIds = useMemo(() => items.map((item) => item.id), [items]);
+  const sortableItemIds = useMemo(() => itemIds, [itemIds]);
   const reorderEnabled = Boolean(itemActions) && Boolean(onItemReorder);
   const sensors = useSensors(useSensor(PageItemPointerSensor));
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const shouldReduceMotion = useReducedMotion() ?? false;
+  const itemEntryMotionConfig = useMemo(() => buildItemEntryMotionConfig(shouldReduceMotion), [shouldReduceMotion]);
+  const previousItemIdsRef = useRef<string[]>(itemIds);
+  const previousDraftRef = useRef<{ exists: boolean; isSaving: boolean }>({
+    exists: Boolean(draftState),
+    isSaving: draftState?.isSaving ?? false,
+  });
+  const skippedItemEntryAnimationIdSet = useMemo(
+    () =>
+      new Set(
+        resolveSkippedItemEntryAnimationIds({
+          previousItemIds: previousItemIdsRef.current,
+          nextItemIds: itemIds,
+          previousDraft: previousDraftRef.current,
+          nextDraftExists: Boolean(draftState),
+        }),
+      ),
+    [itemIds, draftState],
+  );
+
+  useEffect(() => {
+    previousItemIdsRef.current = itemIds;
+    previousDraftRef.current = {
+      exists: Boolean(draftState),
+      isSaving: draftState?.isSaving ?? false,
+    };
+  }, [itemIds, draftState]);
 
   if (items.length === 0 && !draftItem) {
     return null;
@@ -393,26 +489,81 @@ function ItemList({
     setActiveItemId(null);
   };
 
+  const renderItemCards = (isReorderEnabled: boolean) => {
+    if (shouldReduceMotion) {
+      return items.map((item) => (
+        <SortableItemCard
+          key={item.id}
+          item={item}
+          itemActions={itemActions}
+          onMemoChange={onMemoChange}
+          onLinkTitleChange={onLinkTitleChange}
+          onLinkTitleSubmit={onLinkTitleSubmit}
+          reorderEnabled={isReorderEnabled}
+        />
+      ));
+    }
+
+    return (
+      <AnimatePresence initial={false}>
+        {items.map((item) => {
+          const shouldSkipEntryAnimation = skippedItemEntryAnimationIdSet.has(item.id);
+
+          return (
+            <motion.div
+              key={item.id}
+              initial={shouldSkipEntryAnimation ? false : itemEntryMotionConfig.initial}
+              animate={itemEntryMotionConfig.animate}
+              exit={itemEntryMotionConfig.exit}
+              transition={itemEntryMotionConfig.transition}
+            >
+              <SortableItemCard
+                item={item}
+                itemActions={itemActions}
+                onMemoChange={onMemoChange}
+                onLinkTitleChange={onLinkTitleChange}
+                onLinkTitleSubmit={onLinkTitleSubmit}
+                reorderEnabled={isReorderEnabled}
+              />
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    );
+  };
+
+  const renderDraftCard = () => {
+    if (!draftItem) {
+      return null;
+    }
+
+    if (shouldReduceMotion) {
+      return draftItem;
+    }
+
+    return (
+      <motion.div
+        initial={itemEntryMotionConfig.initial}
+        animate={itemEntryMotionConfig.animate}
+        transition={itemEntryMotionConfig.transition}
+      >
+        {draftItem}
+      </motion.div>
+    );
+  };
+
   if (!reorderEnabled) {
     return (
       <div className={cn("flex flex-col gap-3", withBottomSpacing ? "pb-40" : undefined)}>
-        {items.map((item) => (
-          <SortableItemCard
-            key={item.id}
-            item={item}
-            itemActions={itemActions}
-            onMemoChange={onMemoChange}
-            onLinkTitleChange={onLinkTitleChange}
-            onLinkTitleSubmit={onLinkTitleSubmit}
-          />
-        ))}
-        {draftItem}
+        {renderItemCards(false)}
+        {renderDraftCard()}
       </div>
     );
   }
 
   return (
     <DndContext
+      id={dndContextId}
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
@@ -421,18 +572,8 @@ function ItemList({
     >
       <SortableContext items={sortableItemIds} strategy={verticalListSortingStrategy}>
         <div className={cn("flex flex-col gap-3", withBottomSpacing ? "pb-40" : undefined)}>
-          {items.map((item) => (
-            <SortableItemCard
-              key={item.id}
-              item={item}
-              itemActions={itemActions}
-              onMemoChange={onMemoChange}
-              onLinkTitleChange={onLinkTitleChange}
-              onLinkTitleSubmit={onLinkTitleSubmit}
-              reorderEnabled
-            />
-          ))}
-          {draftItem}
+          {renderItemCards(true)}
+          {renderDraftCard()}
         </div>
       </SortableContext>
 
@@ -457,53 +598,55 @@ function ItemList({
 /**
  * 페이지 소유자가 전체 아이템을 확인하고 하단 작성 바를 통해 아이템을 추가하는 편집 섹션.
  */
-export function EditablePageItemSection({ handle, initialItems = [] }: EditablePageItemSectionProps) {
+export function EditablePageItemSection({ handle, initialItems = [], composerAppearDelayMs = 0 }: EditablePageItemSectionProps) {
   const controller = usePageItemComposer({
     handle,
     initialItems,
   });
   const ogController = useOgCrawl({
+    onLookupStart: controller.handleOpenLinkDraft,
+    onLookupError: controller.handleRemoveDraft,
     onLookupSuccess: controller.handleCreateLinkItemFromOg,
   });
 
   const draftItem = controller.draft ? (
-    <DraftItemCard draft={controller.draft} focusRequestId={controller.focusRequestId} onDraftChange={controller.handleDraftChange} />
+    <DraftItemCard
+      draft={controller.draft}
+      focusRequestId={controller.focusRequestId}
+      onDraftChange={controller.handleDraftChange}
+      onDraftRemove={controller.handleRemoveDraft}
+    />
   ) : null;
+  const draftState = controller.draft
+    ? {
+        isSaving: controller.draft.isSaving,
+      }
+    : null;
   const itemActions: EditableItemActions = {
     onRemove: controller.handleRemoveItem,
     onResize: controller.handleItemResize,
   };
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex flex-col gap-3 px-4">
       <ItemList
         items={controller.items}
         withBottomSpacing
         draftItem={draftItem}
+        draftState={draftState}
+        dndContextId={`page-item-sortable-${encodeURIComponent(handle)}`}
         itemActions={itemActions}
         onMemoChange={controller.handleItemMemoChange}
         onLinkTitleChange={controller.handleItemLinkTitleChange}
         onLinkTitleSubmit={controller.handleItemLinkTitleSubmit}
         onItemReorder={controller.handleItemReorder}
       />
-      <ItemComposerBar hasDraft={Boolean(controller.draft)} onOpenComposer={controller.handleOpenComposer} ogController={ogController} />
-    </section>
-  );
-}
-
-/**
- * 방문자 화면에서 전체 타입 아이템 목록을 읽기 전용으로 렌더링한다.
- */
-export function ReadonlyPageItemSection({ items }: ReadonlyPageItemSectionProps) {
-  const normalizedItems = normalizeInitialPageItems(items);
-
-  if (normalizedItems.length === 0) {
-    return null;
-  }
-
-  return (
-    <section className="mt-6 flex flex-col gap-3">
-      <ItemList items={normalizedItems} />
+      <ItemComposerBar
+        hasDraft={Boolean(controller.draft)}
+        onOpenComposer={controller.handleOpenComposer}
+        ogController={ogController}
+        appearDelayMs={composerAppearDelayMs}
+      />
     </section>
   );
 }

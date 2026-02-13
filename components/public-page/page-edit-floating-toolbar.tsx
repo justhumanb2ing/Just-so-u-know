@@ -4,8 +4,10 @@ import { AtSignIcon, Settings2Icon } from "lucide-react";
 import { motion } from "motion/react";
 import dynamic from "next/dynamic";
 import { type ReactNode, useCallback, useId, useState } from "react";
+import { Popover, PopoverPanel, PopoverTrigger } from "@/components/animate-ui/components/base/popover";
 import { Tooltip, TooltipPanel, TooltipTrigger } from "@/components/animate-ui/components/base/tooltip";
 import type { EditableSocialAccountInitialItem } from "@/components/public-page/editable-social-accounts-section";
+import { PageOwnerAccountActions } from "@/components/public-page/page-owner-account-actions";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -14,10 +16,11 @@ const LazyPageSettingsSheet = dynamic(() => loadPageSettingsSheet().then((module
 const loadSocialAccountsSheet = () => import("@/components/public-page/social-accounts-sheet");
 const LazySocialAccountsSheet = dynamic(() => loadSocialAccountsSheet().then((module) => module.SocialAccountsSheet));
 
-type PageEditFloatingToolbarProps = {
+type OwnerActionFloatingToolbarProps = {
   handle: string;
   initialIsPublic: boolean;
   initialSocialItems: EditableSocialAccountInitialItem[];
+  onSocialItemsChange?: (items: EditableSocialAccountInitialItem[]) => void;
 };
 
 type MotionToolbarButtonProps = {
@@ -35,6 +38,35 @@ const TOOLBAR_BUTTON_TRANSITION = {
   duration: 0.12,
   ease: "easeOut",
 } as const;
+
+/**
+ * 계정 관련 액션(Sign out/Delete account)을 Popover로 묶어 오동작을 줄인다.
+ */
+function AccountActionsPopoverAction() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger
+        render={
+          <motion.button
+            type="button"
+            aria-expanded={isOpen}
+            aria-haspopup="dialog"
+            whileTap={TOOLBAR_BUTTON_TAP}
+            transition={TOOLBAR_BUTTON_TRANSITION}
+            className={cn(buttonVariants({ variant: "default", size: "sm" }), "phantom-border rounded-full px-3")}
+          >
+            account
+          </motion.button>
+        }
+      />
+      <PopoverPanel side="top" align="start" sideOffset={8} className="w-auto min-w-0 rounded-xl border-border/50 p-2">
+        <PageOwnerAccountActions />
+      </PopoverPanel>
+    </Popover>
+  );
+}
 
 function MotionToolbarButton({ controlsId, expanded, label, tooltipText, onPreload, onOpen, children }: MotionToolbarButtonProps) {
   return (
@@ -66,9 +98,14 @@ function MotionToolbarButton({ controlsId, expanded, label, tooltipText, onPrelo
 }
 
 /**
- * 페이지 편집 도구 진입점을 하단 고정 툴바로 제공한다.
+ * 소유자 액션(페이지 설정/소셜 관리/계정 액션) 진입점을 하단 고정 툴바로 제공한다.
  */
-export function PageEditFloatingToolbar({ handle, initialIsPublic, initialSocialItems }: PageEditFloatingToolbarProps) {
+export function OwnerActionFloatingToolbar({
+  handle,
+  initialIsPublic,
+  initialSocialItems,
+  onSocialItemsChange,
+}: OwnerActionFloatingToolbarProps) {
   const settingsSheetId = useId();
   const socialAccountsSheetId = useId();
   const [isSettingsSheetReady, setIsSettingsSheetReady] = useState(false);
@@ -118,11 +155,14 @@ export function PageEditFloatingToolbar({ handle, initialIsPublic, initialSocial
         <Settings2Icon aria-hidden="true" className="size-4" />
       </MotionToolbarButton>
 
+      <AccountActionsPopoverAction />
+
       {isSocialAccountsSheetReady ? (
         <LazySocialAccountsSheet
           contentId={socialAccountsSheetId}
           handle={handle}
           initialItems={initialSocialItems}
+          onPersistedItemsChange={onSocialItemsChange}
           open={isSocialAccountsSheetOpen}
           onOpenChange={setIsSocialAccountsSheetOpen}
         />

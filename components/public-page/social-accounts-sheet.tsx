@@ -11,6 +11,7 @@ type SocialAccountsSheetProps = {
   contentId: string;
   handle: string;
   initialItems: EditableSocialAccountInitialItem[];
+  onPersistedItemsChange?: (items: EditableSocialAccountInitialItem[]) => void;
   open: boolean;
   onOpenChange: (nextOpen: boolean) => void;
 };
@@ -18,7 +19,14 @@ type SocialAccountsSheetProps = {
 /**
  * 소셜 계정 편집 UI를 툴바에서 진입 가능한 Drawer로 제공한다.
  */
-export function SocialAccountsSheet({ contentId, handle, initialItems, open, onOpenChange }: SocialAccountsSheetProps) {
+export function SocialAccountsSheet({
+  contentId,
+  handle,
+  initialItems,
+  onPersistedItemsChange,
+  open,
+  onOpenChange,
+}: SocialAccountsSheetProps) {
   const [persistedInitialItems, setPersistedInitialItems] = useState<EditableSocialAccountInitialItem[]>(initialItems);
 
   useEffect(() => {
@@ -41,7 +49,10 @@ export function SocialAccountsSheet({ contentId, handle, initialItems, open, onO
             <EditableSocialAccountsSection
               handle={handle}
               initialItems={persistedInitialItems}
-              onPersistedItemsChange={setPersistedInitialItems}
+              onPersistedItemsChange={(items) => {
+                setPersistedInitialItems(items);
+                onPersistedItemsChange?.(items);
+              }}
               onSaveSuccess={() => {
                 onOpenChange(false);
               }}
