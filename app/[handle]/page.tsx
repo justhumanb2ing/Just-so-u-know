@@ -2,7 +2,9 @@ import { headers } from "next/headers";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { EditablePageContent } from "@/components/public-page/editable-page-content";
+import { PageEditFloatingToolbar } from "@/components/public-page/page-edit-floating-toolbar";
 import { ReadonlyPageItemSection } from "@/components/public-page/page-item-section";
+import { PageSaveStatusIndicator } from "@/components/public-page/page-save-status-indicator";
 import {
   PUBLIC_PAGE_BIO_FIELD_CLASSNAME,
   PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME,
@@ -12,6 +14,7 @@ import {
   PUBLIC_PAGE_NAME_FIELD_CLASSNAME,
   PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME,
 } from "@/components/public-page/profile-field-styles";
+import { PageSaveStatusProvider } from "@/hooks/use-page-save-status";
 import { auth } from "@/lib/auth/auth";
 import { canEditPageProfile, findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
 import { findVisiblePageItemsByPathHandle } from "@/service/page/items";
@@ -55,17 +58,24 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
 
   return (
     <main className="container mx-auto flex h-dvh min-h-0 justify-center gap-4 overflow-hidden">
-      <section className="md:floating-shadow scrollbar-hide max-h-dvh max-w-lg grow overflow-y-auto px-4 py-10 md:mt-10 md:max-h-[calc(100dvh-2.5rem)] md:rounded-t-[64px] md:border-[0.5px] md:px-10">
-        {canEdit ? (
-          <EditablePageContent
-            handle={page.handle}
-            initialName={page.name}
-            initialBio={page.bio}
-            initialImage={page.image}
-            initialItems={pageItems}
-            initialSocialItems={pageSocialItems}
-          />
-        ) : (
+      {canEdit ? (
+        <PageSaveStatusProvider>
+          <section className="md:floating-shadow scrollbar-hide max-h-dvh max-w-lg grow overflow-y-auto px-4 py-10 md:mt-10 md:max-h-[calc(100dvh-2.5rem)] md:rounded-t-[64px] md:border-[0.5px] md:px-10">
+            <EditablePageContent
+              handle={page.handle}
+              initialName={page.name}
+              initialBio={page.bio}
+              initialImage={page.image}
+              initialItems={pageItems}
+            />
+          </section>
+          <PageEditFloatingToolbar handle={page.handle} initialIsPublic={page.isPublic} initialSocialItems={pageSocialItems} />
+          <PageSaveStatusIndicator />
+        </PageSaveStatusProvider>
+      ) : null}
+
+      {!canEdit ? (
+        <section className="md:floating-shadow scrollbar-hide max-h-dvh max-w-lg grow overflow-y-auto px-4 py-10 md:mt-10 md:max-h-[calc(100dvh-2.5rem)] md:rounded-t-[64px] md:border-[0.5px] md:px-10">
           <section className={PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME}>
             {page.image ? (
               <div className={PUBLIC_PAGE_IMAGE_VIEW_CONTAINER_CLASSNAME}>
@@ -73,9 +83,10 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
                   src={page.image}
                   alt={`${page.name ?? page.handle} profile`}
                   fill
-                  quality={95}
-                  sizes={PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE}
+                  quality={75}
                   unoptimized
+                  loading="eager"
+                  sizes={PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE}
                   className={PUBLIC_PAGE_IMAGE_CONTENT_CLASSNAME}
                 />
               </div>
@@ -86,8 +97,8 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
             </section>
             <ReadonlyPageItemSection items={pageItems} />
           </section>
-        )}
-      </section>
+        </section>
+      ) : null}
     </main>
   );
 }

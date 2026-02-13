@@ -2,7 +2,7 @@
 
 import { AtSignIcon, CircleCheckIcon, XIcon as CloseIcon } from "lucide-react";
 import type { KeyboardEvent } from "react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Tooltip, TooltipPanel, TooltipTrigger } from "@/components/animate-ui/components/base/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,6 +129,13 @@ export type EditableSocialAccountInitialItem = {
   username: string;
 };
 
+type EditableSocialAccountsSectionProps = {
+  handle: string;
+  initialItems?: EditableSocialAccountInitialItem[];
+  onPersistedItemsChange?: (items: EditableSocialAccountInitialItem[]) => void;
+  onSaveSuccess?: () => void;
+};
+
 /**
  * 브랜드 배경색의 상대 휘도를 계산해 가독성이 높은 텍스트 색상을 반환한다.
  */
@@ -182,6 +189,16 @@ function buildInitialIdentifierByPlatform(initialItems: EditableSocialAccountIni
   }
 
   return identifierByPlatform;
+}
+
+/**
+ * 저장된 플랫폼별 식별자 맵을 Drawer 재진입 시 재사용 가능한 초기 아이템 포맷으로 직렬화한다.
+ */
+export function serializePersistedSocialItems(identifierByPlatform: Map<SocialPlatform, string>): EditableSocialAccountInitialItem[] {
+  return Array.from(identifierByPlatform, ([platform, username]) => ({
+    platform,
+    username,
+  }));
 }
 
 function SocialPlatformRow({
@@ -342,10 +359,9 @@ function SocialPlatformRow({
 export function EditableSocialAccountsSection({
   handle,
   initialItems = [],
-}: {
-  handle: string;
-  initialItems?: EditableSocialAccountInitialItem[];
-}) {
+  onPersistedItemsChange,
+  onSaveSuccess,
+}: EditableSocialAccountsSectionProps) {
   const initialIdentifierByPlatform = useMemo(() => buildInitialIdentifierByPlatform(initialItems), [initialItems]);
   const [persistedIdentifierByPlatform, setPersistedIdentifierByPlatform] = useState<Map<SocialPlatform, string>>(
     () => new Map(initialIdentifierByPlatform),
@@ -448,26 +464,35 @@ export function EditableSocialAccountsSection({
 
       return nextState;
     });
-  }, [deletePlatformsToSave, saveSocialPlatformChanges, upsertItemsToSave]);
+
+    onSaveSuccess?.();
+  }, [deletePlatformsToSave, onSaveSuccess, saveSocialPlatformChanges, upsertItemsToSave]);
+
+  useEffect(() => {
+    if (!onPersistedItemsChange) {
+      return;
+    }
+
+    onPersistedItemsChange(serializePersistedSocialItems(persistedIdentifierByPlatform));
+  }, [onPersistedItemsChange, persistedIdentifierByPlatform]);
 
   return (
-    <section className="phantom-shadow flex h-[820px] max-w-[424px] flex-col rounded-[2.5rem] border p-6 md:p-8">
-      <h2 className="font-bold text-xl leading-tight">Get your social platform into your page</h2>
-      <div className="flex grow flex-col">
-        <ScrollArea className="scrollbar-hide mt-8 h-96 grow border border-none" scrollFade scrollbarHidden>
-          {SOCIAL_PLATFORM_OPTIONS.map((option) => (
-            <SocialPlatformRow
-              key={option.platform}
-              option={option}
-              pendingDelete={deletePlatformSet.has(option.platform)}
-              disabled={isSaving}
-              initialIdentifier={initialIdentifierByPlatform.get(option.platform) ?? ""}
-              onCommit={handleCommit}
-              onUncommit={handleUncommit}
-              onDraftChange={handleDraftChange}
-            />
-          ))}
-        </ScrollArea>
+    <section className="relative flex h-full max-w-full flex-col pb-12">
+      <ScrollArea className="scrollbar-hide h-full grow border border-none pb-2" scrollFade scrollbarHidden>
+        {SOCIAL_PLATFORM_OPTIONS.map((option) => (
+          <SocialPlatformRow
+            key={option.platform}
+            option={option}
+            pendingDelete={deletePlatformSet.has(option.platform)}
+            disabled={isSaving}
+            initialIdentifier={initialIdentifierByPlatform.get(option.platform) ?? ""}
+            onCommit={handleCommit}
+            onUncommit={handleUncommit}
+            onDraftChange={handleDraftChange}
+          />
+        ))}
+      </ScrollArea>
+      <footer className="fixed bottom-3 left-0 w-full px-4">
         <Button
           type="button"
           size="lg"
@@ -475,11 +500,11 @@ export function EditableSocialAccountsSection({
           onClick={() => {
             void handleSaveSelectedPlatforms();
           }}
-          className="mt-8 h-14! w-full rounded-full font-semibold text-lg!"
+          className="w-full rounded-full py-6 font-semibold text-lg"
         >
-          {isSaving ? "Saving..." : "Get Platforms"}
+          {isSaving ? "Saving..." : "Connect"}
         </Button>
-      </div>
+      </footer>
     </section>
   );
 }

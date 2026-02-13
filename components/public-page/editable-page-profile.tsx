@@ -76,8 +76,9 @@ function ProfileImageField({ controller }: ProfileImageFieldProps) {
             alt="Profile"
             fill
             sizes={PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE}
-            quality={95}
+            quality={75}
             unoptimized
+            loading="eager"
             className={PUBLIC_PAGE_IMAGE_CONTENT_CLASSNAME}
           />
         ) : (

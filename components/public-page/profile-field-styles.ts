@@ -33,8 +33,8 @@ export const PUBLIC_PAGE_IMAGE_LOADING_OVERLAY_CLASSNAME = "absolute inset-0 fle
 export const PUBLIC_PAGE_HOVER_REMOVE_BUTTON_BASE_CLASSNAME =
   "pointer-events-none absolute z-10 rounded-full border border-black opacity-0 transition-opacity hover:bg-primary group-hover:pointer-events-auto group-hover:opacity-100";
 
-export const PUBLIC_PAGE_IMAGE_REMOVE_BUTTON_CLASSNAME = `${PUBLIC_PAGE_HOVER_REMOVE_BUTTON_BASE_CLASSNAME} right-2 bottom-2 group-focus-within:pointer-events-auto group-focus-within:opacity-100`;
+export const PUBLIC_PAGE_IMAGE_REMOVE_BUTTON_CLASSNAME = `${PUBLIC_PAGE_HOVER_REMOVE_BUTTON_BASE_CLASSNAME} right-2 bottom-2 group-focus-within:pointer-events-auto group-focus-within:opacity-100 phantom-border`;
 
-export const PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME = `${PUBLIC_PAGE_HOVER_REMOVE_BUTTON_BASE_CLASSNAME} -right-3 -top-3`;
+export const PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME = `${PUBLIC_PAGE_HOVER_REMOVE_BUTTON_BASE_CLASSNAME} -right-3 -top-3 phantom-border`;
 
 export const PUBLIC_PAGE_ITEM_RESIZE_GROUP_CLASSNAME = `${PUBLIC_PAGE_HOVER_REMOVE_BUTTON_BASE_CLASSNAME} -bottom-7 left-1/2 -translate-x-1/2 border-0 bg-foreground p-1`;
