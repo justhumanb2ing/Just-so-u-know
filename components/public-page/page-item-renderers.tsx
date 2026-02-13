@@ -98,7 +98,7 @@ function MemoItemRenderer({ item, canEditMemo = false, onMemoChange }: PageItemR
       disabled={isDisabled}
       onChange={(event) => onMemoChange?.(item.id, event.target.value)}
       className={cn(
-        "scrollbar-hide wrap-break-word h-full min-h-0 w-full resize-none overflow-y-auto whitespace-pre-wrap rounded-sm border-0 p-2 font-medium text-base! leading-relaxed shadow-none focus-visible:ring-0",
+        "scrollbar-hide wrap-break-word field-sizing-fixed h-full max-h-full min-h-0 w-full resize-none overflow-y-auto whitespace-pre-wrap rounded-sm border-0 p-2 font-medium text-base! leading-relaxed shadow-none focus-visible:ring-0",
         isDisabled
           ? "cursor-default bg-transparent hover:bg-transparent focus-visible:bg-transparent disabled:cursor-default disabled:bg-transparent disabled:opacity-100"
           : "hover:bg-input/60 focus-visible:bg-input/60",

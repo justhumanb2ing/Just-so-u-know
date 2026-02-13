@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
+  applyPageItemOrder,
   buildPageItemEndpoint,
   buildPageItemsEndpoint,
+  buildPageItemsReorderEndpoint,
   hasMeaningfulItemContent,
   normalizeCreatedItem,
   normalizeInitialPageItems,
@@ -9,6 +11,8 @@ import {
   normalizeLinkTitleInput,
   normalizePageItemSizeCode,
   removePageItemById,
+  renumberPageItemOrder,
+  reorderPageItemsById,
   resolveDraftAfterPersistSuccess,
   resolveLinkItemCreatePayloadFromCrawl,
   resolveLinkItemTitle,
@@ -85,6 +89,17 @@ describe("usePageItemComposer helpers", () => {
 
     // Assert
     expect(result).toBe("/api/pages/%40hello%20world/items/item%2F1");
+  });
+
+  test("아이템 정렬 API 경로는 handle을 URL 인코딩해 생성한다", () => {
+    // Arrange
+    const storedHandle = "@hello world";
+
+    // Act
+    const result = buildPageItemsReorderEndpoint(storedHandle);
+
+    // Assert
+    expect(result).toBe("/api/pages/%40hello%20world/items/reorder");
   });
 
   test("초기 아이템 목록은 sizeCode를 정규화하고 orderKey 기준으로 정렬한다", () => {
@@ -348,6 +363,118 @@ describe("usePageItemComposer helpers", () => {
     // Assert
     expect(result[0]?.sizeCode).toBe("wide-tall");
     expect(result[1]).toEqual(items[1]);
+  });
+
+  test("정렬 변경은 active/over 기준으로 이동하고 orderKey를 1..N으로 재번호화한다", () => {
+    // Arrange
+    const items = [
+      {
+        id: "item-1",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 1,
+        data: { content: "first" },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-2",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 2,
+        data: { content: "second" },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-3",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 3,
+        data: { content: "third" },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+    ];
+
+    // Act
+    const result = reorderPageItemsById(items, "item-3", "item-1");
+
+    // Assert
+    expect(result.map((item) => item.id)).toEqual(["item-3", "item-1", "item-2"]);
+    expect(result.map((item) => item.orderKey)).toEqual([1, 2, 3]);
+  });
+
+  test("id 배열 기준 재정렬은 항목 순서와 orderKey를 함께 갱신한다", () => {
+    // Arrange
+    const items = [
+      {
+        id: "item-1",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 5,
+        data: { content: "first" },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-2",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 9,
+        data: { content: "second" },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-3",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 12,
+        data: { content: "third" },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+    ];
+    const orderedItemIds = ["item-2", "item-3", "item-1"];
+
+    // Act
+    const result = applyPageItemOrder(items, orderedItemIds);
+
+    // Assert
+    expect(result.map((item) => item.id)).toEqual(orderedItemIds);
+    expect(result.map((item) => item.orderKey)).toEqual([1, 2, 3]);
+  });
+
+  test("orderKey 재번호화는 현재 배열 순서를 유지하며 1..N을 부여한다", () => {
+    // Arrange
+    const items = [
+      {
+        id: "item-2",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 10,
+        data: { content: "second" },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-1",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 99,
+        data: { content: "first" },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+    ];
+
+    // Act
+    const result = renumberPageItemOrder(items);
+
+    // Assert
+    expect(result.map((item) => item.id)).toEqual(["item-2", "item-1"]);
+    expect(result.map((item) => item.orderKey)).toEqual([1, 2]);
   });
 
   test("아이템 제거 시 제거된 아이템과 남은 목록을 함께 반환한다", () => {

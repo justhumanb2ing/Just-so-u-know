@@ -1,9 +1,22 @@
 "use client";
 
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
+  PointerSensor,
+  type UniqueIdentifier,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { RectangleHorizontalIcon, SquareIcon, TrashIcon } from "lucide-react";
 import { motion } from "motion/react";
-import type { ChangeEvent, ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import type { ChangeEvent, ReactNode, PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Rectangle } from "@/components/icons/rectangle";
 import { ItemComposerBar } from "@/components/public-page/page-item-composer-bar";
 import { getPageItemRenderer } from "@/components/public-page/page-item-renderers";
@@ -24,6 +37,7 @@ const ITEM_BUTTON_TRANSITION = {
   duration: 0.06,
   ease: "easeOut",
 } as const;
+const NON_DRAGGABLE_SELECTOR = "input,textarea,a,button,[contenteditable='true'],[data-no-dnd='true']";
 
 type EditablePageItemSectionProps = {
   handle: string;
@@ -42,6 +56,7 @@ type ItemListProps = {
   onMemoChange?: (itemId: string, nextValue: string) => void;
   onLinkTitleChange?: (itemId: string, nextValue: string) => void;
   onLinkTitleSubmit?: (itemId: string) => void;
+  onItemReorder?: (activeItemId: string, overItemId: string) => void;
 };
 
 type DraftItemCardProps = {
@@ -55,6 +70,15 @@ type DraftItemCardProps = {
 type EditableItemActions = {
   onRemove: (itemId: string) => void;
   onResize: (itemId: string, nextSizeCode: PageItem["sizeCode"]) => void;
+};
+
+type SortableItemCardProps = {
+  item: PageItem;
+  itemActions?: EditableItemActions;
+  onMemoChange?: (itemId: string, nextValue: string) => void;
+  onLinkTitleChange?: (itemId: string, nextValue: string) => void;
+  onLinkTitleSubmit?: (itemId: string) => void;
+  reorderEnabled?: boolean;
 };
 
 const PAGE_ITEM_RESIZE_OPTIONS: Array<{
@@ -79,7 +103,7 @@ const PAGE_ITEM_RESIZE_OPTIONS: Array<{
   },
 ];
 
-const PAGE_ITEM_CARD_BASE_CLASSNAME = "group relative flex flex-col justify-center gap-2 rounded-[16px] p-3 bg-muted/70";
+const PAGE_ITEM_CARD_BASE_CLASSNAME = "group relative gap-2 rounded-[16px] p-3 bg-muted/70";
 
 type PageItemCardStyleConfig = {
   className?: string;
@@ -105,6 +129,41 @@ const PAGE_ITEM_CARD_STYLE_CONFIG_MAP: Record<string, PageItemCardStyleConfig> =
     className: "overflow-visible",
   },
 };
+
+/**
+ * input/textarea/link 등 상호작용 가능한 요소에서는 카드 드래그를 막는다.
+ */
+function shouldAllowCardDrag(eventTarget: EventTarget | null) {
+  if (!(eventTarget instanceof HTMLElement)) {
+    return true;
+  }
+
+  return eventTarget.closest(NON_DRAGGABLE_SELECTOR) === null;
+}
+
+/**
+ * 카드 전체를 드래그 트리거로 사용하되, 상호작용 요소에서의 포인터 다운은 제외한다.
+ */
+class PageItemPointerSensor extends PointerSensor {
+  static activators = [
+    {
+      eventName: "onPointerDown" as const,
+      handler: ({ nativeEvent }: ReactPointerEvent) => shouldAllowCardDrag(nativeEvent.target),
+    },
+  ];
+}
+
+function toItemId(identifier: UniqueIdentifier | null | undefined) {
+  if (typeof identifier === "string") {
+    return identifier;
+  }
+
+  if (typeof identifier === "number") {
+    return String(identifier);
+  }
+
+  return null;
+}
 
 function getItemCardSizeClass(sizeCode: PageItem["sizeCode"]) {
   if (sizeCode === "wide-short") {
@@ -154,6 +213,7 @@ function EditableItemActionControls({ item, itemActions }: { item: PageItem; ite
     <>
       <motion.button
         type="button"
+        data-no-dnd="true"
         className={cn(buttonVariants({ size: "icon-lg" }), PUBLIC_PAGE_ITEM_REMOVE_BUTTON_CLASSNAME)}
         onClick={(event) => {
           event.preventDefault();
@@ -169,6 +229,7 @@ function EditableItemActionControls({ item, itemActions }: { item: PageItem; ite
       <ButtonGroup
         aria-label="Item size options"
         orientation={"horizontal"}
+        data-no-dnd="true"
         className={cn(
           PUBLIC_PAGE_ITEM_RESIZE_GROUP_CLASSNAME,
           "phantom-border gap-1 rounded-sm p-1.5 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
@@ -182,6 +243,7 @@ function EditableItemActionControls({ item, itemActions }: { item: PageItem; ite
             <motion.button
               key={option.sizeCode}
               type="button"
+              data-no-dnd="true"
               aria-label={option.ariaLabel}
               disabled={isOptionDisabled}
               onClick={(event) => {
@@ -212,6 +274,70 @@ function EditableItemActionControls({ item, itemActions }: { item: PageItem; ite
   );
 }
 
+function SortableItemCard({
+  item,
+  itemActions,
+  onMemoChange,
+  onLinkTitleChange,
+  onLinkTitleSubmit,
+  reorderEnabled = false,
+}: SortableItemCardProps) {
+  const ItemRenderer = getPageItemRenderer(item.typeCode);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+    disabled: !reorderEnabled,
+  });
+  const displayTransform = transform
+    ? {
+        ...transform,
+        scaleX: isDragging ? 1.03 : transform.scaleX,
+        scaleY: isDragging ? 1.03 : transform.scaleY,
+      }
+    : null;
+  const style = reorderEnabled
+    ? {
+        transform: CSS.Transform.toString(displayTransform),
+        transition,
+        zIndex: isDragging ? 40 : undefined,
+      }
+    : undefined;
+  const dndBindings = reorderEnabled
+    ? {
+        ...attributes,
+        ...listeners,
+      }
+    : {};
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={style}
+      data-item-type={item.typeCode}
+      data-size-code={item.sizeCode}
+      className={cn(resolvePageItemCardClassName(item), isDragging && "bg-transparent")}
+      {...dndBindings}
+    >
+      {isDragging ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-1 rounded-xl bg-muted opacity-100 shadow-[inset_0_1px_5px_0_rgba(0,0,0,0.1)]"
+        />
+      ) : null}
+      <div className={cn(isDragging && "opacity-0", item.typeCode === "memo" && "h-full min-h-0 overflow-hidden")}>
+        {itemActions ? <EditableItemActionControls item={item} itemActions={itemActions} /> : null}
+        <ItemRenderer
+          item={item}
+          canEditMemo={Boolean(itemActions)}
+          onMemoChange={onMemoChange}
+          canEditLinkTitle={Boolean(itemActions)}
+          onLinkTitleChange={onLinkTitleChange}
+          onLinkTitleSubmit={onLinkTitleSubmit}
+        />
+      </div>
+    </article>
+  );
+}
+
 function ItemList({
   items,
   withBottomSpacing = false,
@@ -220,37 +346,111 @@ function ItemList({
   onMemoChange,
   onLinkTitleChange,
   onLinkTitleSubmit,
+  onItemReorder,
 }: ItemListProps) {
+  const sortableItemIds = useMemo(() => items.map((item) => item.id), [items]);
+  const reorderEnabled = Boolean(itemActions) && Boolean(onItemReorder);
+  const sensors = useSensors(useSensor(PageItemPointerSensor));
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
+
   if (items.length === 0 && !draftItem) {
     return null;
   }
 
-  return (
-    <div className={cn("flex flex-col gap-3", withBottomSpacing ? "pb-40" : undefined)}>
-      {items.map((item) => {
-        const ItemRenderer = getPageItemRenderer(item.typeCode);
+  const activeItem = activeItemId ? (items.find((item) => item.id === activeItemId) ?? null) : null;
+  const ActiveItemRenderer = activeItem ? getPageItemRenderer(activeItem.typeCode) : null;
 
-        return (
-          <article
+  const handleDragStart = (event: DragStartEvent) => {
+    if (!reorderEnabled) {
+      return;
+    }
+
+    const nextActiveItemId = toItemId(event.active.id);
+
+    if (!nextActiveItemId) {
+      return;
+    }
+
+    setActiveItemId(nextActiveItemId);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (!reorderEnabled || !onItemReorder) {
+      return;
+    }
+
+    const nextActiveItemId = toItemId(event.active.id);
+    const nextOverItemId = toItemId(event.over?.id);
+
+    if (nextActiveItemId && nextOverItemId && nextActiveItemId !== nextOverItemId) {
+      onItemReorder(nextActiveItemId, nextOverItemId);
+    }
+
+    setActiveItemId(null);
+  };
+
+  const handleDragCancel = () => {
+    setActiveItemId(null);
+  };
+
+  if (!reorderEnabled) {
+    return (
+      <div className={cn("flex flex-col gap-3", withBottomSpacing ? "pb-40" : undefined)}>
+        {items.map((item) => (
+          <SortableItemCard
             key={item.id}
-            data-item-type={item.typeCode}
-            data-size-code={item.sizeCode}
-            className={resolvePageItemCardClassName(item)}
-          >
-            {itemActions ? <EditableItemActionControls item={item} itemActions={itemActions} /> : null}
-            <ItemRenderer
+            item={item}
+            itemActions={itemActions}
+            onMemoChange={onMemoChange}
+            onLinkTitleChange={onLinkTitleChange}
+            onLinkTitleSubmit={onLinkTitleSubmit}
+          />
+        ))}
+        {draftItem}
+      </div>
+    );
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <SortableContext items={sortableItemIds} strategy={verticalListSortingStrategy}>
+        <div className={cn("flex flex-col gap-3", withBottomSpacing ? "pb-40" : undefined)}>
+          {items.map((item) => (
+            <SortableItemCard
+              key={item.id}
               item={item}
-              canEditMemo={Boolean(itemActions)}
+              itemActions={itemActions}
               onMemoChange={onMemoChange}
-              canEditLinkTitle={Boolean(itemActions)}
               onLinkTitleChange={onLinkTitleChange}
               onLinkTitleSubmit={onLinkTitleSubmit}
+              reorderEnabled
+            />
+          ))}
+          {draftItem}
+        </div>
+      </SortableContext>
+
+      <DragOverlay dropAnimation={null}>
+        {activeItem && ActiveItemRenderer ? (
+          <article className={cn(resolvePageItemCardClassName(activeItem), "floating-shadow scale-[1.03] bg-muted")}>
+            <ActiveItemRenderer
+              item={activeItem}
+              canEditMemo={false}
+              canEditLinkTitle={false}
+              onMemoChange={undefined}
+              onLinkTitleChange={undefined}
+              onLinkTitleSubmit={undefined}
             />
           </article>
-        );
-      })}
-      {draftItem}
-    </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
 
@@ -284,6 +484,7 @@ export function EditablePageItemSection({ handle, initialItems = [] }: EditableP
         onMemoChange={controller.handleItemMemoChange}
         onLinkTitleChange={controller.handleItemLinkTitleChange}
         onLinkTitleSubmit={controller.handleItemLinkTitleSubmit}
+        onItemReorder={controller.handleItemReorder}
       />
       <ItemComposerBar hasDraft={Boolean(controller.draft)} onOpenComposer={controller.handleOpenComposer} ogController={ogController} />
     </section>

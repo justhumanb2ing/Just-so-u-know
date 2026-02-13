@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   normalizeStoredHandleFromPath,
   pageItemCreateSchema,
+  pageItemReorderSchema,
   pageItemUpdateSchema,
   pageSocialItemsUpsertSchema,
 } from "@/service/page/schema";
@@ -111,6 +112,33 @@ describe("page item schema", () => {
 
     // Act
     const result = pageItemUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
+  test("아이템 정렬 스키마는 전체 item id 배열을 허용한다", () => {
+    // Arrange
+    const payload = {
+      itemIds: ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"],
+    };
+
+    // Act
+    const result = pageItemReorderSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual(payload);
+  });
+
+  test("아이템 정렬 스키마는 중복 item id를 거부한다", () => {
+    // Arrange
+    const payload = {
+      itemIds: ["11111111-1111-4111-8111-111111111111", "11111111-1111-4111-8111-111111111111"],
+    };
+
+    // Act
+    const result = pageItemReorderSchema.safeParse(payload);
 
     // Assert
     expect(result.success).toBe(false);

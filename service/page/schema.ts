@@ -137,6 +137,28 @@ const pageItemSizeUpdateSchema = z.object({
 });
 
 /**
+ * 페이지 아이템 순서 일괄 수정 입력을 검증한다.
+ * 전체 아이템 id 배열을 받아 중복 없이 전달되었는지 확인한다.
+ */
+export const pageItemReorderSchema = z
+  .object({
+    itemIds: z.array(z.uuid({ message: "Invalid item id." })).min(1, {
+      message: "Item order is required.",
+    }),
+  })
+  .superRefine((value, context) => {
+    const uniqueItemIds = new Set(value.itemIds);
+
+    if (uniqueItemIds.size !== value.itemIds.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Duplicated item ids are not allowed.",
+        path: ["itemIds"],
+      });
+    }
+  });
+
+/**
  * 페이지 아이템 수정 API 입력을 검증한다.
  * 현재는 memo content, link title, size_code 수정을 지원한다.
  */
@@ -147,6 +169,7 @@ export const pageItemUpdateSchema = z.discriminatedUnion("type", [
 ]);
 
 export type PageItemUpdateInput = z.infer<typeof pageItemUpdateSchema>;
+export type PageItemReorderInput = z.infer<typeof pageItemReorderSchema>;
 
 /**
  * 소셜 계정 일괄 저장 입력을 검증/정규화한다.

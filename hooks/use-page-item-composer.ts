@@ -8,6 +8,7 @@ import { PAGE_ITEM_SIZE_CODES, type PageItemSizeCode } from "@/service/page/item
 import type { CrawlResponse } from "@/service/page/og-crawl";
 
 export const ITEM_COMPOSER_AUTOSAVE_DEBOUNCE_MS = 800;
+export const ITEM_REORDER_PERSIST_DEBOUNCE_MS = 120;
 export const DEFAULT_PAGE_ITEM_SIZE_CODE: PageItemSizeCode = "wide-short";
 
 const WINDOWS_LINE_BREAK_PATTERN = /\r\n?/g;
@@ -71,6 +72,7 @@ export type PageItemComposerController = {
   handleItemLinkTitleChange: (itemId: string, nextValue: string) => void;
   handleItemLinkTitleSubmit: (itemId: string) => void;
   handleItemResize: (itemId: string, nextSizeCode: PageItemSizeCode) => void;
+  handleItemReorder: (activeItemId: string, overItemId: string) => void;
   handleRemoveItem: (itemId: string) => void;
 };
 
@@ -150,8 +152,94 @@ export function buildPageItemEndpoint(handle: string, itemId: string) {
   return `/api/pages/${encodeURIComponent(handle)}/items/${encodeURIComponent(itemId)}`;
 }
 
+/**
+ * 페이지 아이템 순서 일괄 저장 API 엔드포인트를 생성한다.
+ */
+export function buildPageItemsReorderEndpoint(handle: string) {
+  return `/api/pages/${encodeURIComponent(handle)}/items/reorder`;
+}
+
 function sortPageItems(items: PageItem[]) {
   return [...items].sort((a, b) => a.orderKey - b.orderKey);
+}
+
+function resolvePageItemIds(items: PageItem[]) {
+  return items.map((item) => item.id);
+}
+
+function hasSamePageItemIdOrder(left: string[], right: string[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * 아이템 배열 순서를 기준으로 orderKey를 1..N으로 다시 매긴다.
+ */
+export function renumberPageItemOrder(items: PageItem[]) {
+  return items.map((item, index) => ({
+    ...item,
+    orderKey: index + 1,
+  }));
+}
+
+/**
+ * 아이템 id 배열 기준으로 목록 순서를 재배치하고 orderKey를 다시 매긴다.
+ */
+export function applyPageItemOrder(items: PageItem[], orderedItemIds: string[]) {
+  if (items.length !== orderedItemIds.length) {
+    return items;
+  }
+
+  const itemMap = new Map(items.map((item) => [item.id, item]));
+  const orderedItems: PageItem[] = [];
+
+  for (const itemId of orderedItemIds) {
+    const item = itemMap.get(itemId);
+
+    if (!item) {
+      return items;
+    }
+
+    orderedItems.push(item);
+  }
+
+  return renumberPageItemOrder(orderedItems);
+}
+
+/**
+ * active/over 아이템 기준으로 목록 순서를 이동하고 orderKey를 다시 매긴다.
+ */
+export function reorderPageItemsById(items: PageItem[], activeItemId: string, overItemId: string) {
+  if (activeItemId === overItemId) {
+    return items;
+  }
+
+  const activeIndex = items.findIndex((item) => item.id === activeItemId);
+  const overIndex = items.findIndex((item) => item.id === overItemId);
+
+  if (activeIndex < 0 || overIndex < 0 || activeIndex === overIndex) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const [movedItem] = nextItems.splice(activeIndex, 1);
+
+  if (!movedItem) {
+    return items;
+  }
+
+  nextItems.splice(overIndex, 0, movedItem);
+
+  return renumberPageItemOrder(nextItems);
 }
 
 function toObjectData(data: unknown) {
@@ -474,9 +562,13 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
   const linkTitlePersistQueuedIdsRef = useRef<Set<string>>(new Set());
   const itemSizePersistInFlightIdsRef = useRef<Set<string>>(new Set());
   const itemSizePersistQueuedIdsRef = useRef<Set<string>>(new Set());
+  const itemOrderPersistTimerRef = useRef<number | null>(null);
+  const itemOrderPersistInFlightRef = useRef(false);
+  const itemOrderPersistQueuedRef = useRef(false);
   const itemLastSyncedSizeCodeMapRef = useRef<Map<string, PageItemSizeCode>>(
     new Map((normalizedInitialItemsRef.current ?? []).map((item) => [item.id, item.sizeCode])),
   );
+  const itemLastSyncedOrderIdsRef = useRef<string[]>(resolvePageItemIds(normalizedInitialItemsRef.current ?? []));
   const itemDeleteInFlightIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -497,6 +589,10 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         window.clearTimeout(timerId);
       }
 
+      if (itemOrderPersistTimerRef.current) {
+        window.clearTimeout(itemOrderPersistTimerRef.current);
+      }
+
       memoSaveTimerMapRef.current.clear();
       memoPersistInFlightIdsRef.current.clear();
       memoPersistQueuedIdsRef.current.clear();
@@ -505,7 +601,11 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       linkTitlePersistQueuedIdsRef.current.clear();
       itemSizePersistInFlightIdsRef.current.clear();
       itemSizePersistQueuedIdsRef.current.clear();
+      itemOrderPersistInFlightRef.current = false;
+      itemOrderPersistQueuedRef.current = false;
+      itemOrderPersistTimerRef.current = null;
       itemLastSyncedSizeCodeMapRef.current.clear();
+      itemLastSyncedOrderIdsRef.current = [];
       itemDeleteInFlightIdsRef.current.clear();
     };
   }, []);
@@ -559,7 +659,11 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       const createdItem = normalizeCreatedItem(payload.item);
       itemLastSyncedSizeCodeMapRef.current.set(createdItem.id, createdItem.sizeCode);
 
-      setItems((prevItems) => sortPageItems([...prevItems, createdItem]));
+      setItems((prevItems) => {
+        const nextItems = sortPageItems([...prevItems, createdItem]);
+        itemLastSyncedOrderIdsRef.current = resolvePageItemIds(nextItems);
+        return nextItems;
+      });
       setDraft((prevDraft) => resolveDraftAfterPersistSuccess(prevDraft, currentDraft.id));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to create item.";
@@ -623,7 +727,11 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
 
         const createdItem = normalizeCreatedItem(payload.item);
         itemLastSyncedSizeCodeMapRef.current.set(createdItem.id, createdItem.sizeCode);
-        setItems((prevItems) => sortPageItems([...prevItems, createdItem]));
+        setItems((prevItems) => {
+          const nextItems = sortPageItems([...prevItems, createdItem]);
+          itemLastSyncedOrderIdsRef.current = resolvePageItemIds(nextItems);
+          return nextItems;
+        });
 
         return true;
       } catch (error) {
@@ -917,6 +1025,70 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     [handle, trackPageDbWrite],
   );
 
+  /**
+   * 아이템 순서를 서버에 저장한다.
+   * 드래그 중 중복 저장은 마지막 순서만 큐잉해 처리하고, 실패 시 마지막 동기화 상태로 즉시 복구한다.
+   */
+  const persistItemOrder = useCallback(async () => {
+    if (itemOrderPersistInFlightRef.current) {
+      itemOrderPersistQueuedRef.current = true;
+      return;
+    }
+
+    const orderedItemIds = resolvePageItemIds(itemsRef.current);
+
+    if (hasSamePageItemIdOrder(itemLastSyncedOrderIdsRef.current, orderedItemIds)) {
+      return;
+    }
+
+    itemOrderPersistInFlightRef.current = true;
+
+    try {
+      await trackPageDbWrite(async () => {
+        const response = await fetch(buildPageItemsReorderEndpoint(handle), {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            itemIds: orderedItemIds,
+          }),
+        });
+
+        const payload = (await response.json()) as { status?: string; message?: string };
+
+        if (!response.ok || payload.status !== "success") {
+          throw new Error(typeof payload.message === "string" ? payload.message : "Failed to reorder item.");
+        }
+      });
+
+      itemLastSyncedOrderIdsRef.current = orderedItemIds;
+    } catch {
+      const rollbackItemIds = itemLastSyncedOrderIdsRef.current;
+
+      setItems((prevItems) => applyPageItemOrder(prevItems, rollbackItemIds));
+      toast.error("Failed to reorder item");
+    } finally {
+      itemOrderPersistInFlightRef.current = false;
+
+      if (itemOrderPersistQueuedRef.current) {
+        itemOrderPersistQueuedRef.current = false;
+        void persistItemOrder();
+      }
+    }
+  }, [handle, trackPageDbWrite]);
+
+  const scheduleItemOrderPersist = useCallback(() => {
+    if (itemOrderPersistTimerRef.current) {
+      window.clearTimeout(itemOrderPersistTimerRef.current);
+    }
+
+    itemOrderPersistTimerRef.current = window.setTimeout(() => {
+      itemOrderPersistTimerRef.current = null;
+      void persistItemOrder();
+    }, ITEM_REORDER_PERSIST_DEBOUNCE_MS);
+  }, [persistItemOrder]);
+
   const scheduleMemoPersist = useCallback(
     (itemId: string) => {
       const activeTimerId = memoSaveTimerMapRef.current.get(itemId);
@@ -1050,6 +1222,20 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     [persistItemSize],
   );
 
+  const handleItemReorder = useCallback(
+    (activeItemId: string, overItemId: string) => {
+      const reorderedItems = reorderPageItemsById(itemsRef.current, activeItemId, overItemId);
+
+      if (reorderedItems === itemsRef.current) {
+        return;
+      }
+
+      setItems(reorderedItems);
+      scheduleItemOrderPersist();
+    },
+    [scheduleItemOrderPersist],
+  );
+
   const handleRemoveItem = useCallback(
     (itemId: string) => {
       if (itemDeleteInFlightIdsRef.current.has(itemId)) {
@@ -1065,6 +1251,11 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       const removedItemLastSyncedSizeCode = itemLastSyncedSizeCodeMapRef.current.get(itemId) ?? removedItem.sizeCode;
 
       itemDeleteInFlightIdsRef.current.add(itemId);
+      if (itemOrderPersistTimerRef.current) {
+        window.clearTimeout(itemOrderPersistTimerRef.current);
+        itemOrderPersistTimerRef.current = null;
+      }
+      itemOrderPersistQueuedRef.current = false;
       cancelMemoPersist(itemId);
       cancelLinkTitlePersist(itemId);
       itemLastSyncedSizeCodeMapRef.current.delete(itemId);
@@ -1087,6 +1278,8 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
               throw new Error(typeof payload.message === "string" ? payload.message : "Failed to delete item.");
             }
           });
+
+          itemLastSyncedOrderIdsRef.current = itemLastSyncedOrderIdsRef.current.filter((savedItemId) => savedItemId !== itemId);
         } catch (error) {
           const message = error instanceof Error ? error.message : "Failed to delete item.";
 
@@ -1114,6 +1307,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     handleItemLinkTitleChange,
     handleItemLinkTitleSubmit,
     handleItemResize,
+    handleItemReorder,
     handleRemoveItem,
   };
 }

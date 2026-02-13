@@ -78,6 +78,40 @@ export type UpdateOwnedPageItemSizeInput = {
   sizeCode: PageItemSizeCode;
 };
 
+export type ReorderVisiblePageItemsInput = {
+  pageId: string;
+  itemIds: string[];
+};
+
+const PAGE_ITEM_ORDER_KEY_MAX = 2147483647;
+
+/**
+ * 임시 재정렬 구간 오프셋을 계산한다.
+ * 페이지 내 기존 최대 order_key를 기준으로 이동 대상을 안전 구간(max+1..max+N)으로 먼저 옮긴다.
+ */
+export function resolveReorderTemporaryOffset(maxOrderKey: number | null, movingItemCount: number): number | null {
+  const safeMaxOrderKey = typeof maxOrderKey === "number" && Number.isFinite(maxOrderKey) ? maxOrderKey : 0;
+
+  if (safeMaxOrderKey > PAGE_ITEM_ORDER_KEY_MAX - movingItemCount) {
+    return null;
+  }
+
+  return safeMaxOrderKey;
+}
+
+/**
+ * 전달받은 item id 배열을 정렬 순서 CTE로 변환한다.
+ * 배열 순서를 보존하기 위해 `unnest(... with ordinality)`를 사용한다.
+ */
+export function buildReorderRequestOrderCte(itemIds: string[]) {
+  return sql`
+    select
+      request.item_id,
+      request.ordinality::integer as next_order_key
+    from unnest(${itemIds}::uuid[]) with ordinality as request(item_id, ordinality)
+  `;
+}
+
 const queryVisiblePageItemsByStoredHandle = cache(async (storedHandle: string): Promise<VisiblePageItem[]> => {
   const result = await sql<VisiblePageItemRow>`
     select
@@ -323,4 +357,87 @@ export async function deleteOwnedPageItem({ storedHandle, userId, itemId }: Dele
   `.execute(kysely);
 
   return result.rows[0] ?? null;
+}
+
+/**
+ * 가시 아이템의 순서를 전체 item id 배열 기준으로 1..N으로 재번호화한다.
+ * 입력 배열이 현재 페이지 아이템 집합과 정확히 일치하지 않으면 갱신하지 않는다.
+ */
+export async function reorderVisiblePageItems({ pageId, itemIds }: ReorderVisiblePageItemsInput): Promise<boolean> {
+  if (itemIds.length === 0) {
+    return false;
+  }
+
+  return kysely.transaction().execute(async (transaction) => {
+    const visibleItemRows = await sql<{ id: string }>`
+      select
+        id
+      from public.page_item
+      where page_id = ${pageId}::uuid
+        and is_visible = true
+      order by order_key asc
+    `.execute(transaction);
+
+    if (visibleItemRows.rows.length !== itemIds.length) {
+      return false;
+    }
+
+    const visibleItemIdSet = new Set(visibleItemRows.rows.map((row) => row.id));
+    const requestItemIdSet = new Set(itemIds);
+
+    if (requestItemIdSet.size !== itemIds.length) {
+      return false;
+    }
+
+    for (const itemId of itemIds) {
+      if (!visibleItemIdSet.has(itemId)) {
+        return false;
+      }
+    }
+
+    const maxOrderKeyResult = await sql<{ maxOrderKey: number | null }>`
+      select
+        max(order_key) as "maxOrderKey"
+      from public.page_item
+      where page_id = ${pageId}::uuid
+    `.execute(transaction);
+
+    const temporaryOffset = resolveReorderTemporaryOffset(maxOrderKeyResult.rows[0]?.maxOrderKey ?? null, itemIds.length);
+
+    if (temporaryOffset === null) {
+      return false;
+    }
+
+    const requestOrderCte = buildReorderRequestOrderCte(itemIds);
+
+    await sql`
+      with next_order as (
+        ${requestOrderCte}
+      )
+      update public.page_item
+      set order_key = next_order.next_order_key + ${temporaryOffset}
+      from next_order
+      where public.page_item.page_id = ${pageId}::uuid
+        and public.page_item.is_visible = true
+        and public.page_item.id = next_order.item_id
+    `.execute(transaction);
+
+    const reorderedRows = await sql<{ id: string }>`
+      with next_order as (
+        ${requestOrderCte}
+      )
+      update public.page_item
+      set
+        order_key = next_order.next_order_key,
+        lock_version = public.page_item.lock_version + 1
+      from next_order
+      where public.page_item.page_id = ${pageId}::uuid
+        and public.page_item.is_visible = true
+        and public.page_item.id = next_order.item_id
+      returning
+        public.page_item.id
+    `.execute(transaction);
+
+    return reorderedRows.rows.length === itemIds.length;
+  });
 }
