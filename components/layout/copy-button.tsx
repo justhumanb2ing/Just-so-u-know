@@ -22,7 +22,7 @@ function CopyButtonIcon({ status }: { status: CopyButtonStatus }) {
     return <span>Copied!</span>;
   }
 
-  return <span>Share Page</span>;
+  return <span>Share</span>;
 }
 
 export default function CopyUrlButton() {
@@ -71,7 +71,7 @@ export default function CopyUrlButton() {
       type="button"
       size="lg"
       variant="default"
-      className="press-scale rounded-sm px-10"
+      className="press-scale rounded-sm px-10 text-base"
       aria-label="Copy current page URL"
       onClick={handleCopy}
       disabled={status === "pending"}
@@ -80,7 +80,7 @@ export default function CopyUrlButton() {
         <AnimatePresence initial={false}>
           <motion.span
             key={status}
-            className="absolute inset-0 inline-flex items-center justify-center"
+            className="absolute inset-0 inline-flex items-center justify-center font-semibold"
             data-testid={`copy-url-icon-${status}`}
             initial={{ scale: 0.7, y: 2, opacity: 0.4, filter: "blur(4px)" }}
             animate={{ scale: 1, y: 0, opacity: 1, filter: "blur(0px)" }}

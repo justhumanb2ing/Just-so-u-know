@@ -1,6 +1,6 @@
 "use client";
 
-import { AtSignIcon, Settings2Icon } from "lucide-react";
+import { AtSignIcon, Settings2Icon, UserIcon } from "lucide-react";
 import { motion } from "motion/react";
 import dynamic from "next/dynamic";
 import { type ReactNode, useCallback, useId, useState } from "react";
@@ -51,13 +51,14 @@ function AccountActionsPopoverAction() {
         render={
           <motion.button
             type="button"
+            aria-label="account"
             aria-expanded={isOpen}
             aria-haspopup="dialog"
             whileTap={TOOLBAR_BUTTON_TAP}
             transition={TOOLBAR_BUTTON_TRANSITION}
-            className={cn(buttonVariants({ variant: "default", size: "sm" }), "phantom-border rounded-full px-3")}
+            className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "phantom-border size-12 rounded-full")}
           >
-            account
+            <UserIcon strokeWidth={2.5} className="size-5" />
           </motion.button>
         }
       />
@@ -84,7 +85,7 @@ function MotionToolbarButton({ controlsId, expanded, label, tooltipText, onPrelo
             onClick={onOpen}
             whileTap={TOOLBAR_BUTTON_TAP}
             transition={TOOLBAR_BUTTON_TRANSITION}
-            className={cn(buttonVariants({ variant: "default", size: "icon-sm" }), "phantom-border rounded-full")}
+            className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "phantom-border size-12 rounded-full")}
           />
         }
       >
@@ -132,7 +133,7 @@ export function OwnerActionFloatingToolbar({
   }, []);
 
   return (
-    <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 px-4 supports-[padding:max(0px)]:bottom-[max(1rem,env(safe-area-inset-bottom))]">
+    <div className="fixed bottom-3 left-3 z-40 flex flex-row items-center gap-2 px-4 supports-[padding:max(0px)]:bottom-[max(1rem,env(safe-area-inset-bottom))] md:flex-col">
       <MotionToolbarButton
         controlsId={socialAccountsSheetId}
         expanded={isSocialAccountsSheetOpen}
@@ -141,7 +142,7 @@ export function OwnerActionFloatingToolbar({
         onPreload={preloadSocialAccountsSheet}
         onOpen={handleOpenSocialAccountsSheet}
       >
-        <AtSignIcon aria-hidden="true" className="size-4" />
+        <AtSignIcon aria-hidden="true" strokeWidth={2.5} className="size-5" />
       </MotionToolbarButton>
 
       <MotionToolbarButton
@@ -152,7 +153,7 @@ export function OwnerActionFloatingToolbar({
         onPreload={preloadSettingsSheet}
         onOpen={handleOpenSettingsSheet}
       >
-        <Settings2Icon aria-hidden="true" className="size-4" />
+        <Settings2Icon aria-hidden="true" strokeWidth={2.5} className="size-5" />
       </MotionToolbarButton>
 
       <AccountActionsPopoverAction />

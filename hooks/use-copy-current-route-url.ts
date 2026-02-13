@@ -62,9 +62,6 @@ export function useCopyCurrentRouteUrl(): UseCopyCurrentRouteUrlResult {
 
     try {
       await navigator.clipboard.writeText(currentRouteUrl);
-      toast.success("Link copied", {
-        description: "Current page URL copied to clipboard.",
-      });
       return true;
     } catch {
       toast.error("Copy failed", {

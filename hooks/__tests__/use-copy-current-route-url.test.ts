@@ -12,13 +12,11 @@ vi.mock("next/navigation", () => ({
 vi.mock("sonner", () => ({
   toast: {
     error: vi.fn(),
-    success: vi.fn(),
   },
 }));
 
 const mockedUsePathname = vi.mocked(usePathname);
 const mockedUseSearchParams = vi.mocked(useSearchParams);
-const mockedToastSuccess = vi.mocked(toast.success);
 const mockedToastError = vi.mocked(toast.error);
 
 describe("buildAbsoluteRouteUrl", () => {
@@ -61,7 +59,6 @@ describe("useCopyCurrentRouteUrl", () => {
 
     mockedUsePathname.mockReturnValue("/@owner");
     mockedUseSearchParams.mockReturnValue(new URLSearchParams("tab=links") as ReturnType<typeof useSearchParams>);
-    mockedToastSuccess.mockReset();
     mockedToastError.mockReset();
   });
 
@@ -69,7 +66,7 @@ describe("useCopyCurrentRouteUrl", () => {
     vi.clearAllMocks();
   });
 
-  test("현재 라우트 URL을 복사하면 true를 반환하고 성공 토스트를 노출한다", async () => {
+  test("현재 라우트 URL을 복사하면 true를 반환한다", async () => {
     // Arrange
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
@@ -89,9 +86,6 @@ describe("useCopyCurrentRouteUrl", () => {
     expect(result.current.currentRouteUrl).toBe(expectedUrl);
     expect(copied).toBe(true);
     expect(writeText).toHaveBeenCalledWith(expectedUrl);
-    expect(mockedToastSuccess).toHaveBeenCalledWith("Link copied", {
-      description: "Current page URL copied to clipboard.",
-    });
   });
 
   test("클립보드 복사 실패 시 false를 반환하고 에러 토스트를 노출한다", async () => {
