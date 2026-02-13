@@ -40,6 +40,8 @@ bun dev
 - 비로그인: `/sign-in`
 - 로그인 + 온보딩 미완료: `/onboarding`
 - 로그인 + 온보딩 완료: `/{primary handle}`
+- `/sign-in`은 `returnTo` 쿼리(`"/sign-in?returnTo=/{handle}"`)를 지원하며, 로그인 성공 시 해당 경로로 복귀한다.
+- `returnTo`가 없으면 동일 origin referer를 return path 후보로 사용한다.
 - 현재 라우트 URL 복사용 훅 `hooks/use-copy-current-route-url.ts`를 제공한다.
 - URL 복사 훅은 아직 UI 액션에 연결하지 않았다.
 
@@ -70,6 +72,8 @@ bun dev
 - DB 반영은 성공했지만 Storage 정리가 실패한 경우 partial failure toast를 표시한다.
 - 비공개 페이지는 소유자만 접근할 수 있으며, 비소유자 접근 시 라우트 세그먼트 `error.tsx`가 렌더링된다.
 - 방문자 화면도 저장된 전체 타입 아이템 목록을 읽기 전용으로 확인할 수 있다.
+- 비로그인 방문자가 `/{handle}`에 접근하면 데스크톱 뷰포트에서 좌하단 고정 `Sign in` 버튼이 노출된다. (모바일 기기/모바일 뷰포트 숨김)
+- 로그아웃 성공 시 루트(`/`)로 이동하지 않고 현재 URL을 유지한 채 페이지를 갱신한다.
 - 소유자 화면의 아이템 생성 입력은 하단 고정 컴포넌트(`page-item-composer-bar`)로 분리되어 동작한다.
 - 소유자 화면 하단 바의 `Add Link` 팝오버에서 링크 URL을 입력해 `GET /api/page/og`로 OG를 조회할 수 있다. (`http/https` 미입력 시 `https://` 자동 보정)
 - OG 조회 성공 시 `data.url`/`data.title`/`data.favicon`을 기준으로 `link` 아이템이 즉시 생성되며, 생성 성공 시 팝오버 닫힘 + 입력 초기화가 수행된다.

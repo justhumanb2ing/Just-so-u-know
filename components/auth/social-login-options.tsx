@@ -8,7 +8,11 @@ import { authClient } from "@/lib/auth/auth-client";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 
-export function SocialLoginOptions() {
+type SocialLoginOptionsProps = {
+  callbackURL?: string;
+};
+
+export function SocialLoginOptions({ callbackURL = "/" }: SocialLoginOptionsProps = {}) {
   const [loadingProvider, setLoadingProvider] = useState<SocialProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUsedLoginMethod, setLastUsedLoginMethod] = useState<string | null>(null);
@@ -23,7 +27,7 @@ export function SocialLoginOptions() {
       setLoadingProvider(provider);
       await authClient.signIn.social({
         provider,
-        callbackURL: "/",
+        callbackURL,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "소셜 로그인 중 오류가 발생했습니다.";

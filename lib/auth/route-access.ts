@@ -15,6 +15,15 @@ function normalizeReturnPath(candidate: string | null | undefined, fallback = "/
   return candidate;
 }
 
+/**
+ * `returnTo` 쿼리 파라미터를 안전한 내부 경로로 정규화한다.
+ */
+export function resolveReturnPathFromSearchParam(returnTo: string | string[] | null | undefined, fallback = "/") {
+  const rawCandidate = Array.isArray(returnTo) ? returnTo[0] : returnTo;
+
+  return normalizeReturnPath(rawCandidate, fallback);
+}
+
 export function resolveReturnPathFromReferer(referer: string | null, currentOrigin: string, fallback = "/") {
   if (!referer) {
     return fallback;

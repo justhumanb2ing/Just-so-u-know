@@ -1,7 +1,9 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EditablePageOwnerSection } from "@/components/public-page/editable-page-owner-section";
 import { ReadonlyPageVisitorSection } from "@/components/public-page/readonly-page-visitor-section";
+import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth/auth";
 import { isMobileWebUserAgent } from "@/lib/mobile-web-runtime";
 import { canEditPageProfile, findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
@@ -40,6 +42,9 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
   const isOwner = page.userId === session?.user.id;
   const canEdit = canEditPageProfile({ isOwner });
   const shouldHideReadonlyHandle = isMobileWebUserAgent(requestHeaders.get("user-agent") ?? "");
+  const signInReturnPath = `/${page.handle}`;
+  const signInHref = `/sign-in?returnTo=${encodeURIComponent(signInReturnPath)}`;
+  const shouldRenderFloatingSignIn = !session && !shouldHideReadonlyHandle;
 
   if (shouldDenyPrivatePageAccess({ isPublic: page.isPublic, isOwner })) {
     throw new Error(PRIVATE_PAGE_ACCESS_DENIED_ERROR);
@@ -65,6 +70,20 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
           shouldHideHandle={shouldHideReadonlyHandle}
         />
       )}
+      {shouldRenderFloatingSignIn ? (
+        <aside className="fixed bottom-3 left-3 z-40 hidden supports-[padding:max(0px)]:bottom-[max(1rem,env(safe-area-inset-bottom))] md:block">
+          <Button
+            variant="ghost"
+            size="lg"
+            nativeButton={false}
+            render={
+              <Link href={signInHref} prefetch={false}>
+                Sign in
+              </Link>
+            }
+          />
+        </aside>
+      ) : null}
     </main>
   );
 }

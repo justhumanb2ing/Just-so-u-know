@@ -5,6 +5,7 @@ import {
   resolveAuthProxyRedirectPath,
   resolveMeRedirectPath,
   resolveReturnPathFromReferer,
+  resolveReturnPathFromSearchParam,
 } from "@/lib/auth/route-access";
 
 describe("route-access", () => {
@@ -45,6 +46,45 @@ describe("route-access", () => {
     // Assert
     expect(signInReturnPath).toBe("/");
     expect(onboardingReturnPath).toBe("/");
+  });
+
+  test("returnTo 쿼리가 안전한 내부 경로면 그대로 사용한다", () => {
+    // Arrange
+    const returnTo = "/@tester?tab=links";
+
+    // Act
+    const returnPath = resolveReturnPathFromSearchParam(returnTo, "/");
+
+    // Assert
+    expect(returnPath).toBe("/@tester?tab=links");
+  });
+
+  test("returnTo 쿼리가 sign-in/onboarding이면 fallback을 사용한다", () => {
+    // Arrange
+    const fallback = "/@owner";
+
+    // Act
+    const signInReturnPath = resolveReturnPathFromSearchParam("/sign-in", fallback);
+    const onboardingReturnPath = resolveReturnPathFromSearchParam("/onboarding?step=1", fallback);
+
+    // Assert
+    expect(signInReturnPath).toBe(fallback);
+    expect(onboardingReturnPath).toBe(fallback);
+  });
+
+  test("returnTo 쿼리가 외부/비정상 경로면 fallback을 사용한다", () => {
+    // Arrange
+    const fallback = "/@owner";
+
+    // Act
+    const externalReturnPath = resolveReturnPathFromSearchParam("https://evil.example", fallback);
+    const schemeRelativeReturnPath = resolveReturnPathFromSearchParam("//evil.example", fallback);
+    const arrayReturnPath = resolveReturnPathFromSearchParam(["/@safe", "/@ignored"], fallback);
+
+    // Assert
+    expect(externalReturnPath).toBe(fallback);
+    expect(schemeRelativeReturnPath).toBe(fallback);
+    expect(arrayReturnPath).toBe("/@safe");
   });
 
   test("onboardingComplete가 true일 때만 완료 상태로 판단한다", () => {

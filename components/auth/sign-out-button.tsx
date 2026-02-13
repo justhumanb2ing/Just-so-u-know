@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { ComponentProps } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ type SignOutButtonProps = {
 };
 
 export function SignOutButton({ className, label = "Sign out", size = "sm", variant = "link", wrapperClassName }: SignOutButtonProps = {}) {
+  const router = useRouter();
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -33,7 +35,7 @@ export function SignOutButton({ className, label = "Sign out", size = "sm", vari
       const result = await authClient.signOut({
         fetchOptions: {
           onSuccess: () => {
-            window.location.href = "/";
+            router.refresh();
           },
         },
       });
@@ -55,6 +57,7 @@ export function SignOutButton({ className, label = "Sign out", size = "sm", vari
         variant={variant}
         size={size}
         className={cn("h-auto px-0 py-0 text-muted-foreground text-xs", className)}
+        nativeButton={false}
         onClick={handleSignOut}
         disabled={isPending}
       >
