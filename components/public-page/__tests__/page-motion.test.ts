@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildEditableSectionMotionConfig,
   buildItemEntryMotionConfig,
+  resolveEditableItemComposerAppearDelayMs,
   resolveEditableSectionRevealDurationMs,
 } from "@/components/public-page/page-motion";
 
@@ -34,6 +35,30 @@ describe("page motion", () => {
 
     // Assert
     expect(result).toBe(3520);
+  });
+
+  it("아이템 작성 바 노출 지연은 체감 지연 상한 이내로 제한한다", () => {
+    // Arrange
+    const shouldReduceMotion = false;
+    const sectionMotion = buildEditableSectionMotionConfig(shouldReduceMotion);
+
+    // Act
+    const result = resolveEditableItemComposerAppearDelayMs(sectionMotion);
+
+    // Assert
+    expect(result).toBe(320);
+  });
+
+  it("reduced motion 환경에서는 아이템 작성 바를 즉시 노출한다", () => {
+    // Arrange
+    const shouldReduceMotion = true;
+    const sectionMotion = buildEditableSectionMotionConfig(shouldReduceMotion);
+
+    // Act
+    const result = resolveEditableItemComposerAppearDelayMs(sectionMotion);
+
+    // Assert
+    expect(result).toBe(0);
   });
 
   it("아이템 생성 진입 애니메이션은 완만한 속도로 노출된다", () => {

@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { type ConnectedSocialItem, ConnectedSocialItems } from "@/components/public-page/connected-social-items";
 import { EditablePageProfile } from "@/components/public-page/editable-page-profile";
 import { EditablePageItemSection } from "@/components/public-page/page-item-section";
-import { buildEditableSectionMotionConfig, resolveEditableSectionRevealDurationMs } from "@/components/public-page/page-motion";
+import { buildEditableSectionMotionConfig, resolveEditableItemComposerAppearDelayMs } from "@/components/public-page/page-motion";
 import type { InitialPageItem } from "@/hooks/use-page-item-composer";
 
 type EditablePageContentProps = {
@@ -30,7 +30,7 @@ export function EditablePageContent({
 }: EditablePageContentProps) {
   const shouldReduceMotion = useReducedMotion() ?? false;
   const sectionMotionConfig = useMemo(() => buildEditableSectionMotionConfig(shouldReduceMotion), [shouldReduceMotion]);
-  const composerAppearDelayMs = useMemo(() => resolveEditableSectionRevealDurationMs(sectionMotionConfig), [sectionMotionConfig]);
+  const composerAppearDelayMs = useMemo(() => resolveEditableItemComposerAppearDelayMs(sectionMotionConfig), [sectionMotionConfig]);
 
   return (
     <div className="flex flex-col gap-10">

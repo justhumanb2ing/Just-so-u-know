@@ -5,6 +5,7 @@ const ITEM_ENTRY_EASE = [0.22, 1, 0.36, 1] as const;
 const PROFILE_SECTION_DURATION = 2.8;
 const SOCIAL_SECTION_DELAY = 0.36;
 const ITEMS_SECTION_DELAY = 0.72;
+const ITEM_COMPOSER_MAX_APPEAR_DELAY_MS = 320;
 
 type SectionEntryState = {
   opacity: number;
@@ -49,6 +50,16 @@ export function resolveEditableSectionRevealDurationMs(config: EditableSectionMo
   );
 
   return Math.max(0, Math.round(lastRevealSecond * 1000));
+}
+
+/**
+ * 하단 아이템 작성 바의 첫 노출 지연을 계산한다.
+ * 마지막 섹션 애니메이션 완료까지 기다리지 않고, 체감 지연 상한을 둔다.
+ */
+export function resolveEditableItemComposerAppearDelayMs(config: EditableSectionMotionConfig) {
+  const itemSectionDelayMs = Math.max(0, Math.round(config.items.transition.delay * 1000));
+
+  return Math.min(itemSectionDelayMs, ITEM_COMPOSER_MAX_APPEAR_DELAY_MS);
 }
 
 /**
