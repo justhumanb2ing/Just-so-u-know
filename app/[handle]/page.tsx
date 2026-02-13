@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { EditablePageOwnerSection } from "@/components/public-page/editable-page-owner-section";
 import { ReadonlyPageVisitorSection } from "@/components/public-page/readonly-page-visitor-section";
 import { auth } from "@/lib/auth/auth";
+import { isMobileWebUserAgent } from "@/lib/mobile-web-runtime";
 import { canEditPageProfile, findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
 import { findVisiblePageItemsByPathHandle } from "@/service/page/items";
 import { findVisiblePageSocialItemsByPathHandle } from "@/service/page/social-items";
@@ -38,6 +39,7 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
 
   const isOwner = page.userId === session?.user.id;
   const canEdit = canEditPageProfile({ isOwner });
+  const shouldHideReadonlyHandle = isMobileWebUserAgent(requestHeaders.get("user-agent") ?? "");
 
   if (shouldDenyPrivatePageAccess({ isPublic: page.isPublic, isOwner })) {
     throw new Error(PRIVATE_PAGE_ACCESS_DENIED_ERROR);
@@ -56,7 +58,12 @@ export default async function PublicPage({ params }: { params: Promise<{ handle:
           initialSocialItems={pageSocialItems}
         />
       ) : (
-        <ReadonlyPageVisitorSection page={page} socialItems={pageSocialItems} items={pageItems} />
+        <ReadonlyPageVisitorSection
+          page={page}
+          socialItems={pageSocialItems}
+          items={pageItems}
+          shouldHideHandle={shouldHideReadonlyHandle}
+        />
       )}
     </main>
   );

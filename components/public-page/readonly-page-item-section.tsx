@@ -135,7 +135,7 @@ export function ReadonlyPageItemSection({ items }: ReadonlyPageItemSectionProps)
   }
 
   return (
-    <section className="mt-6 flex flex-col gap-3">
+    <section className="mt-6 flex flex-col gap-3 pb-12">
       {normalizedItems.map((item) => (
         <article key={item.id} data-item-type={item.typeCode} data-size-code={item.sizeCode} className={resolvePageItemCardClassName(item)}>
           {renderReadonlyItemContent(item)}

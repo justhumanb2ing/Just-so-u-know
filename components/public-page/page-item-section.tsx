@@ -633,7 +633,7 @@ export function EditablePageItemSection({ handle, initialItems = [], composerApp
   };
 
   return (
-    <section className="flex flex-col gap-3 px-4">
+    <section className="flex flex-col gap-3 px-4 pb-12">
       <ItemList
         items={controller.items}
         withBottomSpacing={!shouldHideComposerBar}
