@@ -34,6 +34,7 @@ export function EditablePageHandleForm({ handle }: EditablePageHandleFormProps) 
       formAction={formAction}
       isSubmitting={isSubmitting}
       submitErrorMessage={actionState.status === "error" ? actionState.message : undefined}
+      initialHandle={handle}
       hiddenFields={[{ name: "storedHandle", value: handle }]}
     />
   );

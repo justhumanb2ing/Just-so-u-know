@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { HandleInputField } from "@/components/onboarding/handle-input-field";
-import { type UseHandleAvailabilityResult, useHandleAvailability } from "@/components/onboarding/use-handle-availability";
+import {
+  normalizeHandleInput,
+  type UseHandleAvailabilityResult,
+  useHandleAvailability,
+} from "@/components/onboarding/use-handle-availability";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 
@@ -18,6 +22,7 @@ type HandleFormProps = {
   formAction: (payload: FormData) => void;
   isSubmitting: boolean;
   submitErrorMessage?: string;
+  initialHandle?: string;
   hiddenFields?: HandleFormHiddenField[];
 };
 
@@ -29,6 +34,17 @@ type ResolveHandleSubmitErrorMessageInput = {
 
 type ResolveHandleCheckErrorMessageInput = {
   handleCheckState: UseHandleAvailabilityResult["handleCheckState"];
+};
+type ResolveHandleAvailabilityOptionsInput = {
+  mode: HandleFormMode;
+  initialHandle?: string;
+};
+type ResolveHandleCanSubmitInput = {
+  mode: HandleFormMode;
+  initialHandle?: string;
+  currentHandleInput: string;
+  verifiedHandle: string;
+  isSubmitting: boolean;
 };
 
 const HANDLE_FORM_LABELS: Record<HandleFormMode, { idle: string; pending: string }> = {
@@ -78,15 +94,77 @@ export function resolveHandleCheckErrorMessage({ handleCheckState }: ResolveHand
 }
 
 /**
+ * 폼 모드에 맞춰 초기 입력값/초기 검증값을 계산한다.
+ * create 모드에서는 항상 빈 입력으로 시작하고,
+ * update 모드에서는 현재 handle을 즉시 제출 가능 상태로 사용한다.
+ */
+export function resolveHandleAvailabilityOptions({ mode, initialHandle }: ResolveHandleAvailabilityOptionsInput) {
+  if (mode === "create") {
+    return {
+      initialHandleInput: "",
+      initialVerifiedHandle: "",
+    };
+  }
+
+  const normalizedInitialHandle = normalizeHandleInput(initialHandle ?? "");
+
+  return {
+    initialHandleInput: normalizedInitialHandle,
+    initialVerifiedHandle: normalizedInitialHandle,
+  };
+}
+
+/**
+ * 제출 버튼 활성화 여부를 계산한다.
+ * update 모드에서는 기존 handle과 동일한 값이면 변경사항이 없으므로 비활성화한다.
+ */
+export function resolveHandleCanSubmit({
+  mode,
+  initialHandle,
+  currentHandleInput,
+  verifiedHandle,
+  isSubmitting,
+}: ResolveHandleCanSubmitInput) {
+  if (isSubmitting) {
+    return false;
+  }
+
+  if (!verifiedHandle) {
+    return false;
+  }
+
+  if (mode !== "update") {
+    return true;
+  }
+
+  const normalizedInitialHandle = normalizeHandleInput(initialHandle ?? "");
+  return normalizedInitialHandle !== currentHandleInput;
+}
+
+/**
  * 핸들 검증 입력/제출 영역을 공통화한 폼 컴포넌트.
  * create/update 모드를 버튼 라벨만 다르게 사용한다.
  */
-export function HandleForm({ mode = "create", formAction, isSubmitting, submitErrorMessage, hiddenFields }: HandleFormProps) {
-  const { handleInput, handleCheckState, verifiedHandle, onHandleChange } = useHandleAvailability();
+export function HandleForm({
+  mode = "create",
+  formAction,
+  isSubmitting,
+  submitErrorMessage,
+  initialHandle,
+  hiddenFields,
+}: HandleFormProps) {
+  const availabilityOptions = resolveHandleAvailabilityOptions({ mode, initialHandle });
+  const { handleInput, handleCheckState, verifiedHandle, onHandleChange } = useHandleAvailability(availabilityOptions);
   const [submittedHandleAtRequest, setSubmittedHandleAtRequest] = useState<string | null>(null);
 
   const submitLabels = HANDLE_FORM_LABELS[mode];
-  const canSubmit = Boolean(verifiedHandle) && !isSubmitting;
+  const canSubmit = resolveHandleCanSubmit({
+    mode,
+    initialHandle,
+    currentHandleInput: handleInput,
+    verifiedHandle,
+    isSubmitting,
+  });
   const visibleSubmitErrorMessage = resolveHandleSubmitErrorMessage({
     submitErrorMessage,
     currentHandleInput: handleInput,
