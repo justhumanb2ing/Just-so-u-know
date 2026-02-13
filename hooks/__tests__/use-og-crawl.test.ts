@@ -96,9 +96,11 @@ describe("useOgCrawl helpers", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const onLookupSuccess = vi.fn().mockResolvedValue(false);
+    const onLookupError = vi.fn();
     const onSuccess = vi.fn();
     const { result } = renderHook(() =>
       useOgCrawl({
+        onLookupError,
         onLookupSuccess,
       }),
     );
@@ -127,6 +129,49 @@ describe("useOgCrawl helpers", () => {
     });
     expect(result.current.linkUrl).toBe("example.com");
     expect(onLookupSuccess).toHaveBeenCalledTimes(1);
+    expect(onLookupError).toHaveBeenCalledTimes(1);
     expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  test("OG 추출 실패 시 error 콜백을 호출한다", async () => {
+    // Arrange
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "error",
+          message: "crawl failed",
+        }),
+        { status: 500 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onLookupError = vi.fn();
+    const { result } = renderHook(() =>
+      useOgCrawl({
+        onLookupError,
+      }),
+    );
+
+    // Act
+    act(() => {
+      result.current.handleLinkUrlChange({
+        target: {
+          value: "https://example.com/fail",
+        },
+      } as ChangeEvent<HTMLInputElement>);
+    });
+
+    act(() => {
+      result.current.handleSubmitOgLookup({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent<HTMLFormElement>);
+    });
+
+    // Assert
+    await waitFor(() => {
+      expect(result.current.isPending).toBe(false);
+    });
+    expect(onLookupError).toHaveBeenCalledTimes(1);
   });
 });

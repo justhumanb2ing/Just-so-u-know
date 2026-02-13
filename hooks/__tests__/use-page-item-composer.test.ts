@@ -1,3 +1,5 @@
+import { act, renderHook } from "@testing-library/react";
+import { type ChangeEvent, createElement, type ReactNode } from "react";
 import { describe, expect, test } from "vitest";
 import {
   applyPageItemOrder,
@@ -21,7 +23,9 @@ import {
   updateLinkItemTitle,
   updateMemoItemContent,
   updatePageItemSize,
+  usePageItemComposer,
 } from "@/hooks/use-page-item-composer";
+import { PageSaveStatusProvider } from "@/hooks/use-page-save-status";
 
 describe("usePageItemComposer helpers", () => {
   test("아이템 입력의 줄바꿈을 \\n 형식으로 정규화한다", () => {
@@ -158,6 +162,7 @@ describe("usePageItemComposer helpers", () => {
     // Arrange
     const prevDraft = {
       id: "draft-1",
+      kind: "memo" as const,
       content: "hello",
       hasUserInput: true,
       isSaving: true,
@@ -555,5 +560,50 @@ describe("usePageItemComposer helpers", () => {
 
     // Assert
     expect(result.map((item) => item.id)).toEqual(["item-1", "item-2", "item-3"]);
+  });
+});
+
+describe("usePageItemComposer hook", () => {
+  test("링크 생성 시작 시 링크 스켈레톤 draft를 연다", () => {
+    // Arrange
+    const wrapper = ({ children }: { children: ReactNode }) => createElement(PageSaveStatusProvider, null, children);
+    const { result } = renderHook(() => usePageItemComposer({ handle: "tester" }), { wrapper });
+
+    // Act
+    act(() => {
+      result.current.handleOpenLinkDraft();
+    });
+
+    // Assert
+    expect(result.current.draft).toMatchObject({
+      kind: "link",
+      hasUserInput: false,
+      isSaving: true,
+    });
+  });
+
+  test("draft 메모는 작성 중에도 삭제할 수 있다", () => {
+    // Arrange
+    const wrapper = ({ children }: { children: ReactNode }) => createElement(PageSaveStatusProvider, null, children);
+    const { result } = renderHook(() => usePageItemComposer({ handle: "tester" }), { wrapper });
+    const draftChangeEvent = {
+      target: {
+        value: "Hello draft",
+      },
+    } as ChangeEvent<HTMLTextAreaElement>;
+
+    // Act
+    act(() => {
+      result.current.handleOpenComposer();
+    });
+    act(() => {
+      result.current.handleDraftChange(draftChangeEvent);
+    });
+    act(() => {
+      result.current.handleRemoveDraft();
+    });
+
+    // Assert
+    expect(result.current.draft).toBeNull();
   });
 });
