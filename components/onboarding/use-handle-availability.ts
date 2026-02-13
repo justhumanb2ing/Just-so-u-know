@@ -9,6 +9,10 @@ const HANDLE_SANITIZE_PATTERN = /[^a-z0-9]/g;
 const HANDLE_CHECK_DEBOUNCE_MS = 400;
 
 type HandleCheckState = { status: "idle" } | HandleAvailabilityResult | { status: "checking"; message: string };
+type UseHandleAvailabilityOptions = {
+  initialHandleInput?: string;
+  initialVerifiedHandle?: string;
+};
 
 export type UseHandleAvailabilityResult = {
   handleInput: string;
@@ -18,22 +22,56 @@ export type UseHandleAvailabilityResult = {
 };
 
 /**
- * handle 입력값 정규화와 디바운스 중복 검증 상태를 캡슐화한다.
- * 온보딩/핸들 변경 폼에서 공통으로 재사용한다.
+ * handle 입력값을 정책에 맞는 소문자/영문숫자 형태로 정규화한다.
  */
-export function useHandleAvailability(): UseHandleAvailabilityResult {
-  const [handleInput, setHandleInput] = useState("");
-  const [handleCheckState, setHandleCheckState] = useState<HandleCheckState>({ status: "idle" });
+export function normalizeHandleInput(value: string) {
+  return value.toLowerCase().replace(HANDLE_SANITIZE_PATTERN, "").slice(0, HANDLE_MAX_LENGTH);
+}
+
+/**
+ * handle 입력값 정규화와 디바운스 중복 검증 상태를 캡슐화한다.
+ * update 모드에서는 현재 handle을 초기 검증 완료 상태로 주입할 수 있다.
+ */
+export function useHandleAvailability({
+  initialHandleInput = "",
+  initialVerifiedHandle = "",
+}: UseHandleAvailabilityOptions = {}): UseHandleAvailabilityResult {
+  const normalizedInitialHandleInput = normalizeHandleInput(initialHandleInput);
+  const normalizedInitialVerifiedHandle = normalizeHandleInput(initialVerifiedHandle);
+  const [handleInput, setHandleInput] = useState(normalizedInitialHandleInput);
+  const [handleCheckState, setHandleCheckState] = useState<HandleCheckState>(() => {
+    if (normalizedInitialHandleInput.length > 0 && normalizedInitialHandleInput === normalizedInitialVerifiedHandle) {
+      return {
+        status: "available",
+        message: "This handle is available.",
+        normalizedHandle: normalizedInitialHandleInput,
+      };
+    }
+
+    return { status: "idle" };
+  });
   const lastCheckRequestIdRef = useRef(0);
 
   const onHandleChange = useCallback((value: string) => {
-    const normalizedValue = value.toLowerCase().replace(HANDLE_SANITIZE_PATTERN, "").slice(0, HANDLE_MAX_LENGTH);
+    const normalizedValue = normalizeHandleInput(value);
     setHandleInput(normalizedValue);
   }, []);
 
   useEffect(() => {
     const requestId = lastCheckRequestIdRef.current + 1;
     lastCheckRequestIdRef.current = requestId;
+
+    /**
+     * 현재 페이지의 기존 handle은 서버 중복 체크와 무관하게 즉시 제출 가능해야 한다.
+     */
+    if (normalizedInitialVerifiedHandle.length > 0 && handleInput === normalizedInitialVerifiedHandle) {
+      setHandleCheckState({
+        status: "available",
+        message: "This handle is available.",
+        normalizedHandle: normalizedInitialVerifiedHandle,
+      });
+      return;
+    }
 
     if (handleInput.length === 0) {
       setHandleCheckState({ status: "idle" });
@@ -63,7 +101,7 @@ export function useHandleAvailability(): UseHandleAvailabilityResult {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [handleInput]);
+  }, [handleInput, normalizedInitialVerifiedHandle]);
 
   const verifiedHandle = handleCheckState.status === "available" ? (handleCheckState.normalizedHandle ?? "") : "";
 
