@@ -27,8 +27,14 @@
 - `hooks/use-page-item-composer.ts`
 - `hooks/use-page-social-accounts.ts`
 - `hooks/use-og-crawl.ts`
+- `components/public-page/public-page-shell.tsx`
+- `components/public-page/readonly-page-visitor-section.tsx`
+- `components/public-page/readonly-page-item-section.tsx`
+- `components/public-page/readonly-page-item-view.ts`
 - `components/public-page/page-item-section.tsx`
 - `components/public-page/page-item-composer-bar.tsx`
+- `components/public-page/connected-social-items-model.ts`
+- `components/public-page/connected-social-items.tsx`
 - `components/public-page/editable-page-profile.tsx`
 - `components/public-page/editable-social-accounts-section.tsx`
 
@@ -45,6 +51,12 @@
 - `handle` 유니크 인덱스
 - 사용자별 `is_primary=true`는 1개만 허용(partial unique index)
 - 예약어 체크(`page_handle_reserved_check`)
+
+## 공개 페이지 렌더링 경계
+- `app/[handle]/page.tsx`는 권한 판단 후 `소유자 편집 variant`와 `방문자 읽기 variant`를 명시적으로 분기한다.
+- 읽기 전용 아이템 렌더링은 `components/public-page/readonly-page-item-section.tsx`에서 서버 컴포넌트로 처리한다.
+- 편집 전용 DnD/상태 로직은 `components/public-page/page-item-section.tsx`의 클라이언트 트리에만 유지한다.
+- 공통 외곽 레이아웃 클래스는 `components/public-page/public-page-shell.tsx`에서 공유한다.
 
 ## 아이템 스키마
 - `public.item_type`
