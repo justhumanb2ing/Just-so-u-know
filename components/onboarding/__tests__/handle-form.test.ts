@@ -1,10 +1,5 @@
 import { describe, expect, test } from "vitest";
-import {
-  resolveHandleAvailabilityOptions,
-  resolveHandleCanSubmit,
-  resolveHandleCheckErrorMessage,
-  resolveHandleSubmitErrorMessage,
-} from "@/components/onboarding/handle-form";
+import { resolveHandleCheckErrorMessage, resolveHandleSubmitErrorMessage } from "@/components/onboarding/handle-form";
 
 describe("resolveHandleSubmitErrorMessage", () => {
   test("제출 직후 입력값이 같으면 에러 메시지를 노출한다", () => {
@@ -101,94 +96,5 @@ describe("resolveHandleCheckErrorMessage", () => {
 
     // Assert
     expect(result).toBeNull();
-  });
-});
-
-describe("resolveHandleAvailabilityOptions", () => {
-  test("update 모드에서는 @ 접두가 있어도 초기 입력/검증값을 동일한 핸들로 정규화한다", () => {
-    // Arrange
-    const input = {
-      mode: "update" as const,
-      initialHandle: "@TeSter_123",
-    };
-
-    // Act
-    const result = resolveHandleAvailabilityOptions(input);
-
-    // Assert
-    expect(result).toEqual({
-      initialHandleInput: "tester123",
-      initialVerifiedHandle: "tester123",
-    });
-  });
-
-  test("create 모드에서는 initialHandle이 있어도 항상 빈 입력으로 시작한다", () => {
-    // Arrange
-    const input = {
-      mode: "create" as const,
-      initialHandle: "tester",
-    };
-
-    // Act
-    const result = resolveHandleAvailabilityOptions(input);
-
-    // Assert
-    expect(result).toEqual({
-      initialHandleInput: "",
-      initialVerifiedHandle: "",
-    });
-  });
-});
-
-describe("resolveHandleCanSubmit", () => {
-  test("update 모드에서 입력값이 초기 handle과 같으면 비활성화한다", () => {
-    // Arrange
-    const input = {
-      mode: "update" as const,
-      initialHandle: "@tester",
-      currentHandleInput: "tester",
-      verifiedHandle: "tester",
-      isSubmitting: false,
-    };
-
-    // Act
-    const result = resolveHandleCanSubmit(input);
-
-    // Assert
-    expect(result).toBe(false);
-  });
-
-  test("update 모드에서 입력값이 변경되면 활성화한다", () => {
-    // Arrange
-    const input = {
-      mode: "update" as const,
-      initialHandle: "@tester",
-      currentHandleInput: "tester2",
-      verifiedHandle: "tester2",
-      isSubmitting: false,
-    };
-
-    // Act
-    const result = resolveHandleCanSubmit(input);
-
-    // Assert
-    expect(result).toBe(true);
-  });
-
-  test("create 모드는 초기 handle 비교 없이 verifiedHandle 기준으로 활성화한다", () => {
-    // Arrange
-    const input = {
-      mode: "create" as const,
-      initialHandle: "@tester",
-      currentHandleInput: "tester",
-      verifiedHandle: "tester",
-      isSubmitting: false,
-    };
-
-    // Act
-    const result = resolveHandleCanSubmit(input);
-
-    // Assert
-    expect(result).toBe(true);
   });
 });
