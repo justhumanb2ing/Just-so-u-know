@@ -29,6 +29,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useIsMobileWebRuntime } from "@/hooks/use-is-mobile-web-runtime";
 import { useOgCrawl } from "@/hooks/use-og-crawl";
 import type { InitialPageItem, PageItem } from "@/hooks/use-page-item-composer";
 import { usePageItemComposer } from "@/hooks/use-page-item-composer";
@@ -603,6 +605,9 @@ export function EditablePageItemSection({ handle, initialItems = [], composerApp
     handle,
     initialItems,
   });
+  const isMobileViewport = useIsMobile();
+  const isMobileWebRuntime = useIsMobileWebRuntime();
+  const shouldHideComposerBar = isMobileViewport || isMobileWebRuntime;
   const ogController = useOgCrawl({
     onLookupStart: controller.handleOpenLinkDraft,
     onLookupError: controller.handleRemoveDraft,
@@ -631,7 +636,7 @@ export function EditablePageItemSection({ handle, initialItems = [], composerApp
     <section className="flex flex-col gap-3 px-4">
       <ItemList
         items={controller.items}
-        withBottomSpacing
+        withBottomSpacing={!shouldHideComposerBar}
         draftItem={draftItem}
         draftState={draftState}
         dndContextId={`page-item-sortable-${encodeURIComponent(handle)}`}
@@ -641,12 +646,14 @@ export function EditablePageItemSection({ handle, initialItems = [], composerApp
         onLinkTitleSubmit={controller.handleItemLinkTitleSubmit}
         onItemReorder={controller.handleItemReorder}
       />
-      <ItemComposerBar
-        hasDraft={Boolean(controller.draft)}
-        onOpenComposer={controller.handleOpenComposer}
-        ogController={ogController}
-        appearDelayMs={composerAppearDelayMs}
-      />
+      {shouldHideComposerBar ? null : (
+        <ItemComposerBar
+          hasDraft={Boolean(controller.draft)}
+          onOpenComposer={controller.handleOpenComposer}
+          ogController={ogController}
+          appearDelayMs={composerAppearDelayMs}
+        />
+      )}
     </section>
   );
 }
