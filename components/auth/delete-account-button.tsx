@@ -1,6 +1,7 @@
 "use client";
 
 import { LoaderIcon } from "lucide-react";
+import type { ComponentProps } from "react";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -15,8 +16,23 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/auth-client";
+import { cn } from "@/lib/utils";
 
-export function DeleteAccountButton() {
+type DeleteAccountButtonProps = {
+  className?: string;
+  label?: string;
+  size?: ComponentProps<typeof Button>["size"];
+  variant?: ComponentProps<typeof Button>["variant"];
+  wrapperClassName?: string;
+};
+
+export function DeleteAccountButton({
+  className,
+  label = "delete account",
+  size = "sm",
+  variant = "link",
+  wrapperClassName,
+}: DeleteAccountButtonProps = {}) {
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -51,20 +67,20 @@ export function DeleteAccountButton() {
   };
 
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className={cn("flex flex-col items-start gap-1", wrapperClassName)}>
       <AlertDialog>
         <AlertDialogTrigger
           render={
             <Button
               type="button"
-              variant="link"
-              size="sm"
-              className={"h-auto px-0 py-0 text-muted-foreground text-xs"}
+              variant={variant}
+              size={size}
+              className={cn("h-auto px-0 py-0 text-muted-foreground text-xs", className)}
               disabled={isPending}
             />
           }
         >
-          delete account
+          {label}
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>

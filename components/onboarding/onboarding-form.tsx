@@ -5,9 +5,8 @@ import { useActionState } from "react";
 import type { OnboardingSubmitState } from "@/app/(auth)/onboarding/actions";
 import { submitOnboardingAction } from "@/app/(auth)/onboarding/actions";
 import { HandleForm } from "@/components/onboarding/handle-form";
+import { OnboardingAccountActions } from "@/components/onboarding/onboarding-account-actions";
 import { OnboardingComplete } from "@/components/onboarding/onboarding-complete";
-import { DeleteAccountButton } from "../auth/delete-account-button";
-import { SignOutButton } from "../auth/sign-out-button";
 
 const INITIAL_ONBOARDING_SUBMIT_STATE: OnboardingSubmitState = { status: "idle" };
 
@@ -39,10 +38,7 @@ export function OnboardingForm() {
         <HandleForm formAction={submitAction} isSubmitting={isSubmitting} submitErrorMessage={submitErrorMessage} />
       </div>
 
-      <aside className="flex items-center gap-3">
-        <SignOutButton />
-        <DeleteAccountButton />
-      </aside>
+      <OnboardingAccountActions />
     </div>
   );
 }
