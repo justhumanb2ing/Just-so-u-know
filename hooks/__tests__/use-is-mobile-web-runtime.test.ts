@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { isMobileWebUserAgent, useIsMobileWebRuntime } from "@/hooks/use-is-mobile-web-runtime";
 
@@ -50,6 +50,8 @@ describe("useIsMobileWebRuntime", () => {
     const { result } = renderHook(() => useIsMobileWebRuntime());
 
     // Assert
-    expect(result.current).toBe(true);
+    return waitFor(() => {
+      expect(result.current).toBe(true);
+    });
   });
 });

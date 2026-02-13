@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const MOBILE_WEB_USER_AGENT_KEYWORDS = ["ipad", "iphone", "android"] as const;
 
@@ -12,17 +12,17 @@ export function isMobileWebUserAgent(userAgent: string) {
 }
 
 /**
- * 현재 JS 런타임의 User Agent를 기준으로 모바일 웹 실행 여부를 1회 계산한다.
- * User Agent는 런타임 중 바뀌지 않으므로 state 초기화 함수만 사용해 불필요한 재계산을 피한다.
+ * SSR과 클라이언트 첫 렌더를 동일하게 맞춘 뒤, 마운트 후 User Agent로 모바일 런타임 여부를 갱신한다.
  */
 export function useIsMobileWebRuntime() {
-  const [isMobileWebRuntime] = useState(() => {
-    if (typeof navigator === "undefined") {
-      return false;
-    }
+  const [isMobileWebRuntime, setIsMobileWebRuntime] = useState(false);
 
-    return isMobileWebUserAgent(navigator.userAgent ?? "");
-  });
+  useEffect(() => {
+    const nextIsMobileWebRuntime = isMobileWebUserAgent(navigator.userAgent ?? "");
+    setIsMobileWebRuntime((prevIsMobileWebRuntime) =>
+      prevIsMobileWebRuntime === nextIsMobileWebRuntime ? prevIsMobileWebRuntime : nextIsMobileWebRuntime,
+    );
+  }, []);
 
   return isMobileWebRuntime;
 }
