@@ -4,7 +4,6 @@ import { useCallback, useState } from "react";
 import type { ConnectedSocialItem } from "@/components/public-page/connected-social-items-model";
 import { EditablePageContent } from "@/components/public-page/editable-page-content";
 import { OwnerActionFloatingToolbar } from "@/components/public-page/page-edit-floating-toolbar";
-import { PageSaveStatusIndicator } from "@/components/public-page/page-save-status-indicator";
 import { PublicPageShell } from "@/components/public-page/public-page-shell";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useIsMobileWebRuntime } from "@/hooks/use-is-mobile-web-runtime";
@@ -90,7 +89,6 @@ export function EditablePageOwnerSection({
         initialSocialItems={socialItems}
         onSocialItemsChange={handleSocialItemsChange}
       />
-      <PageSaveStatusIndicator />
     </PageSaveStatusProvider>
   );
 }

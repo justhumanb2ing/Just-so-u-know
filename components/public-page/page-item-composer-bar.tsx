@@ -1,13 +1,17 @@
 "use client";
 
+import { ImagePlayIcon, LinkIcon, MapIcon, StickyNoteIcon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Popover, PopoverPanel, PopoverTrigger } from "@/components/animate-ui/components/base/popover";
-import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipPanel, TooltipTrigger } from "@/components/animate-ui/components/base/tooltip";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { OgCrawlController } from "@/hooks/use-og-crawl";
 import { cn } from "@/lib/utils";
+import { Separator } from "../ui/separator";
+import { PageSaveStatusIndicator } from "./page-save-status-indicator";
 
 type ItemComposerBarProps = {
   hasDraft: boolean;
@@ -15,6 +19,40 @@ type ItemComposerBarProps = {
   ogController: OgCrawlController;
   appearDelayMs?: number;
 };
+
+type ComposerActionButtonProps = Omit<ComponentProps<typeof motion.button>, "type">;
+type ComposerTooltipButtonProps = ComposerActionButtonProps & {
+  tooltipText: string;
+};
+
+const COMPOSER_BUTTON_TAP = { scale: 0.92 } as const;
+const COMPOSER_BUTTON_TRANSITION = {
+  duration: 0.12,
+  ease: "easeOut",
+} as const;
+
+function ComposerActionButton({ className, ...props }: ComposerActionButtonProps) {
+  return (
+    <motion.button
+      type="button"
+      whileTap={COMPOSER_BUTTON_TAP}
+      transition={COMPOSER_BUTTON_TRANSITION}
+      className={cn(buttonVariants({ variant: "ghost", size: "icon-lg" }), "phantom-border", className)}
+      {...props}
+    />
+  );
+}
+
+function ComposerTooltipButton({ tooltipText, ...props }: ComposerTooltipButtonProps) {
+  return (
+    <Tooltip delay={0}>
+      <TooltipTrigger render={<ComposerActionButton {...props} />} />
+      <TooltipPanel side="top" align="center">
+        {tooltipText}
+      </TooltipPanel>
+    </Tooltip>
+  );
+}
 
 /**
  * 페이지 하단에 고정되는 아이템 작성 바.
@@ -56,22 +94,33 @@ export function ItemComposerBar({ hasDraft, onOpenComposer, ogController, appear
 
   return createPortal(
     <motion.div
-      className="fixed inset-x-0 bottom-4 z-30 mx-auto w-full max-w-md px-4"
+      className="fixed inset-x-0 bottom-4 z-30 mx-auto w-full max-w-fit px-4"
       initial={shouldReduceMotion ? false : { opacity: 0, y: 64 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: shouldReduceMotion ? 0 : 1.2, ease: [0.22, 1, 0.36, 1] }}
     >
-      <section className="space-y-2 rounded-[20px] border bg-background/80 p-2 shadow-xl backdrop-blur-sm">
-        <div className="flex items-center gap-2">
+      <section className="floating-shadow flex items-center gap-2 rounded-[16px] border-[0.5px] border-border bg-background/80 p-2 shadow-xl backdrop-blur-sm">
+        <PageSaveStatusIndicator />
+        <Separator orientation="vertical" className={"my-3 rounded-lg data-vertical:w-0.5"} />
+        <div className="flex items-center gap-1">
           <Popover open={isLinkPopoverOpen} onOpenChange={setIsLinkPopoverOpen}>
-            <PopoverTrigger
-              render={
-                <Button type="button" variant={"default"} className={"phantom-border"}>
-                  Link
-                </Button>
-              }
-            ></PopoverTrigger>
-            <PopoverPanel sideOffset={8} className="w-[min(20rem,calc(100vw-2rem))] space-y-2 rounded-lg border-border/50 p-0">
+            <Tooltip delay={0}>
+              <TooltipTrigger
+                render={
+                  <PopoverTrigger
+                    render={
+                      <ComposerActionButton aria-label="Open link composer">
+                        <LinkIcon className="size-5" strokeWidth={2.5} />
+                      </ComposerActionButton>
+                    }
+                  />
+                }
+              />
+              <TooltipPanel side="top" align="center">
+                Link
+              </TooltipPanel>
+            </Tooltip>
+            <PopoverPanel sideOffset={16} className="w-[min(20rem,calc(100vw-2rem))] space-y-2 rounded-lg border-border/50 p-0">
               <form
                 className="w-full"
                 onSubmit={(event) => {
@@ -95,14 +144,20 @@ export function ItemComposerBar({ hasDraft, onOpenComposer, ogController, appear
               </form>
             </PopoverPanel>
           </Popover>
-          <Button
-            type="button"
-            variant="default"
+          <ComposerTooltipButton
+            aria-label="Open memo composer"
+            tooltipText="Memo"
             onClick={onOpenComposer}
-            className={cn("phantom-border gap-1.5", hasDraft ? "border-primary/60" : undefined)}
+            className={cn("gap-1.5", hasDraft ? "border-primary/60" : undefined)}
           >
-            Memo
-          </Button>
+            <StickyNoteIcon className="size-5" strokeWidth={2.5} />
+          </ComposerTooltipButton>
+          <ComposerTooltipButton aria-label="Add image and video item" tooltipText="Image&Video" className={cn("gap-1.5")}>
+            <ImagePlayIcon className="size-5" strokeWidth={2.5} />
+          </ComposerTooltipButton>
+          <ComposerTooltipButton aria-label="Add location item" tooltipText="Location" className={cn("gap-1.5")}>
+            <MapIcon className="size-5" strokeWidth={2.5} />
+          </ComposerTooltipButton>
         </div>
       </section>
     </motion.div>,

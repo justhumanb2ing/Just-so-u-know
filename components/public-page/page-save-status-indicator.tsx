@@ -3,6 +3,7 @@
 import { AlertCircleIcon, LoaderIcon } from "lucide-react";
 import { usePageSaveStatusView } from "@/hooks/use-page-save-status";
 import { cn } from "@/lib/utils";
+import CopyUrlButton from "../layout/copy-button";
 
 /**
  * 페이지 우하단에 저장 중/완료/실패 상태를 고정 표시한다.
@@ -11,7 +12,11 @@ export function PageSaveStatusIndicator() {
   const { phase } = usePageSaveStatusView();
 
   if (phase === "hidden") {
-    return null;
+    return (
+      <div className="w-30 text-center">
+        <CopyUrlButton className={"px-12 text-base"} />
+      </div>
+    );
   }
 
   const isSaving = phase === "saving";
@@ -19,11 +24,11 @@ export function PageSaveStatusIndicator() {
   const isError = phase === "error";
 
   return (
-    <aside className="pointer-events-none fixed right-5 bottom-5 z-40">
+    <aside className="pointer-events-none z-40 w-30">
       <div
         className={cn(
-          "flex min-h-11 items-center gap-2 rounded-2xl px-3.5 py-2 font-medium text-muted-foreground text-sm backdrop-blur-md transition-colors",
-          isSaving && "border-slate-300/70 bg-background/95 text-foreground",
+          "flex min-h-10 items-center justify-center gap-2 rounded-2xl px-3.5 py-2 font-medium text-muted-foreground text-sm backdrop-blur-md transition-colors",
+          isSaving && "border-slate-300/70 bg-background/95",
           isError && "border-rose-300/80 bg-rose-50/95 text-destructive",
         )}
       >

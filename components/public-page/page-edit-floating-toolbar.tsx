@@ -71,7 +71,7 @@ function AccountActionsPopoverAction() {
 
 function MotionToolbarButton({ controlsId, expanded, label, tooltipText, onPreload, onOpen, children }: MotionToolbarButtonProps) {
   return (
-    <Tooltip delay={100}>
+    <Tooltip delay={0}>
       <TooltipTrigger
         render={
           <motion.button
