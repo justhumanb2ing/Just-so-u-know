@@ -78,7 +78,7 @@ export function PageSettingsSheet({ contentId, handle, initialIsPublic, open, on
               type="button"
               size={"lg"}
               variant={"default"}
-              className="phantom-border py-6 text-lg text-white"
+              className="phantom-border rounded-full py-6 text-base text-white"
               onClick={handleVisibilityCheckedChange}
               aria-label="Toggle page visibility"
             >
@@ -109,7 +109,7 @@ export function PageSettingsSheet({ contentId, handle, initialIsPublic, open, on
 
         <DrawerFooter className="scroll-affordance-top z-10 border-border/40 border-t bg-background/95 pt-4">
           <DrawerClose asChild>
-            <Button type="button" size="lg" variant="default" className="py-6 text-lg">
+            <Button type="button" size="lg" variant="default" className="py-6 font-bold text-lg tracking-wider">
               Close
             </Button>
           </DrawerClose>

@@ -193,7 +193,7 @@ export function HandleForm({
       {visibleActionErrorMessage ? (
         <FieldError id="handle-error">{visibleActionErrorMessage}</FieldError>
       ) : (
-        <Button type="submit" size="lg" disabled={!canSubmit} className="w-full py-6 font-semibold text-base!">
+        <Button type="submit" size="lg" disabled={!canSubmit} className="w-full rounded-full py-6 text-base">
           {isSubmitting ? submitLabels.pending : submitLabels.idle}
         </Button>
       )}
