@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
+import { buildEditableSectionMotionConfig } from "@/components/public-page/page-motion";
 import {
   READONLY_VISITOR_HANDLE_CLASSNAME,
+  resolveReadonlySectionMotionConfig,
   resolveShouldRenderReadonlyHandle,
 } from "@/components/public-page/readonly-page-visitor-section";
 
@@ -44,5 +46,19 @@ describe("READONLY_VISITOR_HANDLE_CLASSNAME", () => {
     // Assert
     expect(shouldHideOnMobile).toBe(true);
     expect(shouldShowFromMd).toBe(true);
+  });
+});
+
+describe("resolveReadonlySectionMotionConfig", () => {
+  test("방문자 섹션 모션은 편집 섹션 모션 구성과 동일해야 한다", () => {
+    // Arrange
+    const shouldReduceMotion = false;
+
+    // Act
+    const readonlyConfig = resolveReadonlySectionMotionConfig(shouldReduceMotion);
+    const editableConfig = buildEditableSectionMotionConfig(shouldReduceMotion);
+
+    // Assert
+    expect(readonlyConfig).toEqual(editableConfig);
   });
 });

@@ -1,6 +1,11 @@
+"use client";
+
+import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
+import { useMemo } from "react";
 import { PublicPageAuthAction } from "@/components/auth/public-page-auth-action";
 import { ConnectedSocialItems } from "@/components/public-page/connected-social-items";
+import { buildEditableSectionMotionConfig, type EditableSectionMotionConfig } from "@/components/public-page/page-motion";
 import {
   PUBLIC_PAGE_BIO_FIELD_CLASSNAME,
   PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME,
@@ -42,7 +47,14 @@ export function resolveShouldRenderReadonlyHandle({ shouldHideHandle }: ResolveS
 }
 
 /**
- * 방문자 읽기 모드에서 프로필/소셜/아이템을 서버 컴포넌트로 조합해 렌더링한다.
+ * 방문자 섹션도 소유자 편집 섹션과 동일한 진입 모션 구성을 재사용한다.
+ */
+export function resolveReadonlySectionMotionConfig(shouldReduceMotion: boolean): EditableSectionMotionConfig {
+  return buildEditableSectionMotionConfig(shouldReduceMotion);
+}
+
+/**
+ * 방문자 읽기 모드에서 프로필/소셜/아이템을 동일한 섹션 모션과 함께 렌더링한다.
  */
 export function ReadonlyPageVisitorSection({
   page,
@@ -54,6 +66,8 @@ export function ReadonlyPageVisitorSection({
   shouldHideHandle,
 }: ReadonlyPageVisitorSectionProps) {
   const shouldRenderHandle = resolveShouldRenderReadonlyHandle({ shouldHideHandle });
+  const shouldReduceMotion = useReducedMotion() ?? false;
+  const sectionMotionConfig = useMemo(() => resolveReadonlySectionMotionConfig(shouldReduceMotion), [shouldReduceMotion]);
   const visitorReturnTo = `/${page.handle}`;
 
   return (
@@ -61,26 +75,44 @@ export function ReadonlyPageVisitorSection({
       {shouldRenderHandle ? <div className={READONLY_VISITOR_HANDLE_CLASSNAME}>{page.handle}</div> : null}
       <PublicPageShell>
         <section className={cn(PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME, "relative")}>
-          {page.image ? (
-            <div className={PUBLIC_PAGE_IMAGE_VIEW_CONTAINER_CLASSNAME}>
-              <Image
-                src={page.image}
-                alt={`${page.name ?? page.handle} profile`}
-                fill
-                quality={75}
-                unoptimized
-                loading="eager"
-                sizes={PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE}
-                className={PUBLIC_PAGE_IMAGE_CONTENT_CLASSNAME}
-              />
-            </div>
-          ) : null}
-          <section className={PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME}>
-            <h1 className={PUBLIC_PAGE_NAME_FIELD_CLASSNAME}>{page.name ?? page.handle}</h1>
-            {page.bio ? <p className={PUBLIC_PAGE_BIO_FIELD_CLASSNAME}>{page.bio}</p> : null}
-          </section>
-          <ConnectedSocialItems items={socialItems} className="px-0" />
-          <ReadonlyPageItemSection items={items} />
+          <motion.div
+            initial={sectionMotionConfig.profile.initial}
+            animate={sectionMotionConfig.profile.animate}
+            transition={sectionMotionConfig.profile.transition}
+          >
+            {page.image ? (
+              <div className={PUBLIC_PAGE_IMAGE_VIEW_CONTAINER_CLASSNAME}>
+                <Image
+                  src={page.image}
+                  alt={`${page.name ?? page.handle} profile`}
+                  fill
+                  quality={75}
+                  unoptimized
+                  loading="eager"
+                  sizes={PUBLIC_PAGE_IMAGE_SIZES_ATTRIBUTE}
+                  className={PUBLIC_PAGE_IMAGE_CONTENT_CLASSNAME}
+                />
+              </div>
+            ) : null}
+            <section className={PUBLIC_PAGE_TEXT_FIELDS_CONTAINER_CLASSNAME}>
+              <h1 className={PUBLIC_PAGE_NAME_FIELD_CLASSNAME}>{page.name ?? page.handle}</h1>
+              {page.bio ? <p className={PUBLIC_PAGE_BIO_FIELD_CLASSNAME}>{page.bio}</p> : null}
+            </section>
+          </motion.div>
+          <motion.div
+            initial={sectionMotionConfig.social.initial}
+            animate={sectionMotionConfig.social.animate}
+            transition={sectionMotionConfig.social.transition}
+          >
+            <ConnectedSocialItems items={socialItems} className="px-0" />
+          </motion.div>
+          <motion.div
+            initial={sectionMotionConfig.items.initial}
+            animate={sectionMotionConfig.items.animate}
+            transition={sectionMotionConfig.items.transition}
+          >
+            <ReadonlyPageItemSection items={items} />
+          </motion.div>
           <aside className="absolute top-10 right-4 md:top-18">
             <CopyUrlButton />
           </aside>
