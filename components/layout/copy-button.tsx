@@ -2,13 +2,15 @@
 
 import { LoaderIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ComponentProps, useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCopyCurrentRouteUrl } from "@/hooks/use-copy-current-route-url";
+import { cn } from "@/lib/utils";
 
 const COPY_SUCCESS_VISIBLE_MS = 1500;
 
 type CopyButtonStatus = "idle" | "pending" | "success";
+type CopyUrlButtonProps = Pick<ComponentProps<typeof Button>, "className" | "size" | "variant">;
 
 /**
  * 복사 진행 상태에 따라 표시할 아이콘을 반환한다.
@@ -25,7 +27,7 @@ function CopyButtonIcon({ status }: { status: CopyButtonStatus }) {
   return <span>Share</span>;
 }
 
-export default function CopyUrlButton() {
+export default function CopyUrlButton({ className, size = "lg", variant = "default" }: CopyUrlButtonProps) {
   const { copyCurrentRouteUrl } = useCopyCurrentRouteUrl();
   const [status, setStatus] = useState<CopyButtonStatus>("idle");
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -69,9 +71,9 @@ export default function CopyUrlButton() {
   return (
     <Button
       type="button"
-      size="lg"
-      variant="default"
-      className="press-scale rounded-sm px-10 text-base"
+      size={size}
+      variant={variant}
+      className={cn("press-scale rounded-sm px-10 text-base", className)}
       aria-label="Copy current page URL"
       onClick={handleCopy}
       disabled={status === "pending"}

@@ -73,4 +73,25 @@ describe("CopyUrlButton", () => {
     // Assert
     expect(screen.getByTestId("copy-url-icon-idle")).toBeTruthy();
   });
+
+  test("외부에서 className, size, variant를 주입하면 버튼 스타일에 반영된다", () => {
+    // Arrange
+    mockedUseCopyCurrentRouteUrl.mockReturnValue({
+      currentRouteUrl: "https://tsuki.app/@owner",
+      copyCurrentRouteUrl: vi.fn().mockResolvedValue(true),
+    });
+
+    // Act
+    render(<CopyUrlButton className="custom-copy-button" size="icon" variant="ghost" />);
+    const buttons = screen.getAllByRole("button", {
+      name: "Copy current page URL",
+    });
+    const button = buttons.at(-1);
+
+    // Assert
+    expect(button).toBeTruthy();
+    expect(button?.className).toContain("custom-copy-button");
+    expect(button?.className).toContain("size-9");
+    expect(button?.className).toContain("hover:bg-muted");
+  });
 });
