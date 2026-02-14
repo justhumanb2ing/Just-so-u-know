@@ -56,7 +56,7 @@ function UserAvatar({ userImage, userName }: Pick<PublicPageAuthActionProps, "us
   );
 }
 
-function HomeButton({ size = "sm" }: Pick<PublicPageAuthActionProps, 'size'>) {
+function HomeButton({ size = "sm" }: Pick<PublicPageAuthActionProps, "size">) {
   return (
     <Button
       variant="ghost"

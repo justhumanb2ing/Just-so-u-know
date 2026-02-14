@@ -34,6 +34,10 @@ bun install
 bun dev
 ```
 
+### 로컬 폰트
+- 로컬 sans 폰트는 `public/font/*.woff2`를 사용한다.
+- Next.js 폰트 설정은 `config/font.ts`에서 중앙 관리한다.
+
 ### 랜딩 CTA 라우팅
 - 홈 CTA는 정적 링크(`/me`)로 동작한다.
 - `/me` 서버 라우트가 인증 상태를 확인해 아래로 리다이렉트한다.
