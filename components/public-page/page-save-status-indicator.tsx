@@ -29,7 +29,7 @@ export function PageSaveStatusIndicator() {
         className={cn(
           "flex min-h-10 items-center justify-center gap-2 rounded-2xl px-3.5 py-2 font-medium text-muted-foreground text-sm backdrop-blur-md transition-colors",
           isSaving && "border-slate-300/70 bg-background/95",
-          isError && "border-rose-300/80 bg-rose-50/95 text-destructive",
+          isError && "text-destructive/80",
         )}
       >
         {isSaving ? (
