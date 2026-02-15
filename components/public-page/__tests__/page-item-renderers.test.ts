@@ -5,7 +5,17 @@ import { getPageItemRenderer, resolvePageItemDisplayText } from "@/components/pu
 import type { PageItem } from "@/hooks/use-page-item-composer";
 
 vi.mock("@/components/ui/map", () => ({
-  Map: ({ children }: { children?: ReactNode }) => createElement("div", { "data-testid": "map-canvas" }, children),
+  Map: ({ children, viewport }: { children?: ReactNode; viewport?: { center?: [number, number]; zoom?: number } }) =>
+    createElement(
+      "div",
+      {
+        "data-testid": "map-canvas",
+        "data-center-lng": viewport?.center?.[0] ?? "",
+        "data-center-lat": viewport?.center?.[1] ?? "",
+        "data-zoom": viewport?.zoom ?? "",
+      },
+      children,
+    ),
 }));
 
 vi.mock("@/components/public-page/page-item-location-dialog", () => ({
@@ -178,9 +188,43 @@ describe("page item renderers", () => {
     // Assert
     expect(screen.getByTestId("map-canvas")).toBeTruthy();
     expect(screen.getByText("Seoul City Hall")).toBeTruthy();
-    const mapLink = screen.getAllByRole("link").find((link) => link.getAttribute("href")?.includes("google.com/maps"));
-    expect(mapLink?.getAttribute("href")).toBe("https://www.google.com/maps?q=37.566500,126.978000&z=13");
-    expect(screen.getByLabelText("Edit map item")).toBeTruthy();
+  });
+
+  test("map 데이터 변경 시 렌더러는 최신 viewport를 즉시 전달한다", () => {
+    // Arrange
+    const MapRenderer = getPageItemRenderer("map");
+    const beforeItem = createItem({
+      id: "item-map-1",
+      typeCode: "map",
+      data: {
+        lat: 37.5665,
+        lng: 126.978,
+        zoom: 13,
+        caption: "Before",
+        googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+      },
+    });
+    const afterItem = createItem({
+      id: "item-map-1",
+      typeCode: "map",
+      data: {
+        lat: 35.1796,
+        lng: 129.0756,
+        zoom: 15,
+        caption: "After",
+        googleMapUrl: "https://www.google.com/maps?q=35.179600,129.075600&z=15",
+      },
+    });
+
+    // Act
+    const { rerender } = render(MapRenderer({ item: beforeItem }));
+    rerender(MapRenderer({ item: afterItem }));
+    const mapCanvas = screen.getAllByTestId("map-canvas").at(-1);
+
+    // Assert
+    expect(mapCanvas?.getAttribute("data-center-lng")).toBe("129.0756");
+    expect(mapCanvas?.getAttribute("data-center-lat")).toBe("35.1796");
+    expect(mapCanvas?.getAttribute("data-zoom")).toBe("15");
   });
 
   test("미지원 타입은 첫 번째 문자열 primitive를 fallback으로 사용한다", () => {

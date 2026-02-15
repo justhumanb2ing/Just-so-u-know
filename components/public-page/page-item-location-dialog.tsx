@@ -1,11 +1,11 @@
 "use client";
 
 import { Loader2Icon, SearchIcon, XIcon } from "lucide-react";
-import { type ComponentProps, useCallback, useEffect, useMemo, useState } from "react";
+import { type ComponentProps, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Tooltip, TooltipPanel, TooltipTrigger } from "@/components/animate-ui/components/base/tooltip";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Map as MapCanvas, MapControls, type MapViewport } from "@/components/ui/map";
+import { Map as MapCanvas, MapControls, type MapRef, type MapViewport } from "@/components/ui/map";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { buildGoogleMapUrl, type MapItemCreatePayload } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
@@ -46,8 +46,10 @@ type MapSearchResultItem = {
 /**
  * 다이얼로그 오픈 시 사용할 초기 지도/캡션 상태를 계산한다.
  */
-function resolveInitialMapDialogState(initialValue?: MapDialogInitialValue) {
-  if (!initialValue) {
+function resolveInitialMapDialogStateFromPrimitives(params: { lat?: number; lng?: number; zoom?: number; caption?: string }) {
+  const { lat, lng, zoom, caption } = params;
+
+  if (typeof lat !== "number" || typeof lng !== "number" || typeof zoom !== "number") {
     return {
       center: LOCATION_PICKER_MAP_VIEW.center,
       zoom: LOCATION_PICKER_MAP_VIEW.zoom,
@@ -56,9 +58,9 @@ function resolveInitialMapDialogState(initialValue?: MapDialogInitialValue) {
   }
 
   return {
-    center: [initialValue.lng, initialValue.lat] as [number, number],
-    zoom: initialValue.zoom,
-    caption: initialValue.caption?.trim() ?? "",
+    center: [lng, lat] as [number, number],
+    zoom,
+    caption: caption?.trim() ?? "",
   };
 }
 
@@ -66,8 +68,23 @@ function resolveInitialMapDialogState(initialValue?: MapDialogInitialValue) {
  * map 아이템 생성/수정에서 공용으로 사용하는 위치 선택 다이얼로그.
  */
 export function PageItemLocationDialog({ trigger, onSaveMapItem, initialValue }: PageItemLocationDialogProps) {
-  const initialMapDialogState = useMemo(() => resolveInitialMapDialogState(initialValue), [initialValue]);
+  const initialLat = initialValue?.lat;
+  const initialLng = initialValue?.lng;
+  const initialZoom = initialValue?.zoom;
+  const initialCaption = initialValue?.caption;
+  const initialMapDialogState = useMemo(
+    () =>
+      resolveInitialMapDialogStateFromPrimitives({
+        lat: initialLat,
+        lng: initialLng,
+        zoom: initialZoom,
+        caption: initialCaption,
+      }),
+    [initialCaption, initialLat, initialLng, initialZoom],
+  );
+  const mapRef = useRef<MapRef | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [mapRenderKey, setMapRenderKey] = useState(0);
   const [mapViewport, setMapViewport] = useState<MapViewport>({
     center: initialMapDialogState.center,
     zoom: initialMapDialogState.zoom,
@@ -99,6 +116,7 @@ export function PageItemLocationDialog({ trigger, onSaveMapItem, initialValue }:
       return;
     }
 
+    setMapRenderKey((prevValue) => prevValue + 1);
     setMapViewport({
       center: initialMapDialogState.center,
       zoom: initialMapDialogState.zoom,
@@ -125,19 +143,30 @@ export function PageItemLocationDialog({ trigger, onSaveMapItem, initialValue }:
   /**
    * 사용자가 검색 결과를 선택하면 지도 중심을 해당 좌표로 이동한다.
    */
-  const handleSelectSearchResult = useCallback((item: MapSearchResultItem) => {
-    const nextCenter = item.center;
-    setMapViewport((prev) => ({
-      ...prev,
-      center: nextCenter,
-      zoom: Math.max(prev.zoom, LOCATION_PICKER_MAP_VIEW.zoom),
-    }));
-    setSelectedCenter(nextCenter);
-    setQuery("");
-    setDebouncedQuery("");
-    setSearchResults([]);
-    setSearchError(null);
-  }, []);
+  const handleSelectSearchResult = useCallback(
+    (item: MapSearchResultItem) => {
+      const nextCenter = item.center;
+      const nextZoom = Math.max(mapRef.current?.getZoom() ?? mapViewport.zoom, LOCATION_PICKER_MAP_VIEW.zoom);
+
+      mapRef.current?.easeTo({
+        center: nextCenter,
+        zoom: nextZoom,
+        duration: 300,
+      });
+
+      setMapViewport((prev) => ({
+        ...prev,
+        center: nextCenter,
+        zoom: nextZoom,
+      }));
+      setSelectedCenter(nextCenter);
+      setQuery("");
+      setDebouncedQuery("");
+      setSearchResults([]);
+      setSearchError(null);
+    },
+    [mapViewport.zoom],
+  );
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -267,6 +296,15 @@ export function PageItemLocationDialog({ trigger, onSaveMapItem, initialValue }:
         className="max-w-xl overflow-hidden rounded-3xl border-5 border-foreground bg-transparent p-0! shadow-lg"
         bottomStickOnMobile={false}
         showCloseButton={false}
+        data-no-dnd="true"
+        onPointerDownCapture={(event) => {
+          /**
+           * React Portal 내부 이벤트는 DOM 트리와 무관하게 React 트리로 버블링된다.
+           * map 편집 모달의 포인터 다운이 sortable 카드까지 전파되면 dnd-kit 센서가 활성화되어
+           * 모달 지도 조작과 리스트 드래그가 동시에 발생하므로 여기서 전파를 차단한다.
+           */
+          event.stopPropagation();
+        }}
       >
         <DialogHeader className={"sr-only"}>
           <DialogTitle className={"sr-only"}>Select location</DialogTitle>
@@ -274,11 +312,11 @@ export function PageItemLocationDialog({ trigger, onSaveMapItem, initialValue }:
         </DialogHeader>
         <div className="relative p-0">
           <MapCanvas
-            center={initialMapDialogState.center}
-            zoom={initialMapDialogState.zoom}
+            key={mapRenderKey}
+            ref={mapRef}
+            viewport={mapViewport}
             minZoom={LOCATION_PICKER_MAP_VIEW.minZoom}
             maxZoom={LOCATION_PICKER_MAP_VIEW.maxZoom}
-            viewport={mapViewport}
             className="aspect-square h-full w-full"
             styles={{
               light: "https://api.maptiler.com/maps/019c603c-4dda-7ea0-ab88-6521888e9715/style.json?key=cBOQsbRDRLWu2ZIg2chC",
@@ -351,7 +389,7 @@ export function PageItemLocationDialog({ trigger, onSaveMapItem, initialValue }:
               ) : null}
             </div>
           </div>
-          <div className="pointer-events-auto absolute bottom-3 left-3 z-20 w-72">
+          <div className="pointer-events-auto absolute bottom-3 left-3 z-20 w-fit min-w-12 max-w-60">
             <div className="rounded-lg border border-black bg-foreground/95 p-0 shadow-lg backdrop-blur-xs">
               <div className="relative">
                 <Input

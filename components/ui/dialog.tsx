@@ -27,6 +27,7 @@ function DialogBackdrop({ className, ...props }: DialogPrimitive.Backdrop.Props)
         "fixed inset-0 z-50 bg-black/20 backdrop-blur-xs transition-all duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0",
         className,
       )}
+      data-no-dnd="true"
       data-slot="dialog-backdrop"
       {...props}
     />
@@ -37,6 +38,7 @@ function DialogViewport({ className, ...props }: DialogPrimitive.Viewport.Props)
   return (
     <DialogPrimitive.Viewport
       className={cn("fixed inset-0 z-50 grid grid-rows-[1fr_auto_1fr] justify-items-center p-4", className)}
+      data-no-dnd="true"
       data-slot="dialog-viewport"
       {...props}
     />
@@ -64,6 +66,7 @@ function DialogPopup({
               "max-sm:max-w-none max-sm:rounded-none max-sm:border-x-0 max-sm:border-t max-sm:border-b-0 max-sm:opacity-[calc(1-min(var(--nested-dialogs),1))] max-sm:data-ending-style:translate-y-4 max-sm:data-starting-style:translate-y-4 max-sm:before:hidden max-sm:before:rounded-none",
             className,
           )}
+          data-no-dnd="true"
           data-slot="dialog-popup"
           {...props}
         >

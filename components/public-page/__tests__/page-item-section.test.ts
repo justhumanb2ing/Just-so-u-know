@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { resolveSkippedItemEntryAnimationIds } from "@/components/public-page/page-item-section";
+import { resolveSkippedItemEntryAnimationIds, shouldAllowCardDrag } from "@/components/public-page/page-item-section";
 
 vi.mock("@/components/ui/map", () => ({
   Map: () => null,
@@ -46,5 +46,36 @@ describe("resolveSkippedItemEntryAnimationIds", () => {
 
     // Assert
     expect(result).toEqual([]);
+  });
+});
+
+describe("shouldAllowCardDrag", () => {
+  test("data-no-dnd 컨테이너 내부 이벤트는 카드 드래그를 허용하지 않는다", () => {
+    // Arrange
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-no-dnd", "true");
+    const innerTarget = document.createElement("button");
+    wrapper.append(innerTarget);
+    document.body.append(wrapper);
+
+    // Act
+    const result = shouldAllowCardDrag(innerTarget);
+
+    // Assert
+    expect(result).toBe(false);
+    wrapper.remove();
+  });
+
+  test("일반 요소 이벤트는 카드 드래그를 허용한다", () => {
+    // Arrange
+    const target = document.createElement("div");
+    document.body.append(target);
+
+    // Act
+    const result = shouldAllowCardDrag(target);
+
+    // Assert
+    expect(result).toBe(true);
+    target.remove();
   });
 });

@@ -137,7 +137,7 @@ const PAGE_ITEM_CARD_STYLE_CONFIG_MAP: Record<string, PageItemCardStyleConfig> =
     className: "overflow-visible p-2 flex flex-col justify-center",
   },
   map: {
-    className: "overflow-hidden p-0",
+    className: "overflow-visible p-0",
   },
   image: {
     className: "overflow-visible",
@@ -154,6 +154,8 @@ function shouldAllowCardDrag(eventTarget: EventTarget | null) {
 
   return eventTarget.closest(NON_DRAGGABLE_SELECTOR) === null;
 }
+
+export { shouldAllowCardDrag };
 
 /**
  * 카드 전체를 드래그 트리거로 사용하되, 상호작용 요소에서의 포인터 다운은 제외한다.
@@ -396,7 +398,9 @@ function SortableItemCard({
           className="pointer-events-none absolute inset-0 z-1 rounded-xl bg-muted opacity-100 shadow-[inset_0_1px_5px_0_rgba(0,0,0,0.1)]"
         />
       ) : null}
-      <div className={cn(isDragging && "opacity-0", item.typeCode === "memo" && "h-full min-h-0 overflow-hidden")}>
+      <div
+        className={cn(isDragging && "opacity-0", (item.typeCode === "memo" || item.typeCode === "map") && "h-full min-h-0 overflow-hidden")}
+      >
         {itemActions ? <EditableItemActionControls item={item} itemActions={itemActions} /> : null}
         <ItemRenderer
           item={item}

@@ -23,6 +23,7 @@ import {
   resolveMemoItemContent,
   restoreRemovedPageItem,
   updateLinkItemTitle,
+  updateMapItemData,
   updateMemoItemContent,
   updatePageItemSize,
   usePageItemComposer,
@@ -333,6 +334,52 @@ describe("usePageItemComposer helpers", () => {
 
     // Assert
     expect((result[0]?.data as { title: string }).title).toBe("after");
+    expect(result[1]).toEqual(items[1]);
+  });
+
+  test("map 수정 시 대상 map 아이템만 즉시 갱신한다", () => {
+    // Arrange
+    const items = [
+      {
+        id: "item-1",
+        typeCode: "map",
+        sizeCode: "wide-full",
+        orderKey: 1,
+        data: {
+          lat: 37.5665,
+          lng: 126.978,
+          zoom: 13,
+          caption: "Before",
+          googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-2",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 2,
+        data: {
+          content: "memo",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+    ];
+    const payload = {
+      lat: 37.5701,
+      lng: 126.9822,
+      zoom: 14,
+      caption: "After",
+      googleMapUrl: "https://www.google.com/maps?q=37.570100,126.982200&z=14.00",
+    };
+
+    // Act
+    const result = updateMapItemData(items, "item-1", payload);
+
+    // Assert
+    expect(result[0]?.data).toMatchObject(payload);
     expect(result[1]).toEqual(items[1]);
   });
 

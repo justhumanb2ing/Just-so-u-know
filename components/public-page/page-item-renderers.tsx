@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowUpRightIcon, PencilIcon } from "lucide-react";
+import { ArrowUpRightIcon, LayersIcon } from "lucide-react";
+import dynamic from "next/dynamic";
 import type { KeyboardEvent, ReactNode } from "react";
-import { PageItemLocationDialog } from "@/components/public-page/page-item-location-dialog";
 import { Input } from "@/components/ui/input";
 import { Map as MapCanvas } from "@/components/ui/map";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,12 @@ import {
   resolveMemoItemContent,
 } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
+
+const PageItemLocationDialog = dynamic(
+  () => import("@/components/public-page/page-item-location-dialog").then((module) => module.PageItemLocationDialog),
+  { ssr: false },
+);
 
 type PageItemRendererProps = {
   item: PageItem;
@@ -36,6 +42,7 @@ export type PageItemRenderer = (props: PageItemRendererProps) => ReactNode;
 const FALLBACK_EMPTY_TEXT = "No content";
 const FALLBACK_UNSUPPORTED_TEXT = "Unsupported data format";
 const DEFAULT_FAVICON_SRC = "/no-favicon.png";
+const NOOP_MAP_VIEWPORT_CHANGE = () => {};
 
 function toObjectData(data: unknown): PageItemData | null {
   if (!data || typeof data !== "object") {
@@ -178,21 +185,43 @@ function MapItemRenderer({ item, canEditMap = false, onMapSave }: PageItemRender
   const canUpdateMap = canEditMap && Boolean(onMapSave);
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-[12px]">
-      <MapCanvas center={[mapView.lng, mapView.lat]} zoom={mapView.zoom} interactive={false} className="h-full w-full" />
+    <div className="relative h-full w-full overflow-hidden rounded-[12px] border">
+      <MapCanvas
+        viewport={{
+          center: [mapView.lng, mapView.lat],
+          zoom: mapView.zoom,
+        }}
+        styles={{
+          light: "https://api.maptiler.com/maps/019c603c-4dda-7ea0-ab88-6521888e9715/style.json?key=cBOQsbRDRLWu2ZIg2chC",
+        }}
+        onViewportChange={NOOP_MAP_VIEWPORT_CHANGE}
+        interactive={false}
+        className="h-full w-full"
+      />
+      <div className="pointer-events-none absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+        <div className="animation-duration-[2.5s] absolute -inset-2 animate-ping rounded-full bg-blue-500 opacity-75" />
+        <div className="relative flex size-7 items-center justify-center rounded-full bg-white p-1 shadow-[1px_2px_13px_4px_rgba(0,0,0,0.25)]">
+          <div className="size-full rounded-full bg-blue-500" />
+        </div>
+      </div>
       {mapView.caption ? (
-        <div className="pointer-events-none absolute bottom-2 left-2 z-20">
-          <p className="line-clamp-1 w-fit max-w-60 truncate rounded-md border border-black/80 bg-white/90 px-2 py-1 text-black text-xs">
+        <div className="pointer-events-none absolute bottom-2 left-2">
+          <p className="line-clamp-1 min-w-12 max-w-60 truncate rounded-sm border bg-white/90 px-2 py-2 text-black text-sm">
             {mapView.caption}
           </p>
         </div>
       ) : null}
-      <div className="absolute top-2 right-2 z-20">
-        <div className="size-6 rounded-full border bg-white">
-          <a href={mapView.googleMapUrl} target="_blank" rel="noreferrer" className="block">
-            <ArrowUpRightIcon className="size-full text-black" />
-          </a>
-        </div>
+      <div className="absolute right-2 bottom-3.5 z-20 flex size-7 items-center justify-center rounded-full bg-white shadow-sm">
+        <Button
+          size={"icon-xs"}
+          className={"rounded-full"}
+          nativeButton={false}
+          render={
+            <a href={mapView.googleMapUrl} target="_blank" rel="noreferrer" className="block">
+              <ArrowUpRightIcon className="size-4" strokeWidth={3} />
+            </a>
+          }
+        ></Button>
       </div>
       {canUpdateMap ? (
         <div className="absolute top-2 left-2 z-20">
@@ -205,13 +234,10 @@ function MapItemRenderer({ item, canEditMap = false, onMapSave }: PageItemRender
               caption: mapView.caption,
             }}
             trigger={
-              <button
-                type="button"
-                className="flex size-6 items-center justify-center rounded-full border bg-white"
-                aria-label="Edit map item"
-              >
-                <PencilIcon className="size-3.5 text-black" />
-              </button>
+              <Button type="button" size={"icon-sm"} aria-label="Edit map item" className={"rounded-full"}>
+                {/* <PencilIcon className="phatom-border size-4" strokeWidth={3} /> */}
+                <LayersIcon className="phatom-border size-4" strokeWidth={3} />
+              </Button>
             }
           />
         </div>

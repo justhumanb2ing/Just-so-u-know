@@ -106,7 +106,7 @@ export type MapItemCreatePayload = {
   lat: number;
   lng: number;
   zoom: number;
-  caption: string;
+  caption?: string;
   googleMapUrl: string;
 };
 
@@ -454,6 +454,21 @@ function mergeLinkItemDataTitle(data: unknown, title: string) {
 }
 
 /**
+ * map data에 좌표/줌/캡션/구글맵 링크를 주입한 새 객체를 반환한다.
+ */
+function mergeMapItemData(data: unknown, payload: MapItemCreatePayload) {
+  const nextData = toObjectData(data) ?? {};
+  return {
+    ...nextData,
+    lat: payload.lat,
+    lng: payload.lng,
+    zoom: payload.zoom,
+    caption: payload.caption,
+    googleMapUrl: payload.googleMapUrl,
+  };
+}
+
+/**
  * 아이템 목록에서 특정 memo 아이템의 content를 낙관적으로 갱신한다.
  */
 export function updateMemoItemContent(items: PageItem[], itemId: string, content: string) {
@@ -499,6 +514,41 @@ export function updateLinkItemTitle(items: PageItem[], itemId: string, title: st
     return {
       ...item,
       data: mergeLinkItemDataTitle(item.data, title),
+    };
+  });
+
+  return hasChanged ? nextItems : items;
+}
+
+/**
+ * 아이템 목록에서 특정 map 아이템의 좌표/줌/캡션/링크를 낙관적으로 갱신한다.
+ */
+export function updateMapItemData(items: PageItem[], itemId: string, payload: MapItemCreatePayload) {
+  let hasChanged = false;
+
+  const nextItems = items.map((item) => {
+    if (item.id !== itemId || item.typeCode !== "map") {
+      return item;
+    }
+
+    const currentMapView = resolveMapItemView(item);
+
+    if (
+      currentMapView &&
+      currentMapView.lat === payload.lat &&
+      currentMapView.lng === payload.lng &&
+      currentMapView.zoom === payload.zoom &&
+      currentMapView.caption === payload.caption &&
+      currentMapView.googleMapUrl === payload.googleMapUrl
+    ) {
+      return item;
+    }
+
+    hasChanged = true;
+
+    return {
+      ...item,
+      data: mergeMapItemData(item.data, payload),
     };
   });
 
@@ -881,7 +931,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
                 lat: mapPayload.lat,
                 lng: mapPayload.lng,
                 zoom: mapPayload.zoom,
-                caption: mapPayload.caption,
+                caption: normalizeLinkTitleInput(mapPayload.caption ?? "").trim(),
                 googleMapUrl: mapPayload.googleMapUrl,
               },
             }),
@@ -932,9 +982,12 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         lat: mapPayload.lat,
         lng: mapPayload.lng,
         zoom: mapPayload.zoom,
-        caption: normalizeLinkTitleInput(mapPayload.caption).trim(),
+        caption: normalizeLinkTitleInput(mapPayload.caption ?? "").trim(),
         googleMapUrl: mapPayload.googleMapUrl.trim() || buildGoogleMapUrl(mapPayload.lat, mapPayload.lng, mapPayload.zoom),
       };
+      const previousMapItem = targetItem;
+
+      setItems((prevItems) => updateMapItemData(prevItems, itemId, normalizedPayload));
 
       try {
         const payload = await trackPageDbWrite(async () => {
@@ -983,6 +1036,16 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         return true;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to update item.";
+
+        setItems((prevItems) =>
+          prevItems.map((item) => {
+            if (item.id !== itemId) {
+              return item;
+            }
+
+            return previousMapItem;
+          }),
+        );
 
         toast.error("Failed to update item", {
           description: message,
