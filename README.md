@@ -29,6 +29,7 @@ bun install
 - `SUPABASE_S3_ACCESS_KEY_ID`
 - `SUPABASE_S3_SECRET_ACCESS_KEY`
 - `MAPBOX_ACCESS_TOKEN` (지도 검색 API 호출용)
+- `PG_POOL_MAX` (선택, 기본 `3`; Session mode 연결 제한 대응용 pg pool 상한)
 
 ### 실행
 ```bash
@@ -84,6 +85,13 @@ bun dev
 - OG 조회 성공 시 `data.url`/`data.title`/`data.favicon`을 기준으로 `link` 아이템이 즉시 생성되며, 생성 성공 시 팝오버 닫힘 + 입력 초기화가 수행된다.
 - OG 응답의 `title` 또는 `data.url`이 비어있으면 링크 아이템 저장을 시도하지 않는다.
 - OG 조회 실패 시 에러 toast를 표시한다.
+- 소유자 화면 하단 바의 `Image&Video` 버튼은 파일 선택 즉시 업로드를 시작한다.
+- 이미지/비디오 업로드 전 클라이언트에서 `image/jpeg`, `image/jpg`, `image/png`, `image/webp`, `image/gif`, `video/webm`, `video/mp4` 및 최대 `5MB`를 검증한다.
+- 업로드 버킷은 `page-item-image-video`, object key는 `page-item/{userId}/{pageId}/{image|video}/{uuid}.{ext}` 규칙을 사용한다.
+- 업로드는 `init-upload → presigned PUT → complete-upload → POST /api/pages/{handle}/items` 순서로 처리된다.
+- image/video 아이템의 생성 기본 `size_code`는 `wide-tall`이다.
+- image/video/map 아이템의 `wide-short` 리사이즈 옵션은 비활성화된다.
+- video 아이템은 `preload=\"metadata\" playsInline muted loop autoPlay` 속성으로 렌더링된다.
 - 소유자 화면 하단 바의 `Location` 버튼 클릭 시 지도 다이얼로그가 열린다.
 - 위치 다이얼로그의 기본 지도 중심은 서울(`lng=126.978`, `lat=37.5665`)이며 기본 줌은 `13`이다.
 - 위치 다이얼로그 지도 줌 범위는 `minZoom=7`, `maxZoom=15`로 제한된다.

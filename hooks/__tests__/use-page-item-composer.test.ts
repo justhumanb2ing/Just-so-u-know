@@ -5,6 +5,8 @@ import {
   applyPageItemOrder,
   buildGoogleMapUrl,
   buildPageItemEndpoint,
+  buildPageItemMediaCompleteUploadEndpoint,
+  buildPageItemMediaInitUploadEndpoint,
   buildPageItemsEndpoint,
   buildPageItemsReorderEndpoint,
   hasMeaningfulItemContent,
@@ -20,6 +22,8 @@ import {
   resolveLinkItemCreatePayloadFromCrawl,
   resolveLinkItemTitle,
   resolveMapItemView,
+  resolveMediaItemMimeType,
+  resolveMediaItemSrc,
   resolveMemoItemContent,
   restoreRemovedPageItem,
   updateLinkItemTitle,
@@ -107,6 +111,26 @@ describe("usePageItemComposer helpers", () => {
 
     // Assert
     expect(result).toBe("/api/pages/%40hello%20world/items/reorder");
+  });
+
+  test("미디어 init-upload API 경로를 생성한다", () => {
+    // Arrange
+
+    // Act
+    const result = buildPageItemMediaInitUploadEndpoint();
+
+    // Assert
+    expect(result).toBe("/api/page/item-media/init-upload");
+  });
+
+  test("미디어 complete-upload API 경로를 생성한다", () => {
+    // Arrange
+
+    // Act
+    const result = buildPageItemMediaCompleteUploadEndpoint();
+
+    // Assert
+    expect(result).toBe("/api/page/item-media/complete-upload");
   });
 
   test("초기 아이템 목록은 sizeCode를 정규화하고 orderKey 기준으로 정렬한다", () => {
@@ -262,6 +286,30 @@ describe("usePageItemComposer helpers", () => {
       caption: "Seoul City Hall",
       googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
     });
+  });
+
+  test("image/video 데이터에서 src/mimeType을 추출한다", () => {
+    // Arrange
+    const item = {
+      id: "item-1",
+      typeCode: "video",
+      sizeCode: "wide-tall",
+      orderKey: 1,
+      data: {
+        src: "https://example.com/video.webm",
+        mimeType: "video/webm",
+      },
+      createdAt: "2026-02-12T00:00:00.000Z",
+      updatedAt: "2026-02-12T00:00:00.000Z",
+    } as const;
+
+    // Act
+    const src = resolveMediaItemSrc(item);
+    const mimeType = resolveMediaItemMimeType(item);
+
+    // Assert
+    expect(src).toBe("https://example.com/video.webm");
+    expect(mimeType).toBe("video/webm");
   });
 
   test("memo content 수정 시 대상 memo만 낙관적으로 갱신한다", () => {

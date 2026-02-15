@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { resolveDefaultMapItemSizeCode, resolveReorderTemporaryOffset } from "@/service/page/items";
+import {
+  isWideShortSizeBlockedForItemType,
+  resolveDefaultMapItemSizeCode,
+  resolveDefaultMediaItemSizeCode,
+  resolveReorderTemporaryOffset,
+} from "@/service/page/items";
 
 describe("page items reorder helpers", () => {
   test("임시 오프셋은 현재 최대 order_key를 그대로 사용한다", () => {
@@ -43,5 +48,29 @@ describe("page items reorder helpers", () => {
 
     // Assert
     expect(result).toBe("wide-full");
+  });
+
+  test("image/video 아이템 기본 size_code는 wide-tall을 사용한다", () => {
+    // Arrange
+
+    // Act
+    const result = resolveDefaultMediaItemSizeCode();
+
+    // Assert
+    expect(result).toBe("wide-tall");
+  });
+
+  test("image/video 타입은 wide-short를 금지한다", () => {
+    // Arrange
+
+    // Act
+    const imageBlocked = isWideShortSizeBlockedForItemType("image");
+    const videoBlocked = isWideShortSizeBlockedForItemType("video");
+    const memoBlocked = isWideShortSizeBlockedForItemType("memo");
+
+    // Assert
+    expect(imageBlocked).toBe(true);
+    expect(videoBlocked).toBe(true);
+    expect(memoBlocked).toBe(false);
   });
 });

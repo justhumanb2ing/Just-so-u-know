@@ -3,6 +3,7 @@ import {
   normalizeReadonlyPageItems,
   type ReadonlyPageItem,
   resolveReadonlyLinkView,
+  resolveReadonlyMediaView,
   resolveReadonlyMemoContent,
   resolveReadonlyPageItemDisplayText,
 } from "@/components/public-page/readonly-page-item-view";
@@ -28,7 +29,10 @@ const PAGE_ITEM_CARD_STYLE_CONFIG_MAP: Record<string, PageItemCardStyleConfig> =
     className: "overflow-visible p-2 flex flex-col justify-center",
   },
   image: {
-    className: "overflow-visible",
+    className: "overflow-visible p-0",
+  },
+  video: {
+    className: "overflow-visible p-0",
   },
 };
 
@@ -91,10 +95,37 @@ function ReadonlyLinkItem({ item }: { item: ReadonlyPageItem }) {
 }
 
 function ReadonlyImageItem({ item }: { item: ReadonlyPageItem }) {
+  const mediaView = resolveReadonlyMediaView(item);
+
+  if (!mediaView.src) {
+    return (
+      <p className="wrap-break-word line-clamp-2 h-fit w-full whitespace-pre-wrap text-base italic">
+        {resolveReadonlyPageItemDisplayText(item)}
+      </p>
+    );
+  }
+
   return (
-    <p className="wrap-break-word line-clamp-2 h-fit w-full whitespace-pre-wrap text-base italic">
-      {resolveReadonlyPageItemDisplayText(item)}
-    </p>
+    <div className="h-full w-full overflow-hidden rounded-[12px] border">
+      {/* biome-ignore lint/performance/noImgElement: 외부 public URL 미디어는 img 태그로 직접 렌더링한다. */}
+      <img src={mediaView.src} alt={resolveReadonlyPageItemDisplayText(item)} className="h-full w-full object-cover" loading="lazy" />
+    </div>
+  );
+}
+
+function ReadonlyVideoItem({ item }: { item: ReadonlyPageItem }) {
+  const mediaView = resolveReadonlyMediaView(item);
+
+  if (!mediaView.src) {
+    return <ReadonlyDefaultItem item={item} />;
+  }
+
+  return (
+    <div className="h-full w-full overflow-hidden rounded-[12px] border">
+      <video className="h-full w-full object-cover" preload="metadata" playsInline muted loop autoPlay>
+        <source src={mediaView.src} type={mediaView.mimeType ?? "video/mp4"} />
+      </video>
+    </div>
   );
 }
 
@@ -115,6 +146,10 @@ function renderReadonlyItemContent(item: ReadonlyPageItem): ReactNode {
 
   if (item.typeCode === "image") {
     return <ReadonlyImageItem item={item} />;
+  }
+
+  if (item.typeCode === "video") {
+    return <ReadonlyVideoItem item={item} />;
   }
 
   return <ReadonlyDefaultItem item={item} />;

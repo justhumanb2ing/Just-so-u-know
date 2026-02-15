@@ -1,7 +1,13 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
 import { findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
-import { createOwnedLinkItem, createOwnedMapItem, createOwnedMemoItem, findVisiblePageItemsByStoredHandle } from "@/service/page/items";
+import {
+  createOwnedLinkItem,
+  createOwnedMapItem,
+  createOwnedMediaItem,
+  createOwnedMemoItem,
+  findVisiblePageItemsByStoredHandle,
+} from "@/service/page/items";
 import { normalizeStoredHandleFromPath, pageItemCreateSchema } from "@/service/page/schema";
 
 export const runtime = "nodejs";
@@ -137,7 +143,7 @@ function mapCreateItemError(error: unknown) {
 
 /**
  * 소유한 페이지에 새 아이템을 생성한다.
- * 현재는 memo/link/map 타입 생성을 지원한다.
+ * 현재는 memo/link/map/image/video 타입 생성을 지원한다.
  */
 export async function POST(request: Request, context: CreateItemRouteContext) {
   const session = await resolveSessionOrNull(request.headers);
@@ -207,15 +213,26 @@ export async function POST(request: Request, context: CreateItemRouteContext) {
               title: parsedBody.data.data.title,
               favicon: parsedBody.data.data.favicon ?? null,
             })
-          : await createOwnedMapItem({
-              storedHandle,
-              userId: session.user.id,
-              lat: parsedBody.data.data.lat,
-              lng: parsedBody.data.data.lng,
-              zoom: parsedBody.data.data.zoom,
-              caption: parsedBody.data.data.caption,
-              googleMapUrl: parsedBody.data.data.googleMapUrl,
-            });
+          : parsedBody.data.type === "map"
+            ? await createOwnedMapItem({
+                storedHandle,
+                userId: session.user.id,
+                lat: parsedBody.data.data.lat,
+                lng: parsedBody.data.data.lng,
+                zoom: parsedBody.data.data.zoom,
+                caption: parsedBody.data.data.caption,
+                googleMapUrl: parsedBody.data.data.googleMapUrl,
+              })
+            : await createOwnedMediaItem({
+                storedHandle,
+                userId: session.user.id,
+                typeCode: parsedBody.data.type,
+                src: parsedBody.data.data.src,
+                mimeType: parsedBody.data.data.mimeType,
+                fileName: parsedBody.data.data.fileName,
+                fileSize: parsedBody.data.data.fileSize,
+                objectKey: parsedBody.data.data.objectKey,
+              });
 
     return Response.json(
       {

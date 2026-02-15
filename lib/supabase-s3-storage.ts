@@ -10,7 +10,11 @@ type SupabaseS3Config = {
   publicObjectBaseUrl: string;
 };
 
-let cachedConfig: SupabaseS3Config | null = null;
+type SupabaseS3ConfigOptions = {
+  bucketName?: string;
+};
+
+const cachedConfigByBucketName = new Map<string, SupabaseS3Config>();
 let cachedClient: S3Client | null = null;
 
 function getRequiredEnv(name: string) {
@@ -26,19 +30,20 @@ function getRequiredEnv(name: string) {
 /**
  * Supabase S3 연동 환경 변수를 로드하고 public URL base를 계산한다.
  */
-export function getSupabaseS3Config(): SupabaseS3Config {
-  if (cachedConfig) {
-    return cachedConfig;
-  }
-
+export function getSupabaseS3Config(options: SupabaseS3ConfigOptions = {}): SupabaseS3Config {
   const endpoint = getRequiredEnv("SUPABASE_S3_ENDPOINT");
   const region = getRequiredEnv("SUPABASE_S3_REGION");
   const accessKeyId = getRequiredEnv("SUPABASE_S3_ACCESS_KEY_ID");
   const secretAccessKey = getRequiredEnv("SUPABASE_S3_SECRET_ACCESS_KEY");
-  const configuredBucket = process.env.SUPABASE_S3_BUCKET?.trim();
+  const configuredBucket = options.bucketName?.trim() || process.env.SUPABASE_S3_BUCKET?.trim();
   const bucketName = configuredBucket && configuredBucket.length > 0 ? configuredBucket : PAGE_IMAGE_BUCKET_NAME;
 
-  cachedConfig = {
+  const cachedConfig = cachedConfigByBucketName.get(bucketName);
+  if (cachedConfig) {
+    return cachedConfig;
+  }
+
+  const nextConfig: SupabaseS3Config = {
     endpoint,
     region,
     bucketName,
@@ -46,8 +51,9 @@ export function getSupabaseS3Config(): SupabaseS3Config {
     secretAccessKey,
     publicObjectBaseUrl: buildPublicObjectBaseUrlFromS3Endpoint(endpoint),
   };
+  cachedConfigByBucketName.set(bucketName, nextConfig);
 
-  return cachedConfig;
+  return nextConfig;
 }
 
 /**

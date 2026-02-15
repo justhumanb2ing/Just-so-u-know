@@ -3,8 +3,9 @@
 import { ImagePlayIcon, LinkIcon, MapIcon, StickyNoteIcon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import dynamic from "next/dynamic";
-import { type ComponentProps, useEffect, useState } from "react";
+import { type ChangeEvent, type ComponentProps, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { toast } from "sonner";
 import { Popover, PopoverPanel, PopoverTrigger } from "@/components/animate-ui/components/base/popover";
 import { Tooltip, TooltipPanel, TooltipTrigger } from "@/components/animate-ui/components/base/tooltip";
 import { buttonVariants } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import type { OgCrawlController } from "@/hooks/use-og-crawl";
 import type { MapItemCreatePayload } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
+import { PAGE_ITEM_MEDIA_ALLOWED_MIME_TYPES } from "@/service/page/item-media";
 import { Separator } from "../ui/separator";
 import { PageSaveStatusIndicator } from "./page-save-status-indicator";
 
@@ -24,6 +26,7 @@ type ItemComposerBarProps = {
   onOpenComposer: () => void;
   ogController: OgCrawlController;
   onSaveMapItem: (payload: MapItemCreatePayload) => Promise<boolean>;
+  onCreateMediaItemFromFile: (file: File) => Promise<boolean>;
   appearDelayMs?: number;
 };
 
@@ -37,6 +40,7 @@ const COMPOSER_BUTTON_TRANSITION = {
   duration: 0.12,
   ease: "easeOut",
 } as const;
+const PAGE_ITEM_MEDIA_INPUT_ACCEPT = Array.from(PAGE_ITEM_MEDIA_ALLOWED_MIME_TYPES).join(",");
 
 function ComposerActionButton({ className, ...props }: ComposerActionButtonProps) {
   return (
@@ -65,11 +69,46 @@ function ComposerTooltipButton({ tooltipText, ...props }: ComposerTooltipButtonP
  * 페이지 하단에 고정되는 아이템 작성 바.
  * 현재는 텍스트 아이템 작성과 링크 OG 조회를 함께 제공한다.
  */
-export function ItemComposerBar({ hasDraft, onOpenComposer, ogController, onSaveMapItem, appearDelayMs = 0 }: ItemComposerBarProps) {
+export function ItemComposerBar({
+  hasDraft,
+  onOpenComposer,
+  ogController,
+  onSaveMapItem,
+  onCreateMediaItemFromFile,
+  appearDelayMs = 0,
+}: ItemComposerBarProps) {
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [isMediaUploadPending, setIsMediaUploadPending] = useState(false);
+  const mediaInputRef = useRef<HTMLInputElement | null>(null);
   const shouldReduceMotion = useReducedMotion() ?? false;
+
+  const handleMediaInputChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+
+    if (!selectedFile || isMediaUploadPending) {
+      event.target.value = "";
+      return;
+    }
+
+    setIsMediaUploadPending(true);
+
+    try {
+      const hasCreated = await onCreateMediaItemFromFile(selectedFile);
+
+      if (!hasCreated) {
+        return;
+      }
+    } catch {
+      toast.error("Failed to upload media", {
+        description: "Please try again.",
+      });
+    } finally {
+      setIsMediaUploadPending(false);
+      event.target.value = "";
+    }
+  };
 
   useEffect(() => {
     setPortalRoot(document.body);
@@ -110,6 +149,16 @@ export function ItemComposerBar({ hasDraft, onOpenComposer, ogController, onSave
         <PageSaveStatusIndicator />
         <Separator orientation="vertical" className={"my-3 rounded-lg data-vertical:w-0.5"} />
         <div className="flex items-center gap-1">
+          <input
+            ref={mediaInputRef}
+            type="file"
+            accept={PAGE_ITEM_MEDIA_INPUT_ACCEPT}
+            className="sr-only"
+            onChange={handleMediaInputChange}
+            disabled={isMediaUploadPending}
+            aria-hidden="true"
+            tabIndex={-1}
+          />
           <Popover open={isLinkPopoverOpen} onOpenChange={setIsLinkPopoverOpen}>
             <Tooltip delay={0}>
               <TooltipTrigger
@@ -159,7 +208,19 @@ export function ItemComposerBar({ hasDraft, onOpenComposer, ogController, onSave
           >
             <StickyNoteIcon className="size-5" strokeWidth={2.5} />
           </ComposerTooltipButton>
-          <ComposerTooltipButton aria-label="Add image and video item" tooltipText="Image&Video" className={cn("gap-1.5")}>
+          <ComposerTooltipButton
+            aria-label="Add image and video item"
+            tooltipText="Image&Video"
+            className={cn("gap-1.5")}
+            disabled={isMediaUploadPending}
+            onClick={() => {
+              if (isMediaUploadPending) {
+                return;
+              }
+
+              mediaInputRef.current?.click();
+            }}
+          >
             <ImagePlayIcon className="size-5" strokeWidth={2.5} />
           </ComposerTooltipButton>
           <PageItemLocationDialog

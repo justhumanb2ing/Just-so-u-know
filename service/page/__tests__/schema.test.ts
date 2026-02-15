@@ -107,6 +107,68 @@ describe("page item schema", () => {
     });
   });
 
+  test("아이템 생성 스키마는 image 데이터(src/mimeType/fileName/fileSize/objectKey)를 허용한다", () => {
+    // Arrange
+    const payload = {
+      type: "image",
+      data: {
+        src: "https://example.com/media/image-1.webp",
+        mimeType: "image/webp",
+        fileName: "image-1.webp",
+        fileSize: 1024,
+        objectKey: "page-item/user-1/page-1/image/media-1.webp",
+      },
+    };
+
+    // Act
+    const result = pageItemCreateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual(payload);
+  });
+
+  test("아이템 생성 스키마는 video 데이터(src/mimeType/fileName/fileSize/objectKey)를 허용한다", () => {
+    // Arrange
+    const payload = {
+      type: "video",
+      data: {
+        src: "https://example.com/media/video-1.mp4",
+        mimeType: "video/mp4",
+        fileName: "video-1.mp4",
+        fileSize: 1024,
+        objectKey: "page-item/user-1/page-1/video/media-1.mp4",
+      },
+    };
+
+    // Act
+    const result = pageItemCreateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual(payload);
+  });
+
+  test("아이템 생성 스키마는 5MB 초과 media fileSize를 거부한다", () => {
+    // Arrange
+    const payload = {
+      type: "video",
+      data: {
+        src: "https://example.com/media/video-1.mp4",
+        mimeType: "video/mp4",
+        fileName: "video-1.mp4",
+        fileSize: 5 * 1024 * 1024 + 1,
+        objectKey: "page-item/user-1/page-1/video/media-1.mp4",
+      },
+    };
+
+    // Act
+    const result = pageItemCreateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
   test("아이템 수정 스키마는 memo content 개행을 \\n으로 정규화한다", () => {
     // Arrange
     const payload = {

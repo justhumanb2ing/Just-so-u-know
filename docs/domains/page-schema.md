@@ -14,6 +14,8 @@
 - `app/api/page/image/init-upload/route.ts`
 - `app/api/page/image/complete-upload/route.ts`
 - `app/api/page/image/delete/route.ts`
+- `app/api/page/item-media/init-upload/route.ts`
+- `app/api/page/item-media/complete-upload/route.ts`
 - `app/api/page/og/route.ts`
 - `app/api/pages/[handle]/items/route.ts`
 - `app/api/pages/[handle]/items/[itemId]/route.ts`
@@ -22,6 +24,7 @@
 - `app/[handle]/page.tsx`
 - `service/page/schema.ts`
 - `service/page/items.ts`
+- `service/page/item-media.ts`
 - `service/page/social-items.ts`
 - `service/page/og-crawl.ts`
 - `hooks/use-page-item-composer.ts`
@@ -143,7 +146,7 @@
 ## 페이지 아이템 생성 API 동작
 - 엔드포인트: `POST /api/pages/{handle}/items`
 - 인증: Better Auth 세션 필수
-- 현재 지원 타입: `memo`, `link`, `map`
+- 현재 지원 타입: `memo`, `link`, `map`, `image`, `video`
 - 요청 스키마:
   - `type: "memo"` + `data.content`: 문자열(서버에서 `\r\n`, `\r`을 `\n`으로 정규화, trim 기준 빈 문자열 거부)
   - `type: "link"` + `data.url`/`data.title`/`data.favicon?`
@@ -152,12 +155,16 @@
   - `type: "map"` + `data.lat`/`data.lng`/`data.zoom`/`data.caption`/`data.googleMapUrl`
   - `map`의 `data.lat`/`data.lng`는 좌표 범위(`lat -90..90`, `lng -180..180`)를 검증한다.
   - `map`의 `data.googleMapUrl`은 `http/https` 절대 URL이어야 한다.
+  - `type: "image"` + `data.src`/`data.mimeType`/`data.fileName`/`data.fileSize`/`data.objectKey`
+  - `type: "video"` + `data.src`/`data.mimeType`/`data.fileName`/`data.fileSize`/`data.objectKey`
+  - image/video `mimeType`은 `image/jpeg|image/jpg|image/png|image/webp|image/gif|video/webm|video/mp4`만 허용한다.
+  - image/video `fileSize`는 최대 `5MB`를 허용한다.
 - 처리 정책:
   - `handle`은 경로 파라미터를 저장 포맷(`@handle`)으로 정규화해 검증한다.
   - `memo` 생성은 DB RPC(`create_memo_item_for_owned_page`)로 처리한다.
   - `link` 생성은 DB RPC(`create_link_item_for_owned_page`)로 처리한다.
   - `map` 생성은 페이지 단위 advisory lock + `max(order_key)+1` 계산으로 새 `page_item`을 삽입한다.
-  - 생성 시 기본 `size_code`는 `memo/link=wide-short`, `map=wide-full`이다.
+  - 생성 시 기본 `size_code`는 `memo/link=wide-short`, `map=wide-full`, `image/video=wide-tall`이다.
 - 응답:
   - 성공 시 `201 Created` + 생성된 아이템 1개 반환
   - 실패 시 `401/403/404/422/500` 상태 코드로 정규화된 에러를 반환한다.
@@ -191,6 +198,7 @@
   - `itemId`는 UUID 포맷으로 검증한다.
   - DB에서 `page.handle + page.user_id + page_item.id` 조건으로 매칭되는 1건만 갱신한다.
   - `sizeCode`는 `public.item_size(code)` FK 제약으로 정합성을 보장한다.
+  - `image/video/map` 타입은 `wide-short` 사이즈를 허용하지 않는다.
 - 응답:
   - 성공 시 `200 OK` + 수정된 아이템 1개 반환
   - 실패 시 `401/403/404/422/500` 상태 코드로 정규화된 에러를 반환한다.
@@ -272,8 +280,10 @@
   - 자동 저장 전에 내용을 모두 지워도 draft는 유지한다.
   - 저장된 아이템 카드 우상단에 hover 시 삭제 버튼이 노출된다.
   - 저장된 아이템 카드 좌상단에 hover 시 사이즈 버튼 그룹이 노출된다.
+  - image/video/map 아이템은 `wide-short` 버튼이 비활성화된다.
   - 삭제 버튼 클릭 시 목록에서 즉시 제거(낙관적 업데이트) 후 서버 물리 삭제를 요청한다.
   - 사이즈 버튼 클릭 시 목록에서 즉시 사이즈를 변경(낙관적 업데이트)하고 서버에 즉시 동기화한다.
+  - `Image&Video` 버튼으로 업로드한 video 아이템은 `preload=\"metadata\" playsInline muted loop autoPlay` 속성으로 렌더링된다.
   - 카드 전체를 드래그해 아이템 순서를 변경할 수 있다.
   - `input`/`textarea`/`a`/`button` 등 상호작용 요소에서 포인터 다운 시에는 드래그를 시작하지 않는다.
   - 드래그 중에는 아이템 위치가 실시간으로 재배치되고, over 대상 카드에는 inset-shadow 인디케이터가 표시된다.

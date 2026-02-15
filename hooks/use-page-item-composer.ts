@@ -4,6 +4,11 @@ import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTrackPageDbWrite } from "@/hooks/use-page-save-status";
+import {
+  isAllowedPageItemMediaFileSize,
+  isAllowedPageItemMediaMimeType,
+  PAGE_ITEM_MEDIA_MAX_FILE_SIZE_BYTES,
+} from "@/service/page/item-media";
 import { PAGE_ITEM_SIZE_CODES, type PageItemSizeCode } from "@/service/page/item-size";
 import type { CrawlResponse } from "@/service/page/og-crawl";
 
@@ -13,6 +18,7 @@ export const DEFAULT_PAGE_ITEM_SIZE_CODE: PageItemSizeCode = "wide-short";
 
 const WINDOWS_LINE_BREAK_PATTERN = /\r\n?/g;
 const LINK_TITLE_LINE_BREAK_PATTERN = /\r?\n/g;
+const PAGE_ITEM_MEDIA_MAX_SIZE_MB = Math.floor(PAGE_ITEM_MEDIA_MAX_FILE_SIZE_BYTES / (1024 * 1024));
 
 export type { PageItemSizeCode } from "@/service/page/item-size";
 
@@ -52,7 +58,16 @@ type LinkDraftState = {
   isSaving: boolean;
 };
 
-type ItemDraftState = MemoDraftState | LinkDraftState;
+type MediaDraftState = {
+  id: string;
+  kind: "media";
+  mediaType: "image" | "video";
+  content: string;
+  hasUserInput: boolean;
+  isSaving: boolean;
+};
+
+type ItemDraftState = MemoDraftState | LinkDraftState | MediaDraftState;
 
 type PersistedPageItemApiResponse = {
   status: "success";
@@ -72,6 +87,29 @@ type ErrorApiResponse = {
   message: string;
 };
 
+type InitPageItemMediaUploadApiSuccess = {
+  status: "success";
+  uploadUrl: string;
+  uploadHeaders: Record<string, string>;
+  objectKey: string;
+  mediaType: "image" | "video";
+  mimeType: string;
+  fileName: string;
+  fileSize: number;
+};
+
+type CompletePageItemMediaUploadApiSuccess = {
+  status: "success";
+  media: {
+    type: "image" | "video";
+    src: string;
+    mimeType: string;
+    fileName: string;
+    fileSize: number;
+    objectKey: string;
+  };
+};
+
 export type PageItemComposerController = {
   draft: ItemDraftState | null;
   items: PageItem[];
@@ -82,6 +120,7 @@ export type PageItemComposerController = {
   handleRemoveDraft: () => void;
   handleCreateLinkItemFromOg: (crawlResponse: CrawlResponse) => Promise<boolean>;
   handleCreateMapItem: (payload: MapItemCreatePayload) => Promise<boolean>;
+  handleCreateMediaItemFromFile: (file: File) => Promise<boolean>;
   handleUpdateMapItem: (itemId: string, payload: MapItemCreatePayload) => Promise<boolean>;
   handleItemMemoChange: (itemId: string, nextValue: string) => void;
   handleItemLinkTitleChange: (itemId: string, nextValue: string) => void;
@@ -102,6 +141,15 @@ type LinkItemCreatePayload = {
   favicon: string | null;
 };
 
+type MediaItemCreatePayload = {
+  type: "image" | "video";
+  src: string;
+  mimeType: string;
+  fileName: string;
+  fileSize: number;
+  objectKey: string;
+};
+
 export type MapItemCreatePayload = {
   lat: number;
   lng: number;
@@ -117,6 +165,14 @@ export type MapItemView = {
   caption: string;
   googleMapUrl: string;
 };
+
+async function parseJsonResponse<TResponse>(response: Response): Promise<TResponse | null> {
+  try {
+    return (await response.json()) as TResponse;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * 저장 성공한 draft는 목록 반영 후 화면에서 제거한다.
@@ -188,6 +244,20 @@ export function buildPageItemEndpoint(handle: string, itemId: string) {
  */
 export function buildPageItemsReorderEndpoint(handle: string) {
   return `/api/pages/${encodeURIComponent(handle)}/items/reorder`;
+}
+
+/**
+ * 페이지 아이템 미디어 presigned URL 발급 API 엔드포인트를 반환한다.
+ */
+export function buildPageItemMediaInitUploadEndpoint() {
+  return "/api/page/item-media/init-upload";
+}
+
+/**
+ * 페이지 아이템 미디어 업로드 완료 검증 API 엔드포인트를 반환한다.
+ */
+export function buildPageItemMediaCompleteUploadEndpoint() {
+  return "/api/page/item-media/complete-upload";
 }
 
 function sortPageItems(items: PageItem[]) {
@@ -346,6 +416,36 @@ export function resolveLinkItemFavicon(item: PageItem) {
   const favicon = data.favicon;
 
   return typeof favicon === "string" && favicon.trim().length > 0 ? favicon.trim() : null;
+}
+
+/**
+ * image/video 아이템 데이터에서 media src URL을 추출한다.
+ */
+export function resolveMediaItemSrc(item: PageItem) {
+  const data = toObjectData(item.data);
+
+  if (!data) {
+    return null;
+  }
+
+  const src = data.src;
+
+  return typeof src === "string" && src.trim().length > 0 ? src.trim() : null;
+}
+
+/**
+ * image/video 아이템 데이터에서 MIME 타입을 추출한다.
+ */
+export function resolveMediaItemMimeType(item: PageItem) {
+  const data = toObjectData(item.data);
+
+  if (!data) {
+    return null;
+  }
+
+  const mimeType = data.mimeType;
+
+  return typeof mimeType === "string" && mimeType.trim().length > 0 ? mimeType.trim().toLowerCase() : null;
 }
 
 function resolveFiniteNumber(value: unknown) {
@@ -965,6 +1065,169 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       }
     },
     [handle, trackPageDbWrite],
+  );
+
+  /**
+   * 업로드 완료된 image/video 메타데이터로 아이템을 생성한다.
+   */
+  const handleCreateMediaItem = useCallback(
+    async (mediaPayload: MediaItemCreatePayload) => {
+      try {
+        const payload = await trackPageDbWrite(async () => {
+          const response = await fetch(buildPageItemsEndpoint(handle), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: mediaPayload.type,
+              data: {
+                src: mediaPayload.src,
+                mimeType: mediaPayload.mimeType,
+                fileName: mediaPayload.fileName,
+                fileSize: mediaPayload.fileSize,
+                objectKey: mediaPayload.objectKey,
+              },
+            }),
+          });
+
+          const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+          if (!response.ok || payload.status !== "success") {
+            throw new Error(payload.status === "error" ? payload.message : "Failed to create item.");
+          }
+
+          return payload;
+        });
+
+        const createdItem = normalizeCreatedItem(payload.item);
+        itemLastSyncedSizeCodeMapRef.current.set(createdItem.id, createdItem.sizeCode);
+        setItems((prevItems) => {
+          const nextItems = sortPageItems([...prevItems, createdItem]);
+          itemLastSyncedOrderIdsRef.current = resolvePageItemIds(nextItems);
+          return nextItems;
+        });
+
+        return true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to create item.";
+
+        toast.error("Failed to save item", {
+          description: message,
+        });
+        return false;
+      }
+    },
+    [handle, trackPageDbWrite],
+  );
+
+  /**
+   * 파일 선택부터 presigned 업로드/완료 검증/아이템 생성까지 처리한다.
+   */
+  const handleCreateMediaItemFromFile = useCallback(
+    async (file: File) => {
+      const normalizedMimeType = file.type.trim().toLowerCase();
+      const normalizedFileName = file.name.trim() || "upload-file";
+      const mediaType = normalizedMimeType.startsWith("video/") ? "video" : "image";
+
+      if (!isAllowedPageItemMediaMimeType(normalizedMimeType)) {
+        toast.error("Unsupported media format", {
+          description: "Please upload JPEG, PNG, WebP, GIF, MP4, or WebM files.",
+        });
+        return false;
+      }
+
+      if (!isAllowedPageItemMediaFileSize(file.size)) {
+        toast.error("Media file is too large", {
+          description: `Please upload media up to ${PAGE_ITEM_MEDIA_MAX_SIZE_MB}MB.`,
+        });
+        return false;
+      }
+
+      setDraft((prevDraft) => {
+        if (prevDraft?.kind === "memo" && hasMeaningfulItemContent(prevDraft.content)) {
+          return prevDraft;
+        }
+
+        return {
+          id: createDraftId(),
+          kind: "media",
+          mediaType,
+          content: "",
+          hasUserInput: false,
+          isSaving: true,
+        };
+      });
+
+      try {
+        const initResponse = await fetch(buildPageItemMediaInitUploadEndpoint(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            handle,
+            mimeType: normalizedMimeType,
+            fileSize: file.size,
+            fileName: normalizedFileName,
+          }),
+        });
+        const initPayload = await parseJsonResponse<InitPageItemMediaUploadApiSuccess | ErrorApiResponse>(initResponse);
+
+        if (!initResponse.ok || !initPayload || initPayload.status !== "success") {
+          throw new Error(initPayload?.status === "error" ? initPayload.message : "Failed to initialize media upload.");
+        }
+
+        const uploadResponse = await fetch(initPayload.uploadUrl, {
+          method: "PUT",
+          headers: initPayload.uploadHeaders,
+          body: file,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload media.");
+        }
+
+        const completeResponse = await fetch(buildPageItemMediaCompleteUploadEndpoint(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            handle,
+            objectKey: initPayload.objectKey,
+            mimeType: initPayload.mimeType,
+            fileSize: initPayload.fileSize,
+            fileName: initPayload.fileName,
+          }),
+        });
+        const completePayload = await parseJsonResponse<CompletePageItemMediaUploadApiSuccess | ErrorApiResponse>(completeResponse);
+
+        if (!completeResponse.ok || !completePayload || completePayload.status !== "success") {
+          throw new Error(completePayload?.status === "error" ? completePayload.message : "Failed to complete media upload.");
+        }
+
+        const hasCreated = await handleCreateMediaItem({
+          type: completePayload.media.type,
+          src: completePayload.media.src,
+          mimeType: completePayload.media.mimeType,
+          fileName: completePayload.media.fileName,
+          fileSize: completePayload.media.fileSize,
+          objectKey: completePayload.media.objectKey,
+        });
+
+        setDraft((prevDraft) => (prevDraft?.kind === "media" ? null : prevDraft));
+
+        return hasCreated;
+      } catch (error) {
+        setDraft((prevDraft) => (prevDraft?.kind === "media" ? null : prevDraft));
+        toast.error("Failed to upload media", {
+          description: error instanceof Error ? error.message : "Please try again.",
+        });
+        return false;
+      }
+    },
+    [handle, handleCreateMediaItem],
   );
 
   /**
@@ -1647,6 +1910,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     handleRemoveDraft,
     handleCreateLinkItemFromOg,
     handleCreateMapItem,
+    handleCreateMediaItemFromFile,
     handleUpdateMapItem,
     handleItemMemoChange,
     handleItemLinkTitleChange,

@@ -1,5 +1,9 @@
 import { describe, expect, test, vi } from "vitest";
-import { resolveSkippedItemEntryAnimationIds, shouldAllowCardDrag } from "@/components/public-page/page-item-section";
+import {
+  isItemResizeOptionDisabled,
+  resolveSkippedItemEntryAnimationIds,
+  shouldAllowCardDrag,
+} from "@/components/public-page/page-item-section";
 
 vi.mock("@/components/ui/map", () => ({
   Map: () => null,
@@ -77,5 +81,33 @@ describe("shouldAllowCardDrag", () => {
     // Assert
     expect(result).toBe(true);
     target.remove();
+  });
+});
+
+describe("isItemResizeOptionDisabled", () => {
+  test("link 타입은 wide-short만 허용한다", () => {
+    // Arrange
+
+    // Act
+    const shortEnabled = isItemResizeOptionDisabled("link", "wide-short");
+    const tallDisabled = isItemResizeOptionDisabled("link", "wide-tall");
+
+    // Assert
+    expect(shortEnabled).toBe(false);
+    expect(tallDisabled).toBe(true);
+  });
+
+  test("image/video/map 타입은 wide-short를 비활성화한다", () => {
+    // Arrange
+
+    // Act
+    const imageDisabled = isItemResizeOptionDisabled("image", "wide-short");
+    const videoDisabled = isItemResizeOptionDisabled("video", "wide-short");
+    const mapDisabled = isItemResizeOptionDisabled("map", "wide-short");
+
+    // Assert
+    expect(imageDisabled).toBe(true);
+    expect(videoDisabled).toBe(true);
+    expect(mapDisabled).toBe(true);
   });
 });

@@ -41,6 +41,10 @@ const ITEM_BUTTON_TRANSITION = {
   duration: 0.06,
   ease: "easeOut",
 } as const;
+const ITEM_RESIZE_LAYOUT_TRANSITION = {
+  duration: 0.24,
+  ease: [0.22, 1, 0.36, 1],
+} as const;
 const NON_DRAGGABLE_SELECTOR = "input,textarea,a,button,[contenteditable='true'],[data-no-dnd='true']";
 
 type EditablePageItemSectionProps = {
@@ -68,7 +72,8 @@ type DraftItemAnimationState = {
 
 type DraftItemCardProps = {
   draft: {
-    kind: "memo" | "link";
+    kind: "memo" | "link" | "media";
+    mediaType?: "image" | "video";
     content: string;
     isSaving: boolean;
   };
@@ -140,9 +145,27 @@ const PAGE_ITEM_CARD_STYLE_CONFIG_MAP: Record<string, PageItemCardStyleConfig> =
     className: "overflow-visible p-0",
   },
   image: {
-    className: "overflow-visible",
+    className: "overflow-visible p-0",
+  },
+  video: {
+    className: "overflow-visible p-0",
   },
 };
+
+/**
+ * 아이템 타입/사이즈 조합 기준으로 리사이즈 옵션 비활성화 여부를 계산한다.
+ */
+export function isItemResizeOptionDisabled(itemTypeCode: string, sizeCode: PageItem["sizeCode"]) {
+  if (itemTypeCode === "link") {
+    return sizeCode !== "wide-short";
+  }
+
+  if (itemTypeCode === "map" || itemTypeCode === "image" || itemTypeCode === "video") {
+    return sizeCode === "wide-short";
+  }
+
+  return false;
+}
 
 /**
  * input/textarea/link 등 상호작용 가능한 요소에서는 카드 드래그를 막는다.
@@ -254,6 +277,16 @@ function DraftItemCard({ draft, focusRequestId, onDraftChange, onDraftRemove }: 
     );
   }
 
+  if (draft.kind === "media") {
+    return (
+      <article className="group relative h-40 overflow-visible rounded-[16px] bg-muted/70 p-0">
+        <div className="relative h-full w-full overflow-hidden rounded-[16px]">
+          <Skeleton className="h-full w-full rounded-none" />
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article className="group relative h-16 overflow-visible rounded-[16px] bg-muted/70 p-3">
       <motion.button
@@ -311,8 +344,7 @@ function EditableItemActionControls({ item, itemActions }: { item: PageItem; ite
       >
         {PAGE_ITEM_RESIZE_OPTIONS.map((option) => {
           const isSelected = option.sizeCode === item.sizeCode;
-          const isOptionDisabled =
-            (item.typeCode === "link" && option.sizeCode !== "wide-short") || (item.typeCode === "map" && option.sizeCode === "wide-short");
+          const isOptionDisabled = isItemResizeOptionDisabled(item.typeCode, option.sizeCode);
 
           return (
             <motion.button
@@ -399,7 +431,11 @@ function SortableItemCard({
         />
       ) : null}
       <div
-        className={cn(isDragging && "opacity-0", (item.typeCode === "memo" || item.typeCode === "map") && "h-full min-h-0 overflow-hidden")}
+        className={cn(
+          isDragging && "opacity-0",
+          (item.typeCode === "memo" || item.typeCode === "map" || item.typeCode === "image" || item.typeCode === "video") &&
+            "h-full min-h-0 overflow-hidden",
+        )}
       >
         {itemActions ? <EditableItemActionControls item={item} itemActions={itemActions} /> : null}
         <ItemRenderer
@@ -468,6 +504,7 @@ function ItemList({
 
   const activeItem = activeItemId ? (items.find((item) => item.id === activeItemId) ?? null) : null;
   const ActiveItemRenderer = activeItem ? getPageItemRenderer(activeItem.typeCode) : null;
+  const shouldAnimateItemResizeLayout = !shouldReduceMotion && !activeItemId;
 
   const handleDragStart = (event: DragStartEvent) => {
     if (!reorderEnabled) {
@@ -525,10 +562,14 @@ function ItemList({
           return (
             <motion.div
               key={item.id}
+              layout={shouldAnimateItemResizeLayout}
               initial={shouldSkipEntryAnimation ? false : itemEntryMotionConfig.initial}
               animate={itemEntryMotionConfig.animate}
               exit={itemEntryMotionConfig.exit}
-              transition={itemEntryMotionConfig.transition}
+              transition={{
+                ...itemEntryMotionConfig.transition,
+                layout: ITEM_RESIZE_LAYOUT_TRANSITION,
+              }}
             >
               <SortableItemCard
                 item={item}
@@ -666,6 +707,7 @@ export function EditablePageItemSection({ handle, initialItems = [], composerApp
           onOpenComposer={controller.handleOpenComposer}
           ogController={ogController}
           onSaveMapItem={controller.handleCreateMapItem}
+          onCreateMediaItemFromFile={controller.handleCreateMediaItemFromFile}
           appearDelayMs={composerAppearDelayMs}
         />
       )}

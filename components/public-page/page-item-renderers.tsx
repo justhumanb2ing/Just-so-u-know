@@ -13,6 +13,8 @@ import {
   resolveLinkItemTitle,
   resolveLinkItemUrl,
   resolveMapItemView,
+  resolveMediaItemMimeType,
+  resolveMediaItemSrc,
   resolveMemoItemContent,
 } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
@@ -83,6 +85,7 @@ const PAGE_ITEM_TEXT_RESOLVER_MAP: Record<string, PageItemTextResolver> = {
   link: (data) => pickFirstText(data, ["title", "url"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
   map: (data) => pickFirstText(data, ["caption", "googleMapUrl"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
   image: (data) => pickFirstText(data, ["alt", "caption", "title", "src"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
+  video: (data) => pickFirstText(data, ["title", "caption", "src"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
 };
 
 /**
@@ -247,8 +250,34 @@ function MapItemRenderer({ item, canEditMap = false, onMapSave }: PageItemRender
 }
 
 function ImageItemRenderer({ item }: PageItemRendererProps) {
+  const mediaSrc = resolveMediaItemSrc(item);
+
+  if (!mediaSrc) {
+    return <DefaultItemRenderer item={item} />;
+  }
+
   return (
-    <p className="wrap-break-word line-clamp-2 h-fit w-full whitespace-pre-wrap text-base italic">{resolvePageItemDisplayText(item)}</p>
+    <div className="h-full w-full overflow-hidden rounded-[12px] border">
+      {/* biome-ignore lint/performance/noImgElement: 외부 public URL 미디어는 img 태그로 직접 렌더링한다. */}
+      <img src={mediaSrc} alt={resolvePageItemDisplayText(item)} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+    </div>
+  );
+}
+
+function VideoItemRenderer({ item }: PageItemRendererProps) {
+  const mediaSrc = resolveMediaItemSrc(item);
+  const mimeType = resolveMediaItemMimeType(item) ?? "video/mp4";
+
+  if (!mediaSrc) {
+    return <DefaultItemRenderer item={item} />;
+  }
+
+  return (
+    <div className="h-full w-full overflow-hidden rounded-[12px] border">
+      <video className="h-full w-full object-cover" preload="metadata" playsInline muted loop autoPlay>
+        <source src={mediaSrc} type={mimeType} />
+      </video>
+    </div>
   );
 }
 
@@ -261,6 +290,7 @@ const PAGE_ITEM_RENDERER_MAP: Record<string, PageItemRenderer> = {
   link: LinkItemRenderer,
   map: MapItemRenderer,
   image: ImageItemRenderer,
+  video: VideoItemRenderer,
 };
 
 /**

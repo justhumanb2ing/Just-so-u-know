@@ -16,8 +16,10 @@
 - `/api/pages/{handle}/items` 요청은 페이지 도메인 스키마에서 검증한다.
 - memo 생성은 DB 함수(`create_memo_item_for_owned_page`)로 위임해 정합성과 동시성을 DB에서 보장한다.
 - map 생성은 페이지 단위 advisory lock 후 `max(order_key)+1`로 삽입해 순서 키 충돌을 회피하고, `size_code`를 `page_item_size` enum으로 저장한다.
+- image/video 생성은 페이지 단위 advisory lock 후 `max(order_key)+1`로 삽입하고, 기본 `size_code`를 `wide-tall`로 저장한다.
 - memo 수정은 `page + page_item` 조인 조건(`handle + user_id + item_id + memo 타입`)으로 소유권과 타입을 함께 검증한다.
 - map 수정은 `page + page_item` 조인 조건(`handle + user_id + item_id + map 타입`)으로 소유권과 타입을 함께 검증한다.
+- image/video/map 아이템은 `wide-short` 사이즈를 허용하지 않는다.
 - 페이지 아이템 조회는 `page_item` + `page` 조인으로 handle 기준 조회하고, `is_visible=true` 조건의 모든 타입 아이템을 노출한다.
 - 페이지 소셜 계정 조회는 `page_social_items` + `page` 조인으로 handle 기준 조회하고, `is_visible=true` 조건만 노출한다.
 - 페이지 소셜 계정 저장은 `(page_id, platform)` 유니크 제약 기반 upsert로 처리해 플랫폼당 1개 레코드를 유지한다.

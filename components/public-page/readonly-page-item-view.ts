@@ -117,6 +117,28 @@ export function resolveReadonlyLinkView(item: ReadonlyPageItem) {
 }
 
 /**
+ * image/video 아이템 데이터에서 media src/mimeType을 추출한다.
+ */
+export function resolveReadonlyMediaView(item: ReadonlyPageItem) {
+  const data = toObjectData(item.data);
+
+  if (!data) {
+    return {
+      src: null,
+      mimeType: null,
+    };
+  }
+
+  const src = typeof data.src === "string" && data.src.trim().length > 0 ? data.src.trim() : null;
+  const mimeType = typeof data.mimeType === "string" && data.mimeType.trim().length > 0 ? data.mimeType.trim().toLowerCase() : null;
+
+  return {
+    src,
+    mimeType,
+  };
+}
+
+/**
  * 아이템 타입에 따라 읽기 전용 카드에서 표시할 대표 텍스트를 계산한다.
  */
 export function resolveReadonlyPageItemDisplayText(item: ReadonlyPageItem) {
@@ -144,6 +166,10 @@ export function resolveReadonlyPageItemDisplayText(item: ReadonlyPageItem) {
       pickFirstPrimitiveText(data) ??
       READONLY_PAGE_ITEM_FALLBACK_UNSUPPORTED_TEXT
     );
+  }
+
+  if (item.typeCode === "video") {
+    return pickFirstText(data, ["title", "caption", "src"]) ?? pickFirstPrimitiveText(data) ?? READONLY_PAGE_ITEM_FALLBACK_UNSUPPORTED_TEXT;
   }
 
   return pickFirstPrimitiveText(data) ?? READONLY_PAGE_ITEM_FALLBACK_UNSUPPORTED_TEXT;

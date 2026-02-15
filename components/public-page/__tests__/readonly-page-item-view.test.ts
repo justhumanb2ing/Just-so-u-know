@@ -4,6 +4,7 @@ import {
   READONLY_PAGE_ITEM_FALLBACK_FAVICON_SRC,
   type ReadonlyPageItem,
   resolveReadonlyLinkView,
+  resolveReadonlyMediaView,
   resolveReadonlyPageItemDisplayText,
 } from "@/components/public-page/readonly-page-item-view";
 import type { VisiblePageItem } from "@/service/page/items";
@@ -91,5 +92,32 @@ describe("readonly page item view", () => {
 
     // Assert
     expect(result).toBe("Seoul City Hall");
+  });
+
+  it("video 아이템 뷰 모델은 src/mimeType을 추출한다", () => {
+    // Arrange
+    const item = {
+      id: "video-1",
+      typeCode: "video",
+      sizeCode: "wide-tall",
+      orderKey: 3,
+      data: {
+        src: "https://example.com/video.mp4",
+        mimeType: "video/mp4",
+      },
+      createdAt: "2026-02-13T00:00:00.000Z",
+      updatedAt: "2026-02-13T00:00:00.000Z",
+    } satisfies ReadonlyPageItem;
+
+    // Act
+    const mediaView = resolveReadonlyMediaView(item);
+    const displayText = resolveReadonlyPageItemDisplayText(item);
+
+    // Assert
+    expect(mediaView).toEqual({
+      src: "https://example.com/video.mp4",
+      mimeType: "video/mp4",
+    });
+    expect(displayText).toBe("https://example.com/video.mp4");
   });
 });

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizeSocialIdentifier, SOCIAL_PLATFORM_DEFINITIONS, type SocialPlatform } from "@/constants/social-platforms";
+import { PAGE_ITEM_MEDIA_ALLOWED_MIME_TYPES, PAGE_ITEM_MEDIA_MAX_FILE_SIZE_BYTES } from "@/service/page/item-media";
 import { PAGE_ITEM_SIZE_CODES } from "@/service/page/item-size";
 
 const STORED_HANDLE_PATTERN = /^@[a-z0-9]{3,20}$/;
@@ -123,14 +124,55 @@ const pageItemMapCreateSchema = z.object({
   }),
 });
 
+const pageItemMediaMimeTypeSchema = z
+  .string()
+  .trim()
+  .refine((value) => PAGE_ITEM_MEDIA_ALLOWED_MIME_TYPES.has(value.toLowerCase()), {
+    message: "Unsupported media format.",
+  });
+
+const pageItemMediaFileSizeSchema = z
+  .number()
+  .int()
+  .positive()
+  .max(PAGE_ITEM_MEDIA_MAX_FILE_SIZE_BYTES, { message: "Media file is too large." });
+
+const pageItemImageCreateSchema = z.object({
+  type: z.literal("image"),
+  data: z.object({
+    src: linkUrlSchema,
+    mimeType: pageItemMediaMimeTypeSchema.refine((value) => value.toLowerCase().startsWith("image/"), {
+      message: "Invalid image format.",
+    }),
+    fileName: z.string().trim().min(1, { message: "Media file name is required." }),
+    fileSize: pageItemMediaFileSizeSchema,
+    objectKey: z.string().trim().min(1, { message: "Media object key is required." }),
+  }),
+});
+
+const pageItemVideoCreateSchema = z.object({
+  type: z.literal("video"),
+  data: z.object({
+    src: linkUrlSchema,
+    mimeType: pageItemMediaMimeTypeSchema.refine((value) => value.toLowerCase().startsWith("video/"), {
+      message: "Invalid video format.",
+    }),
+    fileName: z.string().trim().min(1, { message: "Media file name is required." }),
+    fileSize: pageItemMediaFileSizeSchema,
+    objectKey: z.string().trim().min(1, { message: "Media object key is required." }),
+  }),
+});
+
 /**
  * 페이지 아이템 생성 API 입력을 검증한다.
- * 현재는 memo/link/map 타입 생성을 지원한다.
+ * 현재는 memo/link/map/image/video 타입 생성을 지원한다.
  */
 export const pageItemCreateSchema = z.discriminatedUnion("type", [
   pageItemMemoCreateSchema,
   pageItemLinkCreateSchema,
   pageItemMapCreateSchema,
+  pageItemImageCreateSchema,
+  pageItemVideoCreateSchema,
 ]);
 
 export type PageItemCreateInput = z.infer<typeof pageItemCreateSchema>;

@@ -61,6 +61,17 @@ export type CreateOwnedMapItemInput = {
   googleMapUrl: string;
 };
 
+export type CreateOwnedMediaItemInput = {
+  storedHandle: string;
+  userId: string;
+  typeCode: "image" | "video";
+  src: string;
+  mimeType: string;
+  fileName: string;
+  fileSize: number;
+  objectKey: string;
+};
+
 export type UpdateOwnedMemoItemInput = {
   storedHandle: string;
   userId: string;
@@ -106,12 +117,27 @@ export type ReorderVisiblePageItemsInput = {
 
 const PAGE_ITEM_ORDER_KEY_MAX = 2147483647;
 const DEFAULT_MAP_ITEM_SIZE_CODE = "wide-full";
+const DEFAULT_MEDIA_ITEM_SIZE_CODE = "wide-tall";
 
 /**
  * map 아이템 생성 시 적용할 기본 size_code를 반환한다.
  */
 export function resolveDefaultMapItemSizeCode() {
   return DEFAULT_MAP_ITEM_SIZE_CODE;
+}
+
+/**
+ * image/video 아이템 생성 시 적용할 기본 size_code를 반환한다.
+ */
+export function resolveDefaultMediaItemSizeCode() {
+  return DEFAULT_MEDIA_ITEM_SIZE_CODE;
+}
+
+/**
+ * 아이템 타입 기준으로 wide-short 금지 여부를 반환한다.
+ */
+export function isWideShortSizeBlockedForItemType(typeCode: string) {
+  return typeCode === "image" || typeCode === "video";
 }
 
 /**
@@ -364,6 +390,114 @@ export async function createOwnedMapItem({
 }
 
 /**
+ * 소유한 페이지에 image/video 아이템 1개를 생성한다.
+ * 페이지 단위 advisory lock으로 순서 키 충돌을 방지하고 미디어 메타데이터를 함께 저장한다.
+ */
+export async function createOwnedMediaItem({
+  storedHandle,
+  userId,
+  typeCode,
+  src,
+  mimeType,
+  fileName,
+  fileSize,
+  objectKey,
+}: CreateOwnedMediaItemInput): Promise<PageItemRow> {
+  const result = await sql<PageItemRow>`
+    with owned_page as (
+      select public.page.id
+      from public.page
+      where public.page.handle = ${storedHandle}
+        and public.page.user_id = ${userId}
+      limit 1
+    ),
+    page_lock as (
+      select pg_advisory_xact_lock(hashtext(owned_page.id::text))
+      from owned_page
+    ),
+    next_order as (
+      select
+        owned_page.id as page_id,
+        coalesce(max(public.page_item.order_key), 0) + 1 as next_order_key
+      from owned_page
+      inner join page_lock on true
+      left join public.page_item
+        on public.page_item.page_id = owned_page.id
+      group by owned_page.id
+    ),
+    inserted as (
+      insert into public.page_item (
+        page_id,
+        type_code,
+        size_code,
+        order_key,
+        data
+      )
+      select
+        next_order.page_id,
+        ${typeCode}::text,
+        ${resolveDefaultMediaItemSizeCode()}::public.page_item_size,
+        next_order.next_order_key,
+        jsonb_strip_nulls(
+          jsonb_build_object(
+            'src', ${src}::text,
+            'mimeType', ${mimeType}::text,
+            'fileName', ${fileName}::text,
+            'fileSize', ${fileSize}::integer,
+            'objectKey', ${objectKey}::text
+          )
+        )
+      from next_order
+      where next_order.next_order_key <= ${PAGE_ITEM_ORDER_KEY_MAX}
+      returning
+        id,
+        page_id as "pageId",
+        type_code as "typeCode",
+        size_code as "sizeCode",
+        order_key as "orderKey",
+        data,
+        is_visible as "isVisible",
+        lock_version as "lockVersion",
+        created_at as "createdAt",
+        updated_at as "updatedAt"
+    )
+    select
+      inserted.id,
+      inserted."pageId",
+      inserted."typeCode",
+      inserted."sizeCode",
+      inserted."orderKey",
+      inserted.data,
+      inserted."isVisible",
+      inserted."lockVersion",
+      inserted."createdAt",
+      inserted."updatedAt"
+    from inserted
+  `.execute(kysely);
+
+  const createdItem = result.rows[0];
+
+  if (createdItem) {
+    return createdItem;
+  }
+
+  const ownershipResult = await sql<{ isOwner: boolean }>`
+    select exists(
+      select 1
+      from public.page
+      where public.page.handle = ${storedHandle}
+        and public.page.user_id = ${userId}
+    ) as "isOwner"
+  `.execute(kysely);
+
+  if (!ownershipResult.rows[0]?.isOwner) {
+    throw createPageItemDomainError("page not found or permission denied");
+  }
+
+  throw createPageItemDomainError("order key overflow");
+}
+
+/**
  * 소유한 페이지의 memo 아이템 content를 수정한다.
  * 페이지 소유권과 아이템 타입(memo) 조건을 동시에 만족해야 갱신된다.
  */
@@ -496,6 +630,26 @@ export async function updateOwnedPageItemSize({
   itemId,
   sizeCode,
 }: UpdateOwnedPageItemSizeInput): Promise<PageItemRow | null> {
+  if (sizeCode === "wide-short") {
+    const mediaItemResult = await sql<{ typeCode: string }>`
+      select
+        page_item.type_code as "typeCode"
+      from public.page_item
+      inner join public.page
+        on public.page.id = page_item.page_id
+      where public.page.handle = ${storedHandle}
+        and public.page.user_id = ${userId}
+        and page_item.id = ${itemId}::uuid
+      limit 1
+    `.execute(kysely);
+
+    const targetTypeCode = mediaItemResult.rows[0]?.typeCode;
+
+    if (targetTypeCode && isWideShortSizeBlockedForItemType(targetTypeCode)) {
+      throw createPageItemDomainError("wide-short size is not allowed for media items");
+    }
+  }
+
   const result = await sql<PageItemRow>`
     update public.page_item
     set

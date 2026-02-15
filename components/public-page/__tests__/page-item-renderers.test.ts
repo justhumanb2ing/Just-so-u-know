@@ -141,6 +141,25 @@ describe("page item renderers", () => {
     expect(result).toBe("Profile image");
   });
 
+  test("image 렌더러는 src가 있으면 실제 이미지 태그를 렌더링한다", () => {
+    // Arrange
+    const item = createItem({
+      typeCode: "image",
+      data: {
+        alt: "Profile image",
+        src: "https://example.com/image.webp",
+      },
+    });
+    const ImageRenderer = getPageItemRenderer("image");
+
+    // Act
+    render(ImageRenderer({ item }));
+    const image = screen.getByRole("img", { name: "Profile image" });
+
+    // Assert
+    expect(image.getAttribute("src")).toBe("https://example.com/image.webp");
+  });
+
   test("map 타입은 caption/googleMapUrl 순서로 텍스트를 선택한다", () => {
     // Arrange
     const item = createItem({
@@ -227,19 +246,29 @@ describe("page item renderers", () => {
     expect(mapCanvas?.getAttribute("data-zoom")).toBe("15");
   });
 
-  test("미지원 타입은 첫 번째 문자열 primitive를 fallback으로 사용한다", () => {
+  test("video 렌더러는 자동 재생 속성(preload/playsInline/muted/loop/autoPlay)을 적용한다", () => {
     // Arrange
+    const VideoRenderer = getPageItemRenderer("video");
     const item = createItem({
       typeCode: "video",
       data: {
-        url: "https://example.com/video.mp4",
+        src: "https://example.com/video.mp4",
+        mimeType: "video/mp4",
       },
     });
 
     // Act
-    const result = resolvePageItemDisplayText(item);
+    const { container } = render(VideoRenderer({ item }));
+    const videoElement = container.querySelector("video");
+    const sourceElement = container.querySelector("source");
 
     // Assert
-    expect(result).toBe("https://example.com/video.mp4");
+    expect(videoElement).toBeTruthy();
+    expect(videoElement?.getAttribute("preload")).toBe("metadata");
+    expect(videoElement?.hasAttribute("playsinline")).toBe(true);
+    expect(videoElement?.muted).toBe(true);
+    expect(videoElement?.loop).toBe(true);
+    expect(videoElement?.autoplay).toBe(true);
+    expect(sourceElement?.getAttribute("src")).toBe("https://example.com/video.mp4");
   });
 });
