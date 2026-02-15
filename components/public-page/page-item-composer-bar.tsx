@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import type { OgCrawlController } from "@/hooks/use-og-crawl";
 import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
+import { PageItemLocationDialog } from "./page-item-location-dialog";
 import { PageSaveStatusIndicator } from "./page-save-status-indicator";
 
 type ItemComposerBarProps = {
@@ -155,9 +156,13 @@ export function ItemComposerBar({ hasDraft, onOpenComposer, ogController, appear
           <ComposerTooltipButton aria-label="Add image and video item" tooltipText="Image&Video" className={cn("gap-1.5")}>
             <ImagePlayIcon className="size-5" strokeWidth={2.5} />
           </ComposerTooltipButton>
-          <ComposerTooltipButton aria-label="Add location item" tooltipText="Location" className={cn("gap-1.5")}>
-            <MapIcon className="size-5" strokeWidth={2.5} />
-          </ComposerTooltipButton>
+          <PageItemLocationDialog
+            trigger={
+              <ComposerActionButton aria-label="Add location item" className={cn("gap-1.5")}>
+                <MapIcon className="size-5" strokeWidth={2.5} />
+              </ComposerActionButton>
+            }
+          />
         </div>
       </section>
     </motion.div>,

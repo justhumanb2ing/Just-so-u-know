@@ -28,6 +28,7 @@ bun install
 - `SUPABASE_S3_BUCKET` (예: `page-thumbnail`)
 - `SUPABASE_S3_ACCESS_KEY_ID`
 - `SUPABASE_S3_SECRET_ACCESS_KEY`
+- `MAPBOX_ACCESS_TOKEN` (지도 검색 API 호출용)
 
 ### 실행
 ```bash
@@ -83,6 +84,13 @@ bun dev
 - OG 조회 성공 시 `data.url`/`data.title`/`data.favicon`을 기준으로 `link` 아이템이 즉시 생성되며, 생성 성공 시 팝오버 닫힘 + 입력 초기화가 수행된다.
 - OG 응답의 `title` 또는 `data.url`이 비어있으면 링크 아이템 저장을 시도하지 않는다.
 - OG 조회 실패 시 에러 toast를 표시한다.
+- 소유자 화면 하단 바의 `Location` 버튼 클릭 시 지도 다이얼로그가 열린다.
+- 위치 다이얼로그의 기본 지도 중심은 서울(`lng=126.978`, `lat=37.5665`)이며 기본 줌은 `13`이다.
+- 위치 다이얼로그 지도 줌 범위는 `minZoom=7`, `maxZoom=15`로 제한된다.
+- 위치 다이얼로그 지도 컨트롤은 `Zoom in/out`과 `Find my location` 버튼을 제공한다.
+- 위치 다이얼로그 지도 좌상단에는 위치 검색 입력이 고정되며, 검색 결과는 입력 하단 스크롤 리스트로 표시된다.
+- 위치 검색은 `Mapbox Geocoding v6 forward`를 사용하며 `language=ko,en` 기반 다국어 결과를 지원한다.
+- 위치 검색 호출은 디바운싱(`350ms`)을 적용해 과도한 API 호출을 방지한다.
 - `memo` 아이템은 카드 본문에서 `textarea`로 직접 수정되며, 비소유자는 동일 UI를 비활성화 상태로만 확인할 수 있다.
 - `link` 아이템은 favicon(`48x48`)과 title만 렌더링한다. favicon 클릭 시 외부 링크로 이동하며, favicon이 없으면 `/no-favicon.png`를 사용한다.
 - 소유자는 `link` 아이템 title을 `textarea`로 수정할 수 있고, `800ms` 디바운스로 자동 저장된다.
