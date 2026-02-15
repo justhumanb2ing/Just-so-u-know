@@ -1,5 +1,13 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { resolveSkippedItemEntryAnimationIds } from "@/components/public-page/page-item-section";
+
+vi.mock("@/components/ui/map", () => ({
+  Map: () => null,
+}));
+
+vi.mock("@/components/public-page/page-item-location-dialog", () => ({
+  PageItemLocationDialog: () => null,
+}));
 
 describe("resolveSkippedItemEntryAnimationIds", () => {
   test("드래프트 저장 완료로 실제 아이템이 추가된 프레임에서는 진입 애니메이션을 스킵한다", () => {

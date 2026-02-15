@@ -75,6 +75,17 @@ export type UpdateOwnedLinkItemTitleInput = {
   title: string;
 };
 
+export type UpdateOwnedMapItemInput = {
+  storedHandle: string;
+  userId: string;
+  itemId: string;
+  lat: number;
+  lng: number;
+  zoom: number;
+  caption: string;
+  googleMapUrl: string;
+};
+
 export type DeleteOwnedPageItemInput = {
   storedHandle: string;
   userId: string;
@@ -410,6 +421,55 @@ export async function updateOwnedLinkItemTitle({
       and public.page.user_id = ${userId}
       and page_item.id = ${itemId}::uuid
       and page_item.type_code = 'link'
+    returning
+      page_item.id,
+      page_item.page_id as "pageId",
+      page_item.type_code as "typeCode",
+      page_item.size_code as "sizeCode",
+      page_item.order_key as "orderKey",
+      page_item.data,
+      page_item.is_visible as "isVisible",
+      page_item.lock_version as "lockVersion",
+      page_item.created_at as "createdAt",
+      page_item.updated_at as "updatedAt"
+  `.execute(kysely);
+
+  return result.rows[0] ?? null;
+}
+
+/**
+ * 소유한 페이지의 map 아이템 좌표/줌/캡션/구글맵 링크를 수정한다.
+ * 페이지 소유권과 아이템 타입(map) 조건을 동시에 만족해야 갱신된다.
+ */
+export async function updateOwnedMapItem({
+  storedHandle,
+  userId,
+  itemId,
+  lat,
+  lng,
+  zoom,
+  caption,
+  googleMapUrl,
+}: UpdateOwnedMapItemInput): Promise<PageItemRow | null> {
+  const result = await sql<PageItemRow>`
+    update public.page_item
+    set
+      data = jsonb_strip_nulls(
+        jsonb_build_object(
+          'lat', ${lat}::double precision,
+          'lng', ${lng}::double precision,
+          'zoom', ${zoom}::double precision,
+          'caption', ${caption}::text,
+          'googleMapUrl', ${googleMapUrl}::text
+        )
+      ),
+      lock_version = page_item.lock_version + 1
+    from public.page
+    where public.page.id = page_item.page_id
+      and public.page.handle = ${storedHandle}
+      and public.page.user_id = ${userId}
+      and page_item.id = ${itemId}::uuid
+      and page_item.type_code = 'map'
     returning
       page_item.id,
       page_item.page_id as "pageId",

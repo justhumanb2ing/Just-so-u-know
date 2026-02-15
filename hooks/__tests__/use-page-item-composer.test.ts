@@ -3,6 +3,7 @@ import { type ChangeEvent, createElement, type ReactNode } from "react";
 import { describe, expect, test } from "vitest";
 import {
   applyPageItemOrder,
+  buildGoogleMapUrl,
   buildPageItemEndpoint,
   buildPageItemsEndpoint,
   buildPageItemsReorderEndpoint,
@@ -18,6 +19,7 @@ import {
   resolveDraftAfterPersistSuccess,
   resolveLinkItemCreatePayloadFromCrawl,
   resolveLinkItemTitle,
+  resolveMapItemView,
   resolveMemoItemContent,
   restoreRemovedPageItem,
   updateLinkItemTitle,
@@ -215,6 +217,50 @@ describe("usePageItemComposer helpers", () => {
 
     // Assert
     expect(result).toBe("Hello World");
+  });
+
+  test("좌표/줌으로 Google Maps URL을 생성한다", () => {
+    // Arrange
+    const lat = 37.5665;
+    const lng = 126.978;
+    const zoom = 13;
+
+    // Act
+    const result = buildGoogleMapUrl(lat, lng, zoom);
+
+    // Assert
+    expect(result).toBe("https://www.google.com/maps?q=37.566500%2C126.978000&z=13.00");
+  });
+
+  test("map 데이터에서 좌표/줌/캡션/구글맵 링크를 추출한다", () => {
+    // Arrange
+    const item = {
+      id: "item-1",
+      typeCode: "map",
+      sizeCode: "wide-full",
+      orderKey: 1,
+      data: {
+        lat: 37.5665,
+        lng: 126.978,
+        zoom: 13,
+        caption: "Seoul City Hall",
+        googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+      },
+      createdAt: "2026-02-12T00:00:00.000Z",
+      updatedAt: "2026-02-12T00:00:00.000Z",
+    } as const;
+
+    // Act
+    const result = resolveMapItemView(item);
+
+    // Assert
+    expect(result).toEqual({
+      lat: 37.5665,
+      lng: 126.978,
+      zoom: 13,
+      caption: "Seoul City Hall",
+      googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+    });
   });
 
   test("memo content 수정 시 대상 memo만 낙관적으로 갱신한다", () => {

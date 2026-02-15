@@ -82,6 +82,7 @@ export type PageItemComposerController = {
   handleRemoveDraft: () => void;
   handleCreateLinkItemFromOg: (crawlResponse: CrawlResponse) => Promise<boolean>;
   handleCreateMapItem: (payload: MapItemCreatePayload) => Promise<boolean>;
+  handleUpdateMapItem: (itemId: string, payload: MapItemCreatePayload) => Promise<boolean>;
   handleItemMemoChange: (itemId: string, nextValue: string) => void;
   handleItemLinkTitleChange: (itemId: string, nextValue: string) => void;
   handleItemLinkTitleSubmit: (itemId: string) => void;
@@ -102,6 +103,14 @@ type LinkItemCreatePayload = {
 };
 
 export type MapItemCreatePayload = {
+  lat: number;
+  lng: number;
+  zoom: number;
+  caption: string;
+  googleMapUrl: string;
+};
+
+export type MapItemView = {
   lat: number;
   lng: number;
   zoom: number;
@@ -337,6 +346,89 @@ export function resolveLinkItemFavicon(item: PageItem) {
   const favicon = data.favicon;
 
   return typeof favicon === "string" && favicon.trim().length > 0 ? favicon.trim() : null;
+}
+
+function resolveFiniteNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const parsedValue = Number(trimmedValue);
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+}
+
+/**
+ * 좌표/줌 정보를 기반으로 Google Maps URL을 생성한다.
+ */
+export function buildGoogleMapUrl(lat: number, lng: number, zoom: number) {
+  const endpoint = new URL("https://www.google.com/maps");
+  endpoint.searchParams.set("q", `${lat.toFixed(6)},${lng.toFixed(6)}`);
+  endpoint.searchParams.set("z", zoom.toFixed(2));
+  return endpoint.toString();
+}
+
+/**
+ * map 아이템 데이터에서 좌표/줌/캡션/구글맵 링크를 추출한다.
+ */
+export function resolveMapItemView(item: PageItem): MapItemView | null {
+  const data = toObjectData(item.data);
+
+  if (!data) {
+    return null;
+  }
+
+  const lat = resolveFiniteNumber(data.lat);
+  const lng = resolveFiniteNumber(data.lng);
+  const zoom = resolveFiniteNumber(data.zoom);
+
+  if (lat === null || lng === null || zoom === null) {
+    return null;
+  }
+
+  const caption = typeof data.caption === "string" ? normalizeLinkTitleInput(data.caption).trim() : "";
+  const rawGoogleMapUrl = typeof data.googleMapUrl === "string" ? data.googleMapUrl.trim() : "";
+  const fallbackGoogleMapUrl = buildGoogleMapUrl(lat, lng, zoom);
+
+  if (!rawGoogleMapUrl) {
+    return {
+      lat,
+      lng,
+      zoom,
+      caption,
+      googleMapUrl: fallbackGoogleMapUrl,
+    };
+  }
+
+  try {
+    const parsedGoogleMapUrl = new URL(rawGoogleMapUrl);
+    const isValidProtocol = parsedGoogleMapUrl.protocol === "http:" || parsedGoogleMapUrl.protocol === "https:";
+
+    return {
+      lat,
+      lng,
+      zoom,
+      caption,
+      googleMapUrl: isValidProtocol ? parsedGoogleMapUrl.toString() : fallbackGoogleMapUrl,
+    };
+  } catch {
+    return {
+      lat,
+      lng,
+      zoom,
+      caption,
+      googleMapUrl: fallbackGoogleMapUrl,
+    };
+  }
 }
 
 /**
@@ -817,6 +909,82 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         const message = error instanceof Error ? error.message : "Failed to create item.";
 
         toast.error("Failed to save item", {
+          description: message,
+        });
+        return false;
+      }
+    },
+    [handle, trackPageDbWrite],
+  );
+
+  /**
+   * 기존 map 아이템의 좌표/줌/캡션/링크를 서버에 저장한다.
+   */
+  const handleUpdateMapItem = useCallback(
+    async (itemId: string, mapPayload: MapItemCreatePayload) => {
+      const targetItem = itemsRef.current.find((item) => item.id === itemId);
+
+      if (!targetItem || targetItem.typeCode !== "map") {
+        return false;
+      }
+
+      const normalizedPayload: MapItemCreatePayload = {
+        lat: mapPayload.lat,
+        lng: mapPayload.lng,
+        zoom: mapPayload.zoom,
+        caption: normalizeLinkTitleInput(mapPayload.caption).trim(),
+        googleMapUrl: mapPayload.googleMapUrl.trim() || buildGoogleMapUrl(mapPayload.lat, mapPayload.lng, mapPayload.zoom),
+      };
+
+      try {
+        const payload = await trackPageDbWrite(async () => {
+          const response = await fetch(buildPageItemEndpoint(handle, itemId), {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: "map",
+              data: {
+                lat: normalizedPayload.lat,
+                lng: normalizedPayload.lng,
+                zoom: normalizedPayload.zoom,
+                caption: normalizedPayload.caption,
+                googleMapUrl: normalizedPayload.googleMapUrl,
+              },
+            }),
+          });
+
+          const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+          if (!response.ok || payload.status !== "success") {
+            throw new Error(payload.status === "error" ? payload.message : "Failed to update item.");
+          }
+
+          return payload;
+        });
+
+        const updatedItem = normalizeCreatedItem(payload.item);
+
+        setItems((prevItems) =>
+          prevItems.map((item) => {
+            if (item.id !== itemId) {
+              return item;
+            }
+
+            return {
+              ...item,
+              data: updatedItem.data,
+              updatedAt: updatedItem.updatedAt,
+            };
+          }),
+        );
+
+        return true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to update item.";
+
+        toast.error("Failed to update item", {
           description: message,
         });
         return false;
@@ -1416,6 +1584,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     handleRemoveDraft,
     handleCreateLinkItemFromOg,
     handleCreateMapItem,
+    handleUpdateMapItem,
     handleItemMemoChange,
     handleItemLinkTitleChange,
     handleItemLinkTitleSubmit,

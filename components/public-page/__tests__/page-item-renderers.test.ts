@@ -1,7 +1,16 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { describe, expect, test, vi } from "vitest";
 import { getPageItemRenderer, resolvePageItemDisplayText } from "@/components/public-page/page-item-renderers";
 import type { PageItem } from "@/hooks/use-page-item-composer";
+
+vi.mock("@/components/ui/map", () => ({
+  Map: ({ children }: { children?: ReactNode }) => createElement("div", { "data-testid": "map-canvas" }, children),
+}));
+
+vi.mock("@/components/public-page/page-item-location-dialog", () => ({
+  PageItemLocationDialog: ({ trigger }: { trigger: ReactNode }) => createElement("div", { "data-testid": "map-edit-dialog" }, trigger),
+}));
 
 function createItem(input: Partial<PageItem>): PageItem {
   return {
@@ -140,6 +149,38 @@ describe("page item renderers", () => {
 
     // Assert
     expect(result).toBe("Seoul City Hall");
+  });
+
+  test("map 렌더러는 지도/caption/구글맵 링크/편집 버튼을 표시한다", () => {
+    // Arrange
+    const onMapSave = vi.fn().mockResolvedValue(true);
+    const item = createItem({
+      typeCode: "map",
+      data: {
+        lat: 37.5665,
+        lng: 126.978,
+        zoom: 13,
+        caption: "Seoul City Hall",
+        googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+      },
+    });
+    const MapRenderer = getPageItemRenderer("map");
+
+    // Act
+    render(
+      MapRenderer({
+        item,
+        canEditMap: true,
+        onMapSave,
+      }),
+    );
+
+    // Assert
+    expect(screen.getByTestId("map-canvas")).toBeTruthy();
+    expect(screen.getByText("Seoul City Hall")).toBeTruthy();
+    const mapLink = screen.getAllByRole("link").find((link) => link.getAttribute("href")?.includes("google.com/maps"));
+    expect(mapLink?.getAttribute("href")).toBe("https://www.google.com/maps?q=37.566500,126.978000&z=13");
+    expect(screen.getByLabelText("Edit map item")).toBeTruthy();
   });
 
   test("미지원 타입은 첫 번째 문자열 primitive를 fallback으로 사용한다", () => {

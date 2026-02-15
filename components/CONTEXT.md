@@ -18,9 +18,10 @@
 - 하단 생성 바는 `useIsMobile`(뷰포트) + `useIsMobileWebRuntime`(User Agent) 조건을 합쳐 모바일 환경에서는 렌더링하지 않는다.
 - 소유자 편집 화면 상단 handle 텍스트도 동일하게 `useIsMobile` + `useIsMobileWebRuntime` 조건에서 렌더링 자체를 생략한다.
 - 방문자 읽기 화면은 `readonly-page-visitor-section`에서 동일한 handle 스타일을 재사용하며, 서버 모바일 UA 조건(`shouldHideHandle`)과 반응형 클래스(`hidden md:block`)를 함께 적용해 모바일 기기/모바일 뷰포트에서 모두 숨긴다.
-- 아이템 본문 렌더링은 `page-item-renderers`의 타입별 렌더러 맵(`memo/link/image/default`)으로 합성한다.
+- 아이템 본문 렌더링은 `page-item-renderers`의 타입별 렌더러 맵(`memo/link/map/image/default`)으로 합성한다.
 - 아이템 draft 편집 입력은 하단 바가 아니라 아이템 목록 영역의 draft 카드에서 처리하며, draft 카드에서 즉시 삭제할 수 있다.
 - 링크 생성 중 draft 카드는 `Skeleton` 기반(link 아이콘/타이틀 자리)으로 표시하고, OG 추출/커밋 실패 시 즉시 제거한다.
+- map 아이템은 카드 내부에서 `map.tsx` 기반 지도를 렌더링하고, 캡션/구글맵 링크/편집 다이얼로그 트리거를 오버레이로 표시한다.
 
 ## 사용 패턴
 - 컴포넌트는 가능한 표현과 이벤트 전달에 집중하고, 도메인 검증은 서비스/액션에 위임한다.

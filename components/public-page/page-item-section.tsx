@@ -32,7 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useIsMobileWebRuntime } from "@/hooks/use-is-mobile-web-runtime";
 import { useOgCrawl } from "@/hooks/use-og-crawl";
-import type { InitialPageItem, PageItem } from "@/hooks/use-page-item-composer";
+import type { InitialPageItem, MapItemCreatePayload, PageItem } from "@/hooks/use-page-item-composer";
 import { usePageItemComposer } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
 
@@ -80,6 +80,7 @@ type DraftItemCardProps = {
 type EditableItemActions = {
   onRemove: (itemId: string) => void;
   onResize: (itemId: string, nextSizeCode: PageItem["sizeCode"]) => void;
+  onMapSave: (itemId: string, payload: MapItemCreatePayload) => Promise<boolean>;
 };
 
 type SortableItemCardProps = {
@@ -134,6 +135,9 @@ const PAGE_ITEM_CARD_STYLE_CONFIG_MAP: Record<string, PageItemCardStyleConfig> =
   },
   link: {
     className: "overflow-visible p-2 flex flex-col justify-center",
+  },
+  map: {
+    className: "overflow-hidden p-0",
   },
   image: {
     className: "overflow-visible",
@@ -305,7 +309,8 @@ function EditableItemActionControls({ item, itemActions }: { item: PageItem; ite
       >
         {PAGE_ITEM_RESIZE_OPTIONS.map((option) => {
           const isSelected = option.sizeCode === item.sizeCode;
-          const isOptionDisabled = item.typeCode === "link" && option.sizeCode !== "wide-short";
+          const isOptionDisabled =
+            (item.typeCode === "link" && option.sizeCode !== "wide-short") || (item.typeCode === "map" && option.sizeCode === "wide-short");
 
           return (
             <motion.button
@@ -400,6 +405,8 @@ function SortableItemCard({
           canEditLinkTitle={Boolean(itemActions)}
           onLinkTitleChange={onLinkTitleChange}
           onLinkTitleSubmit={onLinkTitleSubmit}
+          canEditMap={Boolean(itemActions)}
+          onMapSave={itemActions?.onMapSave}
         />
       </div>
     </article>
@@ -586,9 +593,11 @@ function ItemList({
               item={activeItem}
               canEditMemo={false}
               canEditLinkTitle={false}
+              canEditMap={false}
               onMemoChange={undefined}
               onLinkTitleChange={undefined}
               onLinkTitleSubmit={undefined}
+              onMapSave={undefined}
             />
           </article>
         ) : null}
@@ -630,6 +639,7 @@ export function EditablePageItemSection({ handle, initialItems = [], composerApp
   const itemActions: EditableItemActions = {
     onRemove: controller.handleRemoveItem,
     onResize: controller.handleItemResize,
+    onMapSave: controller.handleUpdateMapItem,
   };
 
   return (
@@ -651,7 +661,7 @@ export function EditablePageItemSection({ handle, initialItems = [], composerApp
           hasDraft={Boolean(controller.draft)}
           onOpenComposer={controller.handleOpenComposer}
           ogController={ogController}
-          onCreateMapItem={controller.handleCreateMapItem}
+          onSaveMapItem={controller.handleCreateMapItem}
           appearDelayMs={composerAppearDelayMs}
         />
       )}

@@ -1,13 +1,18 @@
 "use client";
 
+import { ArrowUpRightIcon, PencilIcon } from "lucide-react";
 import type { KeyboardEvent, ReactNode } from "react";
+import { PageItemLocationDialog } from "@/components/public-page/page-item-location-dialog";
 import { Input } from "@/components/ui/input";
+import { Map as MapCanvas } from "@/components/ui/map";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  type MapItemCreatePayload,
   type PageItem,
   resolveLinkItemFavicon,
   resolveLinkItemTitle,
   resolveLinkItemUrl,
+  resolveMapItemView,
   resolveMemoItemContent,
 } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
@@ -19,6 +24,8 @@ type PageItemRendererProps = {
   canEditLinkTitle?: boolean;
   onLinkTitleChange?: (itemId: string, nextValue: string) => void;
   onLinkTitleSubmit?: (itemId: string) => void;
+  canEditMap?: boolean;
+  onMapSave?: (itemId: string, payload: MapItemCreatePayload) => Promise<boolean>;
 };
 
 type PageItemData = Record<string, unknown>;
@@ -161,6 +168,58 @@ function LinkItemRenderer({ item, canEditLinkTitle = false, onLinkTitleChange, o
   );
 }
 
+function MapItemRenderer({ item, canEditMap = false, onMapSave }: PageItemRendererProps) {
+  const mapView = resolveMapItemView(item);
+
+  if (!mapView) {
+    return <DefaultItemRenderer item={item} />;
+  }
+
+  const canUpdateMap = canEditMap && Boolean(onMapSave);
+
+  return (
+    <div className="relative h-full w-full overflow-hidden rounded-[12px]">
+      <MapCanvas center={[mapView.lng, mapView.lat]} zoom={mapView.zoom} interactive={false} className="h-full w-full" />
+      {mapView.caption ? (
+        <div className="pointer-events-none absolute bottom-2 left-2 z-20">
+          <p className="line-clamp-1 w-fit max-w-60 truncate rounded-md border border-black/80 bg-white/90 px-2 py-1 text-black text-xs">
+            {mapView.caption}
+          </p>
+        </div>
+      ) : null}
+      <div className="absolute top-2 right-2 z-20">
+        <div className="size-6 rounded-full border bg-white">
+          <a href={mapView.googleMapUrl} target="_blank" rel="noreferrer" className="block">
+            <ArrowUpRightIcon className="size-full text-black" />
+          </a>
+        </div>
+      </div>
+      {canUpdateMap ? (
+        <div className="absolute top-2 left-2 z-20">
+          <PageItemLocationDialog
+            onSaveMapItem={(payload) => onMapSave?.(item.id, payload) ?? Promise.resolve(false)}
+            initialValue={{
+              lat: mapView.lat,
+              lng: mapView.lng,
+              zoom: mapView.zoom,
+              caption: mapView.caption,
+            }}
+            trigger={
+              <button
+                type="button"
+                className="flex size-6 items-center justify-center rounded-full border bg-white"
+                aria-label="Edit map item"
+              >
+                <PencilIcon className="size-3.5 text-black" />
+              </button>
+            }
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ImageItemRenderer({ item }: PageItemRendererProps) {
   return (
     <p className="wrap-break-word line-clamp-2 h-fit w-full whitespace-pre-wrap text-base italic">{resolvePageItemDisplayText(item)}</p>
@@ -174,6 +233,7 @@ function DefaultItemRenderer({ item }: PageItemRendererProps) {
 const PAGE_ITEM_RENDERER_MAP: Record<string, PageItemRenderer> = {
   memo: MemoItemRenderer,
   link: LinkItemRenderer,
+  map: MapItemRenderer,
   image: ImageItemRenderer,
 };
 

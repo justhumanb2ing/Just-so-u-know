@@ -122,6 +122,27 @@ describe("page item schema", () => {
     });
   });
 
+  test("아이템 수정 스키마는 map 데이터(lat/lng/zoom/caption/url)를 허용한다", () => {
+    // Arrange
+    const payload = {
+      type: "map",
+      data: {
+        lat: 37.5665,
+        lng: 126.978,
+        zoom: 13,
+        caption: "Seoul City Hall",
+        googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+      },
+    };
+
+    // Act
+    const result = pageItemUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual(payload);
+  });
+
   test("아이템 수정 스키마는 잘못된 sizeCode를 거부한다", () => {
     // Arrange
     const payload = {

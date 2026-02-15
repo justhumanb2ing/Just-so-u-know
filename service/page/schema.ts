@@ -146,6 +146,17 @@ const pageItemLinkUpdateSchema = z.object({
   }),
 });
 
+const pageItemMapUpdateSchema = z.object({
+  type: z.literal("map"),
+  data: z.object({
+    lat: z.number().finite().min(-90, { message: "Invalid latitude." }).max(90, { message: "Invalid latitude." }),
+    lng: z.number().finite().min(-180, { message: "Invalid longitude." }).max(180, { message: "Invalid longitude." }),
+    zoom: z.number().finite().min(0, { message: "Invalid zoom level." }).max(24, { message: "Invalid zoom level." }),
+    caption: mapCaptionSchema,
+    googleMapUrl: linkUrlSchema,
+  }),
+});
+
 const pageItemSizeUpdateSchema = z.object({
   type: z.literal("size"),
   data: z.object({
@@ -177,11 +188,12 @@ export const pageItemReorderSchema = z
 
 /**
  * 페이지 아이템 수정 API 입력을 검증한다.
- * 현재는 memo content, link title, size_code 수정을 지원한다.
+ * 현재는 memo content, link title, map data, size_code 수정을 지원한다.
  */
 export const pageItemUpdateSchema = z.discriminatedUnion("type", [
   pageItemMemoUpdateSchema,
   pageItemLinkUpdateSchema,
+  pageItemMapUpdateSchema,
   pageItemSizeUpdateSchema,
 ]);
 
