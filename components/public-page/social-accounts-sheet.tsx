@@ -59,14 +59,6 @@ export function SocialAccountsSheet({
             />
           </div>
         </div>
-
-        {/* <DrawerFooter className="scroll-affordance-top z-10 border-border/40 border-t bg-background/95 pt-4">
-          <DrawerClose asChild>
-            <Button type="button" size="lg" variant="default" className="py-6 text-lg">
-              Close
-            </Button>
-          </DrawerClose>
-        </DrawerFooter> */}
       </DrawerContent>
     </Drawer>
   );
