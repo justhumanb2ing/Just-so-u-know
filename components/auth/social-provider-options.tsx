@@ -160,8 +160,8 @@ const NAVER_PROVIDER_OPTION: SocialProviderOption = {
 
 const SOCIAL_PROVIDER_OPTION_MAP: Record<SocialProvider, SocialProviderOption> = {
   google: GOOGLE_PROVIDER_OPTION,
-  kakao: KAKAO_PROVIDER_OPTION,
   github: GITHUB_PROVIDER_OPTION,
+  kakao: KAKAO_PROVIDER_OPTION,
   naver: NAVER_PROVIDER_OPTION,
 };
 

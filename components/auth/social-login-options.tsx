@@ -45,7 +45,7 @@ export function SocialLoginOptions({ callbackURL = "/" }: SocialLoginOptionsProp
             key={option.provider}
             variant="outline"
             size={"lg"}
-            className={cn("relative py-6 shadow-none", option.buttonClassName)}
+            className={cn("phantom-border relative rounded-lg py-6", option.buttonClassName)}
             disabled={loadingProvider !== null}
             onClick={() => handleSocialLogin(option.provider)}
             aria-label={`${option.label} 로그인 (${option.loginOption})`}

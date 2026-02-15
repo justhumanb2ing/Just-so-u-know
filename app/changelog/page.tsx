@@ -4,7 +4,11 @@ import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from "@/components/ui/em
 export default function Page() {
   return (
     <main className="container mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-8 p-6">
-      <h1 className="border-b pb-4 font-semibold text-2xl">Changelog</h1>
+      <div className="flex items-center gap-4">
+        <h1 className="pb-4 font-semibold text-3xl">Changelog</h1>
+        <div className="h-px w-full grow bg-border"></div>
+      </div>
+
       <section>
         <Empty>
           <EmptyHeader>

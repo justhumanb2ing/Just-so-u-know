@@ -1,8 +1,12 @@
+import Link from "next/link";
+
 export default function LandingHeader() {
   return (
     <header className="container mx-auto py-4">
       <nav className="flex items-center justify-between">
-        <aside>로고</aside>
+        <aside>
+          <Link href={"/"}>로고</Link>
+        </aside>
       </nav>
     </header>
   );

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function LandingFooter() {
   return (
-    <footer className="container mx-auto h-[20vh] py-6">
+    <footer className="container mx-auto mb-6 h-[25vh] py-6">
       <section className="flex h-full flex-col justify-between">
         <aside className="flex justify-between">
           <div>
