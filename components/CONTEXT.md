@@ -34,6 +34,7 @@
 - 페이지 편집 플로팅 툴바의 계정 액션은 오동작 방지를 위해 `account` 트리거 → Popover 내부 `Sign out`/`Delete account` 버튼의 2단계 액션으로 처리한다.
 - 계정 액션 버튼 스타일 분기는 화면 전용 래퍼(`onboarding-account-actions`, `page-owner-account-actions`)에서 담당하고, `SignOutButton`/`DeleteAccountButton`은 기본 동작 컴포넌트로 유지한다.
 - 아이템 목록/읽기 전용/편집 variant는 명시적 컴포넌트로 분리해 boolean prop 조합을 피한다.
+- 편집 아이템 리사이즈는 레이아웃 모션 없이 즉시 반영하며, 아이템 생성/삭제 진입 모션만 유지한다.
 
 ## 확장 시 고려사항
 - UI 문구는 영어 유지 규칙을 따른다.

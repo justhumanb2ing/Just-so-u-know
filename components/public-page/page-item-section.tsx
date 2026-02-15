@@ -41,10 +41,6 @@ const ITEM_BUTTON_TRANSITION = {
   duration: 0.06,
   ease: "easeOut",
 } as const;
-const ITEM_RESIZE_LAYOUT_TRANSITION = {
-  duration: 0.24,
-  ease: [0.22, 1, 0.36, 1],
-} as const;
 const NON_DRAGGABLE_SELECTOR = "input,textarea,a,button,[contenteditable='true'],[data-no-dnd='true']";
 
 type EditablePageItemSectionProps = {
@@ -119,7 +115,7 @@ const PAGE_ITEM_RESIZE_OPTIONS: Array<{
   },
 ];
 
-const PAGE_ITEM_CARD_BASE_CLASSNAME = "group relative gap-2 rounded-[16px] p-3 bg-muted/70";
+const PAGE_ITEM_CARD_BASE_CLASSNAME = "group relative gap-2 rounded-[16px] bg-muted/70 p-3";
 
 type PageItemCardStyleConfig = {
   className?: string;
@@ -504,7 +500,6 @@ function ItemList({
 
   const activeItem = activeItemId ? (items.find((item) => item.id === activeItemId) ?? null) : null;
   const ActiveItemRenderer = activeItem ? getPageItemRenderer(activeItem.typeCode) : null;
-  const shouldAnimateItemResizeLayout = !shouldReduceMotion && !activeItemId;
 
   const handleDragStart = (event: DragStartEvent) => {
     if (!reorderEnabled) {
@@ -562,14 +557,10 @@ function ItemList({
           return (
             <motion.div
               key={item.id}
-              layout={shouldAnimateItemResizeLayout}
               initial={shouldSkipEntryAnimation ? false : itemEntryMotionConfig.initial}
               animate={itemEntryMotionConfig.animate}
               exit={itemEntryMotionConfig.exit}
-              transition={{
-                ...itemEntryMotionConfig.transition,
-                layout: ITEM_RESIZE_LAYOUT_TRANSITION,
-              }}
+              transition={itemEntryMotionConfig.transition}
             >
               <SortableItemCard
                 item={item}
