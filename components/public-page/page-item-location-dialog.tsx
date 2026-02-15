@@ -7,11 +7,13 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, Di
 import { Input } from "@/components/ui/input";
 import { Map as MapCanvas, MapControls, type MapViewport } from "@/components/ui/map";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { MapItemCreatePayload } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 
 type PageItemLocationDialogProps = {
   trigger: ComponentProps<typeof DialogTrigger>["render"];
+  onCreateMapItem: (payload: MapItemCreatePayload) => Promise<boolean>;
 };
 
 /**
@@ -34,9 +36,20 @@ type MapSearchResultItem = {
 };
 
 /**
+ * 현재 좌표와 줌 레벨을 Google Maps URL로 변환한다.
+ */
+function buildGoogleMapUrl(lat: number, lng: number, zoom: number) {
+  const endpoint = new URL("https://www.google.com/maps");
+  endpoint.searchParams.set("q", `${lat.toFixed(6)},${lng.toFixed(6)}`);
+  endpoint.searchParams.set("z", zoom.toFixed(2));
+  return endpoint.toString();
+}
+
+/**
  * 아이템 작성 바에서 사용하는 위치 선택 다이얼로그.
  */
-export function PageItemLocationDialog({ trigger }: PageItemLocationDialogProps) {
+export function PageItemLocationDialog({ trigger, onCreateMapItem }: PageItemLocationDialogProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const [mapViewport, setMapViewport] = useState<MapViewport>({
     center: LOCATION_PICKER_MAP_VIEW.center,
     zoom: LOCATION_PICKER_MAP_VIEW.zoom,
@@ -49,6 +62,7 @@ export function PageItemLocationDialog({ trigger }: PageItemLocationDialogProps)
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MapSearchResultItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const searchLanguage = useMemo(() => {
     if (typeof navigator === "undefined") {
@@ -164,8 +178,47 @@ export function PageItemLocationDialog({ trigger }: PageItemLocationDialogProps)
     [selectedCenter],
   );
 
+  /**
+   * 현재 지도 중심 좌표와 확대 레벨을 map 아이템으로 저장한다.
+   */
+  const handleSaveMapItem = useCallback(async () => {
+    if (isSaving) {
+      return;
+    }
+
+    const lat = selectedCenter[1];
+    const lng = selectedCenter[0];
+    const zoom = mapViewport.zoom;
+    const googleMapUrl = buildGoogleMapUrl(lat, lng, zoom);
+
+    setIsSaving(true);
+
+    try {
+      const isSaved = await onCreateMapItem({
+        lat,
+        lng,
+        zoom,
+        caption: caption.trim(),
+        googleMapUrl,
+      });
+
+      if (!isSaved) {
+        return;
+      }
+
+      setCaption("");
+      setQuery("");
+      setDebouncedQuery("");
+      setSearchResults([]);
+      setSearchError(null);
+      setIsOpen(false);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [caption, isSaving, mapViewport.zoom, onCreateMapItem, selectedCenter]);
+
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <Tooltip delay={0}>
         <TooltipTrigger render={<DialogTrigger render={trigger} />} />
         <TooltipPanel side="top" align="center">
@@ -291,8 +344,16 @@ export function PageItemLocationDialog({ trigger }: PageItemLocationDialogProps)
             }
           ></DialogClose>
           <div className="pointer-events-auto absolute right-3 bottom-3">
-            <Button size={"lg"} variant={"default"} className={"phantom-border px-4 text-base"}>
-              Save
+            <Button
+              size={"lg"}
+              variant={"default"}
+              className={"phantom-border px-4 text-base"}
+              disabled={isSaving}
+              onClick={() => {
+                void handleSaveMapItem();
+              }}
+            >
+              {isSaving ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>

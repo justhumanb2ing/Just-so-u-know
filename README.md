@@ -91,6 +91,9 @@ bun dev
 - 위치 다이얼로그 지도 좌상단에는 위치 검색 입력이 고정되며, 검색 결과는 입력 하단 스크롤 리스트로 표시된다.
 - 위치 검색은 `Mapbox Geocoding v6 forward`를 사용하며 `language=ko,en` 기반 다국어 결과를 지원한다.
 - 위치 검색 호출은 디바운싱(`350ms`)을 적용해 과도한 API 호출을 방지한다.
+- 위치 다이얼로그 `Save` 클릭 시 `map` 아이템이 생성되며 `data.lat`/`data.lng`/`data.zoom`/`data.caption`/`data.googleMapUrl`이 저장된다.
+- 새로 생성되는 `map` 아이템의 기본 `size_code`는 `wide-full`이다.
+- 위치 저장 요청 진행 중에는 저장 버튼 라벨이 `Saving...`으로 바뀌고 버튼이 비활성화된다.
 - `memo` 아이템은 카드 본문에서 `textarea`로 직접 수정되며, 비소유자는 동일 UI를 비활성화 상태로만 확인할 수 있다.
 - `link` 아이템은 favicon(`48x48`)과 title만 렌더링한다. favicon 클릭 시 외부 링크로 이동하며, favicon이 없으면 `/no-favicon.png`를 사용한다.
 - 소유자는 `link` 아이템 title을 `textarea`로 수정할 수 있고, `800ms` 디바운스로 자동 저장된다.

@@ -107,11 +107,28 @@ const pageItemLinkCreateSchema = z.object({
   }),
 });
 
+const mapCaptionSchema = z.string().transform((value) => value.replace(LINK_TITLE_LINE_BREAK_PATTERN, " ").trim());
+
+const pageItemMapCreateSchema = z.object({
+  type: z.literal("map"),
+  data: z.object({
+    lat: z.number().finite().min(-90, { message: "Invalid latitude." }).max(90, { message: "Invalid latitude." }),
+    lng: z.number().finite().min(-180, { message: "Invalid longitude." }).max(180, { message: "Invalid longitude." }),
+    zoom: z.number().finite().min(0, { message: "Invalid zoom level." }).max(24, { message: "Invalid zoom level." }),
+    caption: mapCaptionSchema,
+    googleMapUrl: linkUrlSchema,
+  }),
+});
+
 /**
  * 페이지 아이템 생성 API 입력을 검증한다.
- * 현재는 memo/link 타입 생성을 지원한다.
+ * 현재는 memo/link/map 타입 생성을 지원한다.
  */
-export const pageItemCreateSchema = z.discriminatedUnion("type", [pageItemMemoCreateSchema, pageItemLinkCreateSchema]);
+export const pageItemCreateSchema = z.discriminatedUnion("type", [
+  pageItemMemoCreateSchema,
+  pageItemLinkCreateSchema,
+  pageItemMapCreateSchema,
+]);
 
 export type PageItemCreateInput = z.infer<typeof pageItemCreateSchema>;
 

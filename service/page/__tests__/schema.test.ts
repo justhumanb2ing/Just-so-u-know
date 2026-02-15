@@ -57,6 +57,27 @@ describe("page item schema", () => {
     expect(result.success).toBe(false);
   });
 
+  test("아이템 생성 스키마는 map 데이터(lat/lng/zoom/caption/url)를 허용한다", () => {
+    // Arrange
+    const payload = {
+      type: "map",
+      data: {
+        lat: 37.5665,
+        lng: 126.978,
+        zoom: 13,
+        caption: "Seoul City Hall",
+        googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+      },
+    };
+
+    // Act
+    const result = pageItemCreateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual(payload);
+  });
+
   test("아이템 수정 스키마는 memo content 개행을 \\n으로 정규화한다", () => {
     // Arrange
     const payload = {

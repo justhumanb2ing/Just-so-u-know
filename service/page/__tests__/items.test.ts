@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { resolveReorderTemporaryOffset } from "@/service/page/items";
+import { resolveDefaultMapItemSizeCode, resolveReorderTemporaryOffset } from "@/service/page/items";
 
 describe("page items reorder helpers", () => {
   test("임시 오프셋은 현재 최대 order_key를 그대로 사용한다", () => {
@@ -33,5 +33,15 @@ describe("page items reorder helpers", () => {
 
     // Assert
     expect(result).toBeNull();
+  });
+
+  test("map 아이템 기본 size_code는 wide-full을 사용한다", () => {
+    // Arrange
+
+    // Act
+    const result = resolveDefaultMapItemSizeCode();
+
+    // Assert
+    expect(result).toBe("wide-full");
   });
 });

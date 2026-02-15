@@ -134,6 +134,10 @@ export function resolveReadonlyPageItemDisplayText(item: ReadonlyPageItem) {
     return pickFirstText(data, ["title", "url"]) ?? pickFirstPrimitiveText(data) ?? READONLY_PAGE_ITEM_FALLBACK_UNSUPPORTED_TEXT;
   }
 
+  if (item.typeCode === "map") {
+    return pickFirstText(data, ["caption", "googleMapUrl"]) ?? pickFirstPrimitiveText(data) ?? READONLY_PAGE_ITEM_FALLBACK_UNSUPPORTED_TEXT;
+  }
+
   if (item.typeCode === "image") {
     return (
       pickFirstText(data, ["alt", "caption", "title", "src"]) ??

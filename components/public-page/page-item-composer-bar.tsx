@@ -9,6 +9,7 @@ import { Tooltip, TooltipPanel, TooltipTrigger } from "@/components/animate-ui/c
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { OgCrawlController } from "@/hooks/use-og-crawl";
+import type { MapItemCreatePayload } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { PageItemLocationDialog } from "./page-item-location-dialog";
@@ -18,6 +19,7 @@ type ItemComposerBarProps = {
   hasDraft: boolean;
   onOpenComposer: () => void;
   ogController: OgCrawlController;
+  onCreateMapItem: (payload: MapItemCreatePayload) => Promise<boolean>;
   appearDelayMs?: number;
 };
 
@@ -59,7 +61,7 @@ function ComposerTooltipButton({ tooltipText, ...props }: ComposerTooltipButtonP
  * 페이지 하단에 고정되는 아이템 작성 바.
  * 현재는 텍스트 아이템 작성과 링크 OG 조회를 함께 제공한다.
  */
-export function ItemComposerBar({ hasDraft, onOpenComposer, ogController, appearDelayMs = 0 }: ItemComposerBarProps) {
+export function ItemComposerBar({ hasDraft, onOpenComposer, ogController, onCreateMapItem, appearDelayMs = 0 }: ItemComposerBarProps) {
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -157,6 +159,7 @@ export function ItemComposerBar({ hasDraft, onOpenComposer, ogController, appear
             <ImagePlayIcon className="size-5" strokeWidth={2.5} />
           </ComposerTooltipButton>
           <PageItemLocationDialog
+            onCreateMapItem={onCreateMapItem}
             trigger={
               <ComposerActionButton aria-label="Add location item" className={cn("gap-1.5")}>
                 <MapIcon className="size-5" strokeWidth={2.5} />

@@ -81,6 +81,7 @@ export type PageItemComposerController = {
   handleDraftChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
   handleRemoveDraft: () => void;
   handleCreateLinkItemFromOg: (crawlResponse: CrawlResponse) => Promise<boolean>;
+  handleCreateMapItem: (payload: MapItemCreatePayload) => Promise<boolean>;
   handleItemMemoChange: (itemId: string, nextValue: string) => void;
   handleItemLinkTitleChange: (itemId: string, nextValue: string) => void;
   handleItemLinkTitleSubmit: (itemId: string) => void;
@@ -98,6 +99,14 @@ type LinkItemCreatePayload = {
   url: string;
   title: string;
   favicon: string | null;
+};
+
+export type MapItemCreatePayload = {
+  lat: number;
+  lng: number;
+  zoom: number;
+  caption: string;
+  googleMapUrl: string;
 };
 
 /**
@@ -762,6 +771,60 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     [handle, trackPageDbWrite],
   );
 
+  /**
+   * 지도 선택 결과를 map 아이템으로 생성한다.
+   */
+  const handleCreateMapItem = useCallback(
+    async (mapPayload: MapItemCreatePayload) => {
+      try {
+        const payload = await trackPageDbWrite(async () => {
+          const response = await fetch(buildPageItemsEndpoint(handle), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: "map",
+              data: {
+                lat: mapPayload.lat,
+                lng: mapPayload.lng,
+                zoom: mapPayload.zoom,
+                caption: mapPayload.caption,
+                googleMapUrl: mapPayload.googleMapUrl,
+              },
+            }),
+          });
+
+          const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+          if (!response.ok || payload.status !== "success") {
+            throw new Error(payload.status === "error" ? payload.message : "Failed to create item.");
+          }
+
+          return payload;
+        });
+
+        const createdItem = normalizeCreatedItem(payload.item);
+        itemLastSyncedSizeCodeMapRef.current.set(createdItem.id, createdItem.sizeCode);
+        setItems((prevItems) => {
+          const nextItems = sortPageItems([...prevItems, createdItem]);
+          itemLastSyncedOrderIdsRef.current = resolvePageItemIds(nextItems);
+          return nextItems;
+        });
+
+        return true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to create item.";
+
+        toast.error("Failed to save item", {
+          description: message,
+        });
+        return false;
+      }
+    },
+    [handle, trackPageDbWrite],
+  );
+
   useEffect(() => {
     if (!draft || draft.kind !== "memo" || draft.isSaving || !draft.hasUserInput) {
       return;
@@ -1352,6 +1415,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     handleDraftChange,
     handleRemoveDraft,
     handleCreateLinkItemFromOg,
+    handleCreateMapItem,
     handleItemMemoChange,
     handleItemLinkTitleChange,
     handleItemLinkTitleSubmit,

@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
 import { findPageByPathHandle, shouldDenyPrivatePageAccess } from "@/service/onboarding/public-page";
-import { createOwnedLinkItem, createOwnedMemoItem, findVisiblePageItemsByStoredHandle } from "@/service/page/items";
+import { createOwnedLinkItem, createOwnedMapItem, createOwnedMemoItem, findVisiblePageItemsByStoredHandle } from "@/service/page/items";
 import { normalizeStoredHandleFromPath, pageItemCreateSchema } from "@/service/page/schema";
 
 export const runtime = "nodejs";
@@ -105,7 +105,7 @@ function mapCreateItemError(error: unknown) {
 
 /**
  * 소유한 페이지에 새 아이템을 생성한다.
- * 현재는 memo/link 타입 생성을 지원한다.
+ * 현재는 memo/link/map 타입 생성을 지원한다.
  */
 export async function POST(request: Request, context: CreateItemRouteContext) {
   const session = await resolveSessionOrNull(request.headers);
@@ -167,13 +167,23 @@ export async function POST(request: Request, context: CreateItemRouteContext) {
             userId: session.user.id,
             content: parsedBody.data.data.content,
           })
-        : await createOwnedLinkItem({
-            storedHandle,
-            userId: session.user.id,
-            url: parsedBody.data.data.url,
-            title: parsedBody.data.data.title,
-            favicon: parsedBody.data.data.favicon ?? null,
-          });
+        : parsedBody.data.type === "link"
+          ? await createOwnedLinkItem({
+              storedHandle,
+              userId: session.user.id,
+              url: parsedBody.data.data.url,
+              title: parsedBody.data.data.title,
+              favicon: parsedBody.data.data.favicon ?? null,
+            })
+          : await createOwnedMapItem({
+              storedHandle,
+              userId: session.user.id,
+              lat: parsedBody.data.data.lat,
+              lng: parsedBody.data.data.lng,
+              zoom: parsedBody.data.data.zoom,
+              caption: parsedBody.data.data.caption,
+              googleMapUrl: parsedBody.data.data.googleMapUrl,
+            });
 
     return Response.json(
       {

@@ -651,6 +651,7 @@ export function EditablePageItemSection({ handle, initialItems = [], composerApp
           hasDraft={Boolean(controller.draft)}
           onOpenComposer={controller.handleOpenComposer}
           ogController={ogController}
+          onCreateMapItem={controller.handleCreateMapItem}
           appearDelayMs={composerAppearDelayMs}
         />
       )}

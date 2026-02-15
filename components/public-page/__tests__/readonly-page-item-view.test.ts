@@ -67,4 +67,29 @@ describe("readonly page item view", () => {
     });
     expect(displayText).toBe("My\nLink");
   });
+
+  it("map 타입은 caption을 읽기 전용 표시 텍스트로 우선 사용한다", () => {
+    // Arrange
+    const item = {
+      id: "map-1",
+      typeCode: "map",
+      sizeCode: "wide-short",
+      orderKey: 2,
+      data: {
+        lat: 37.5665,
+        lng: 126.978,
+        zoom: 13,
+        caption: "Seoul City Hall",
+        googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+      },
+      createdAt: "2026-02-13T00:00:00.000Z",
+      updatedAt: "2026-02-13T00:00:00.000Z",
+    } satisfies ReadonlyPageItem;
+
+    // Act
+    const result = resolveReadonlyPageItemDisplayText(item);
+
+    // Assert
+    expect(result).toBe("Seoul City Hall");
+  });
 });

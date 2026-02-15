@@ -143,17 +143,21 @@
 ## 페이지 아이템 생성 API 동작
 - 엔드포인트: `POST /api/pages/{handle}/items`
 - 인증: Better Auth 세션 필수
-- 현재 지원 타입: `memo`, `link`
+- 현재 지원 타입: `memo`, `link`, `map`
 - 요청 스키마:
   - `type: "memo"` + `data.content`: 문자열(서버에서 `\r\n`, `\r`을 `\n`으로 정규화, trim 기준 빈 문자열 거부)
   - `type: "link"` + `data.url`/`data.title`/`data.favicon?`
   - `link`의 `data.url`은 절대 URL이어야 하며 OG 응답의 `data.url`을 최종 저장 기준으로 사용한다.
   - `link`의 `data.title`은 단일 라인으로 정규화되고 trim 기준 빈 문자열을 거부한다.
+  - `type: "map"` + `data.lat`/`data.lng`/`data.zoom`/`data.caption`/`data.googleMapUrl`
+  - `map`의 `data.lat`/`data.lng`는 좌표 범위(`lat -90..90`, `lng -180..180`)를 검증한다.
+  - `map`의 `data.googleMapUrl`은 `http/https` 절대 URL이어야 한다.
 - 처리 정책:
   - `handle`은 경로 파라미터를 저장 포맷(`@handle`)으로 정규화해 검증한다.
   - `memo` 생성은 DB RPC(`create_memo_item_for_owned_page`)로 처리한다.
   - `link` 생성은 DB RPC(`create_link_item_for_owned_page`)로 처리한다.
-  - 생성 시 기본 `size_code`는 `wide-short`이다.
+  - `map` 생성은 페이지 단위 advisory lock + `max(order_key)+1` 계산으로 새 `page_item`을 삽입한다.
+  - 생성 시 기본 `size_code`는 `memo/link=wide-short`, `map=wide-full`이다.
 - 응답:
   - 성공 시 `201 Created` + 생성된 아이템 1개 반환
   - 실패 시 `401/403/404/422/500` 상태 코드로 정규화된 에러를 반환한다.

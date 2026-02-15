@@ -122,6 +122,26 @@ describe("page item renderers", () => {
     expect(result).toBe("Profile image");
   });
 
+  test("map 타입은 caption/googleMapUrl 순서로 텍스트를 선택한다", () => {
+    // Arrange
+    const item = createItem({
+      typeCode: "map",
+      data: {
+        lat: 37.5665,
+        lng: 126.978,
+        zoom: 13,
+        caption: "Seoul City Hall",
+        googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+      },
+    });
+
+    // Act
+    const result = resolvePageItemDisplayText(item);
+
+    // Assert
+    expect(result).toBe("Seoul City Hall");
+  });
+
   test("미지원 타입은 첫 번째 문자열 primitive를 fallback으로 사용한다", () => {
     // Arrange
     const item = createItem({

@@ -51,6 +51,16 @@ export type CreateOwnedLinkItemInput = {
   favicon: string | null;
 };
 
+export type CreateOwnedMapItemInput = {
+  storedHandle: string;
+  userId: string;
+  lat: number;
+  lng: number;
+  zoom: number;
+  caption: string;
+  googleMapUrl: string;
+};
+
 export type UpdateOwnedMemoItemInput = {
   storedHandle: string;
   userId: string;
@@ -84,6 +94,14 @@ export type ReorderVisiblePageItemsInput = {
 };
 
 const PAGE_ITEM_ORDER_KEY_MAX = 2147483647;
+const DEFAULT_MAP_ITEM_SIZE_CODE = "wide-full";
+
+/**
+ * map 아이템 생성 시 적용할 기본 size_code를 반환한다.
+ */
+export function resolveDefaultMapItemSizeCode() {
+  return DEFAULT_MAP_ITEM_SIZE_CODE;
+}
 
 /**
  * 임시 재정렬 구간 오프셋을 계산한다.
@@ -219,6 +237,119 @@ export async function createOwnedLinkItem({ storedHandle, userId, url, title, fa
   }
 
   return createdItem;
+}
+
+function createPageItemDomainError(message: string) {
+  const error = new Error(message) as Error & { code: string };
+  error.code = "P0001";
+  return error;
+}
+
+/**
+ * 소유한 페이지에 map 아이템 1개를 생성한다.
+ * 페이지 단위 advisory lock으로 순서 키 충돌을 방지하고 위치 메타데이터를 함께 저장한다.
+ */
+export async function createOwnedMapItem({
+  storedHandle,
+  userId,
+  lat,
+  lng,
+  zoom,
+  caption,
+  googleMapUrl,
+}: CreateOwnedMapItemInput): Promise<PageItemRow> {
+  const result = await sql<PageItemRow>`
+    with owned_page as (
+      select public.page.id
+      from public.page
+      where public.page.handle = ${storedHandle}
+        and public.page.user_id = ${userId}
+      limit 1
+    ),
+    page_lock as (
+      select pg_advisory_xact_lock(hashtext(owned_page.id::text))
+      from owned_page
+    ),
+    next_order as (
+      select
+        owned_page.id as page_id,
+        coalesce(max(public.page_item.order_key), 0) + 1 as next_order_key
+      from owned_page
+      inner join page_lock on true
+      left join public.page_item
+        on public.page_item.page_id = owned_page.id
+      group by owned_page.id
+    ),
+    inserted as (
+      insert into public.page_item (
+        page_id,
+        type_code,
+        size_code,
+        order_key,
+        data
+      )
+      select
+        next_order.page_id,
+        'map',
+        ${resolveDefaultMapItemSizeCode()}::text,
+        next_order.next_order_key,
+        jsonb_strip_nulls(
+          jsonb_build_object(
+            'lat', ${lat}::double precision,
+            'lng', ${lng}::double precision,
+            'zoom', ${zoom}::double precision,
+            'caption', ${caption}::text,
+            'googleMapUrl', ${googleMapUrl}::text
+          )
+        )
+      from next_order
+      where next_order.next_order_key <= ${PAGE_ITEM_ORDER_KEY_MAX}
+      returning
+        id,
+        page_id as "pageId",
+        type_code as "typeCode",
+        size_code as "sizeCode",
+        order_key as "orderKey",
+        data,
+        is_visible as "isVisible",
+        lock_version as "lockVersion",
+        created_at as "createdAt",
+        updated_at as "updatedAt"
+    )
+    select
+      inserted.id,
+      inserted."pageId",
+      inserted."typeCode",
+      inserted."sizeCode",
+      inserted."orderKey",
+      inserted.data,
+      inserted."isVisible",
+      inserted."lockVersion",
+      inserted."createdAt",
+      inserted."updatedAt"
+    from inserted
+  `.execute(kysely);
+
+  const createdItem = result.rows[0];
+
+  if (createdItem) {
+    return createdItem;
+  }
+
+  const ownershipResult = await sql<{ isOwner: boolean }>`
+    select exists(
+      select 1
+      from public.page
+      where public.page.handle = ${storedHandle}
+        and public.page.user_id = ${userId}
+    ) as "isOwner"
+  `.execute(kysely);
+
+  if (!ownershipResult.rows[0]?.isOwner) {
+    throw createPageItemDomainError("page not found or permission denied");
+  }
+
+  throw createPageItemDomainError("order key overflow");
 }
 
 /**
