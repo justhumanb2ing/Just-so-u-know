@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildReadonlyGoogleMapUrl,
   normalizeReadonlyPageItems,
   READONLY_PAGE_ITEM_FALLBACK_FAVICON_SRC,
   type ReadonlyPageItem,
   resolveReadonlyLinkView,
+  resolveReadonlyMapView,
   resolveReadonlyMediaView,
   resolveReadonlyPageItemDisplayText,
 } from "@/components/public-page/readonly-page-item-view";
@@ -92,6 +94,37 @@ describe("readonly page item view", () => {
 
     // Assert
     expect(result).toBe("Seoul City Hall");
+  });
+
+  it("map 뷰 모델은 좌표 기반 fallback 링크를 생성하고 캡션 줄바꿈을 정규화한다", () => {
+    // Arrange
+    const item = {
+      id: "map-2",
+      typeCode: "map",
+      sizeCode: "wide-full",
+      orderKey: 4,
+      data: {
+        lat: "37.5665",
+        lng: "126.978",
+        zoom: "13",
+        caption: "Seoul\nCity Hall",
+        googleMapUrl: "javascript:alert(1)",
+      },
+      createdAt: "2026-02-13T00:00:00.000Z",
+      updatedAt: "2026-02-13T00:00:00.000Z",
+    } satisfies ReadonlyPageItem;
+
+    // Act
+    const mapView = resolveReadonlyMapView(item);
+
+    // Assert
+    expect(mapView).toEqual({
+      lat: 37.5665,
+      lng: 126.978,
+      zoom: 13,
+      caption: "Seoul City Hall",
+      googleMapUrl: buildReadonlyGoogleMapUrl(37.5665, 126.978, 13),
+    });
   });
 
   it("video 아이템 뷰 모델은 src/mimeType을 추출한다", () => {

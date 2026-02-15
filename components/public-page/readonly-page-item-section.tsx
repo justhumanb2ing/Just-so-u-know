@@ -1,14 +1,18 @@
+import { ArrowUpRightIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   normalizeReadonlyPageItems,
   type ReadonlyPageItem,
   resolveReadonlyLinkView,
+  resolveReadonlyMapView,
   resolveReadonlyMediaView,
   resolveReadonlyMemoContent,
   resolveReadonlyPageItemDisplayText,
 } from "@/components/public-page/readonly-page-item-view";
+import { Map as MapCanvas } from "@/components/ui/map";
 import { cn } from "@/lib/utils";
 import type { VisiblePageItem } from "@/service/page/items";
+import { Button } from "../ui/button";
 
 const PAGE_ITEM_CARD_BASE_CLASSNAME = "group relative gap-2 rounded-[16px] bg-muted/70 p-3";
 
@@ -27,6 +31,9 @@ const PAGE_ITEM_CARD_STYLE_CONFIG_MAP: Record<string, PageItemCardStyleConfig> =
   },
   link: {
     className: "overflow-visible p-2 flex flex-col justify-center",
+  },
+  map: {
+    className: "overflow-visible p-0",
   },
   image: {
     className: "overflow-visible p-0",
@@ -129,6 +136,59 @@ function ReadonlyVideoItem({ item }: { item: ReadonlyPageItem }) {
   );
 }
 
+const NOOP_MAP_VIEWPORT_CHANGE = () => {};
+
+function ReadonlyMapItem({ item }: { item: ReadonlyPageItem }) {
+  const mapView = resolveReadonlyMapView(item);
+
+  if (!mapView) {
+    return <ReadonlyDefaultItem item={item} />;
+  }
+
+  return (
+    <div className="relative h-full w-full overflow-hidden rounded-[12px] border">
+      <MapCanvas
+        viewport={{
+          center: [mapView.lng, mapView.lat],
+          zoom: mapView.zoom,
+        }}
+        styles={{
+          light: "https://api.maptiler.com/maps/019c603c-4dda-7ea0-ab88-6521888e9715/style.json?key=cBOQsbRDRLWu2ZIg2chC",
+        }}
+        onViewportChange={NOOP_MAP_VIEWPORT_CHANGE}
+        interactive={false}
+        className="h-full w-full"
+      />
+      <div className="pointer-events-none absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+        <div className="animation-duration-[2.5s] absolute -inset-2 animate-ping rounded-full bg-blue-500 opacity-75" />
+        <div className="relative flex size-7 items-center justify-center rounded-full bg-white p-1 shadow-[1px_2px_13px_4px_rgba(0,0,0,0.25)]">
+          <div className="size-full rounded-full bg-blue-500" />
+        </div>
+      </div>
+      {mapView.caption ? (
+        <div className="pointer-events-none absolute bottom-2 left-2">
+          <p className="line-clamp-1 min-w-12 max-w-60 truncate rounded-sm border bg-white/90 px-2 py-2 text-black text-sm">
+            {mapView.caption}
+          </p>
+        </div>
+      ) : null}
+      <div className="absolute right-2 bottom-3.5 z-20 flex size-7 items-center justify-center rounded-full bg-white shadow-sm">
+        <Button
+          size={"icon-xs"}
+          className={"rounded-full"}
+          nativeButton={false}
+          render={
+            <a href={mapView.googleMapUrl} target="_blank" rel="noreferrer" className="block">
+              <ArrowUpRightIcon className="size-4" strokeWidth={3} />
+            </a>
+          }
+        ></Button>
+      </div>
+      
+    </div>
+  );
+}
+
 function ReadonlyDefaultItem({ item }: { item: ReadonlyPageItem }) {
   return (
     <p className="wrap-break-word line-clamp-2 h-fit w-full whitespace-pre-wrap text-base">{resolveReadonlyPageItemDisplayText(item)}</p>
@@ -150,6 +210,10 @@ function renderReadonlyItemContent(item: ReadonlyPageItem): ReactNode {
 
   if (item.typeCode === "video") {
     return <ReadonlyVideoItem item={item} />;
+  }
+
+  if (item.typeCode === "map") {
+    return <ReadonlyMapItem item={item} />;
   }
 
   return <ReadonlyDefaultItem item={item} />;

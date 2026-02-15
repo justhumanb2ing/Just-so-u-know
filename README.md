@@ -103,6 +103,7 @@ bun dev
 - 위치 다이얼로그 `Save` 클릭 시 `map` 아이템이 생성되며 `data.lat`/`data.lng`/`data.zoom`/`data.caption`/`data.googleMapUrl`이 저장된다.
 - 기존 `map` 아이템 편집 저장 시에는 리스트 카드가 낙관적으로 즉시 갱신되고, 서버 저장 실패 시 이전 상태로 롤백된다.
 - 새로 생성되는 `map` 아이템의 기본 `size_code`는 `wide-full`이다.
+- 방문자 읽기 화면의 `map` 아이템은 읽기 전용 지도 미리보기와 캡션, `Open in Google Maps` 외부 링크 버튼을 함께 렌더링한다.
 - 위치 저장 요청 진행 중에는 저장 버튼 라벨이 `Saving...`으로 바뀌고 버튼이 비활성화된다.
 - `memo` 아이템은 카드 본문에서 `textarea`로 직접 수정되며, 비소유자는 동일 UI를 비활성화 상태로만 확인할 수 있다.
 - `link` 아이템은 favicon(`48x48`)과 title만 렌더링한다. favicon 클릭 시 외부 링크로 이동하며, favicon이 없으면 `/no-favicon.png`를 사용한다.

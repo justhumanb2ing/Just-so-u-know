@@ -8,9 +8,18 @@ const LINK_TITLE_LINE_BREAK_PATTERN = /\r?\n/g;
 export const READONLY_PAGE_ITEM_FALLBACK_EMPTY_TEXT = "No content";
 export const READONLY_PAGE_ITEM_FALLBACK_UNSUPPORTED_TEXT = "Unsupported data format";
 export const READONLY_PAGE_ITEM_FALLBACK_FAVICON_SRC = "/no-favicon.png";
+const GOOGLE_MAP_URL_BASE = "https://www.google.com/maps";
 
 export type ReadonlyPageItem = Omit<VisiblePageItem, "sizeCode"> & {
   sizeCode: PageItemSizeCode;
+};
+
+export type ReadonlyMapItemView = {
+  lat: number;
+  lng: number;
+  zoom: number;
+  caption: string;
+  googleMapUrl: string;
 };
 
 type PageItemData = Record<string, unknown>;
@@ -63,6 +72,35 @@ function pickFirstPrimitiveText(data: PageItemData) {
   }
 
   return null;
+}
+
+function resolveFiniteNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const parsedValue = Number(trimmedValue);
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+}
+
+/**
+ * 읽기 전용 map 아이템의 좌표/줌 정보를 기반으로 Google Maps URL을 생성한다.
+ */
+export function buildReadonlyGoogleMapUrl(lat: number, lng: number, zoom: number) {
+  const endpoint = new URL(GOOGLE_MAP_URL_BASE);
+  endpoint.searchParams.set("q", `${lat.toFixed(6)},${lng.toFixed(6)}`);
+  endpoint.searchParams.set("z", zoom.toFixed(2));
+  return endpoint.toString();
 }
 
 /**
@@ -136,6 +174,60 @@ export function resolveReadonlyMediaView(item: ReadonlyPageItem) {
     src,
     mimeType,
   };
+}
+
+/**
+ * map 아이템 데이터에서 좌표/줌/캡션/구글맵 링크를 읽기 전용 뷰 모델로 추출한다.
+ */
+export function resolveReadonlyMapView(item: ReadonlyPageItem): ReadonlyMapItemView | null {
+  const data = toObjectData(item.data);
+
+  if (!data) {
+    return null;
+  }
+
+  const lat = resolveFiniteNumber(data.lat);
+  const lng = resolveFiniteNumber(data.lng);
+  const zoom = resolveFiniteNumber(data.zoom);
+
+  if (lat === null || lng === null || zoom === null) {
+    return null;
+  }
+
+  const caption = typeof data.caption === "string" ? normalizeLinkTitle(data.caption).trim() : "";
+  const fallbackGoogleMapUrl = buildReadonlyGoogleMapUrl(lat, lng, zoom);
+  const rawGoogleMapUrl = typeof data.googleMapUrl === "string" ? data.googleMapUrl.trim() : "";
+
+  if (!rawGoogleMapUrl) {
+    return {
+      lat,
+      lng,
+      zoom,
+      caption,
+      googleMapUrl: fallbackGoogleMapUrl,
+    };
+  }
+
+  try {
+    const parsedGoogleMapUrl = new URL(rawGoogleMapUrl);
+    const isValidProtocol = parsedGoogleMapUrl.protocol === "http:" || parsedGoogleMapUrl.protocol === "https:";
+
+    return {
+      lat,
+      lng,
+      zoom,
+      caption,
+      googleMapUrl: isValidProtocol ? parsedGoogleMapUrl.toString() : fallbackGoogleMapUrl,
+    };
+  } catch {
+    return {
+      lat,
+      lng,
+      zoom,
+      caption,
+      googleMapUrl: fallbackGoogleMapUrl,
+    };
+  }
 }
 
 /**
