@@ -3,6 +3,7 @@
 import { CircleFadingArrowUpIcon, LoaderIcon, TrashIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
+import { toast } from "sonner";
 import {
   PUBLIC_PAGE_BIO_FIELD_CLASSNAME,
   PUBLIC_PAGE_FIELD_CONTAINER_CLASSNAME,
@@ -23,8 +24,9 @@ import { useProfileDraft } from "@/hooks/use-profile-draft";
 import type { ProfileImageController } from "@/hooks/use-profile-image-editor";
 import { useProfileImageEditor } from "@/hooks/use-profile-image-editor";
 import { cn } from "@/lib/utils";
+import { isAllowedPageImageMimeType, PAGE_IMAGE_ALLOWED_MIME_TYPES } from "@/service/onboarding/page-image";
 
-const IMAGE_ACCEPT_ATTRIBUTE = "image/jpeg,image/png,image/webp";
+const IMAGE_ACCEPT_ATTRIBUTE = [...PAGE_IMAGE_ALLOWED_MIME_TYPES].join(",");
 const IMAGE_TRIGGER_TAP = { scale: 0.96 } as const;
 const IMAGE_REMOVE_TAP = { scale: 0.92 } as const;
 const IMAGE_BUTTON_TRANSITION = {
@@ -47,6 +49,13 @@ type ProfileTextFieldsProps = {
   controller: ProfileDraftController;
 };
 
+/**
+ * 파일 선택 직후 MIME 타입을 선검증해 비허용 타입 업로드를 즉시 차단한다.
+ */
+export function shouldRejectProfileImageFile(file: File | null | undefined) {
+  return Boolean(file && !isAllowedPageImageMimeType(file.type));
+}
+
 function ProfileImageField({ controller }: ProfileImageFieldProps) {
   const { imageUrl, isImageBusy, imageInputRef, handleImageInputChange, handleImageSelectClick, handleDeleteImage } = controller;
 
@@ -58,6 +67,16 @@ function ProfileImageField({ controller }: ProfileImageFieldProps) {
         accept={IMAGE_ACCEPT_ATTRIBUTE}
         className="hidden"
         onChange={(event) => {
+          const selectedFile = event.target.files?.[0];
+
+          if (shouldRejectProfileImageFile(selectedFile)) {
+            toast.error("Unsupported image format", {
+              description: "Please upload a JPG, PNG, or WebP image.",
+            });
+            event.target.value = "";
+            return;
+          }
+
           void handleImageInputChange(event);
         }}
       />
