@@ -15,7 +15,7 @@
 ## 핵심 설계 결정
 - `/api/pages/{handle}/items` 요청은 페이지 도메인 스키마에서 검증한다.
 - memo 생성은 DB 함수(`create_memo_item_for_owned_page`)로 위임해 정합성과 동시성을 DB에서 보장한다.
-- map 생성은 페이지 단위 advisory lock 후 `max(order_key)+1`로 삽입해 순서 키 충돌을 회피한다.
+- map 생성은 페이지 단위 advisory lock 후 `max(order_key)+1`로 삽입해 순서 키 충돌을 회피하고, `size_code`를 `page_item_size` enum으로 저장한다.
 - memo 수정은 `page + page_item` 조인 조건(`handle + user_id + item_id + memo 타입`)으로 소유권과 타입을 함께 검증한다.
 - map 수정은 `page + page_item` 조인 조건(`handle + user_id + item_id + map 타입`)으로 소유권과 타입을 함께 검증한다.
 - 페이지 아이템 조회는 `page_item` + `page` 조인으로 handle 기준 조회하고, `is_visible=true` 조건의 모든 타입 아이템을 노출한다.

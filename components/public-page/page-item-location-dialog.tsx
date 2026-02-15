@@ -310,7 +310,7 @@ export function PageItemLocationDialog({ trigger, onSaveMapItem, initialValue }:
           <DialogTitle className={"sr-only"}>Select location</DialogTitle>
           <DialogDescription className={"sr-only"}>Zoom, move, and find your current location.</DialogDescription>
         </DialogHeader>
-        <div className="relative p-0">
+        <div className="relative bg-background p-0">
           <MapCanvas
             key={mapRenderKey}
             ref={mapRef}

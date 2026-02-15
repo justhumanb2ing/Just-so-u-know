@@ -78,6 +78,35 @@ describe("page item schema", () => {
     expect(result.data).toEqual(payload);
   });
 
+  test("아이템 생성 스키마는 map caption 없이도 저장 가능하다", () => {
+    // Arrange
+    const payload = {
+      type: "map",
+      data: {
+        lat: 37.5665,
+        lng: 126.978,
+        zoom: 13,
+        googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+      },
+    };
+
+    // Act
+    const result = pageItemCreateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      type: "map",
+      data: {
+        lat: 37.5665,
+        lng: 126.978,
+        zoom: 13,
+        caption: "",
+        googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+      },
+    });
+  });
+
   test("아이템 수정 스키마는 memo content 개행을 \\n으로 정규화한다", () => {
     // Arrange
     const payload = {
@@ -141,6 +170,35 @@ describe("page item schema", () => {
     // Assert
     expect(result.success).toBe(true);
     expect(result.data).toEqual(payload);
+  });
+
+  test("아이템 수정 스키마는 map caption 없이도 저장 가능하다", () => {
+    // Arrange
+    const payload = {
+      type: "map",
+      data: {
+        lat: 37.5665,
+        lng: 126.978,
+        zoom: 13,
+        googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+      },
+    };
+
+    // Act
+    const result = pageItemUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      type: "map",
+      data: {
+        lat: 37.5665,
+        lng: 126.978,
+        zoom: 13,
+        caption: "",
+        googleMapUrl: "https://www.google.com/maps?q=37.566500,126.978000&z=13",
+      },
+    });
   });
 
   test("아이템 수정 스키마는 잘못된 sizeCode를 거부한다", () => {

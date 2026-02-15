@@ -302,7 +302,7 @@ export async function createOwnedMapItem({
       select
         next_order.page_id,
         'map',
-        ${resolveDefaultMapItemSizeCode()}::text,
+        ${resolveDefaultMapItemSizeCode()}::public.page_item_size,
         next_order.next_order_key,
         jsonb_strip_nulls(
           jsonb_build_object(

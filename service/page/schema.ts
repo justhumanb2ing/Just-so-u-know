@@ -107,7 +107,10 @@ const pageItemLinkCreateSchema = z.object({
   }),
 });
 
-const mapCaptionSchema = z.string().transform((value) => value.replace(LINK_TITLE_LINE_BREAK_PATTERN, " ").trim());
+const mapCaptionSchema = z
+  .string()
+  .optional()
+  .transform((value) => (value ?? "").replace(LINK_TITLE_LINE_BREAK_PATTERN, " ").trim());
 
 const pageItemMapCreateSchema = z.object({
   type: z.literal("map"),

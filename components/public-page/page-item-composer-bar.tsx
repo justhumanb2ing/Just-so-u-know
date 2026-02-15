@@ -2,6 +2,7 @@
 
 import { ImagePlayIcon, LinkIcon, MapIcon, StickyNoteIcon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
+import dynamic from "next/dynamic";
 import { type ComponentProps, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Popover, PopoverPanel, PopoverTrigger } from "@/components/animate-ui/components/base/popover";
@@ -12,8 +13,11 @@ import type { OgCrawlController } from "@/hooks/use-og-crawl";
 import type { MapItemCreatePayload } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
-import { PageItemLocationDialog } from "./page-item-location-dialog";
 import { PageSaveStatusIndicator } from "./page-save-status-indicator";
+
+const PageItemLocationDialog = dynamic(() => import("./page-item-location-dialog").then((module) => module.PageItemLocationDialog), {
+  ssr: false,
+});
 
 type ItemComposerBarProps = {
   hasDraft: boolean;

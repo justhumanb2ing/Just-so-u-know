@@ -13,6 +13,7 @@ type CreateItemRouteContext = {
 type PostgresErrorLike = {
   code?: string;
   message?: string;
+  constraint?: string;
 };
 
 function toPostgresErrorLike(error: unknown): PostgresErrorLike | null {
@@ -82,6 +83,7 @@ function mapCreateItemError(error: unknown) {
   const postgresError = toPostgresErrorLike(error);
   const code = postgresError?.code;
   const message = postgresError?.message ?? "Failed to create item.";
+  const constraint = postgresError?.constraint ?? "";
 
   if (code === "P0001") {
     if (message === "page not found or permission denied") {
@@ -97,9 +99,39 @@ function mapCreateItemError(error: unknown) {
     };
   }
 
+  if (code === "23503") {
+    if (constraint === "page_item_size_code_fkey") {
+      return {
+        status: 422,
+        message: "Invalid item size.",
+      };
+    }
+
+    if (constraint === "page_item_type_code_fkey") {
+      return {
+        status: 422,
+        message: "Invalid item type.",
+      };
+    }
+  }
+
+  if (code === "42501") {
+    return {
+      status: 500,
+      message: "Database permission is not configured for map item creation.",
+    };
+  }
+
+  if (code === "42P01" || code === "42703") {
+    return {
+      status: 500,
+      message: "Database schema for map item creation is outdated.",
+    };
+  }
+
   return {
     status: 500,
-    message: "Failed to create item.",
+    message: code ? `Failed to create item. (${code})` : "Failed to create item.",
   };
 }
 
