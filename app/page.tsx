@@ -1,20 +1,19 @@
-import Link from "next/link";
 import CTAButton from "@/components/layout/cta-button";
-import { Button } from "@/components/ui/button";
+import LandingFooter from "@/components/layout/landing-footer";
+import LandingHeader from "@/components/layout/landing-header";
 
 export const dynamic = "force-static";
 
 export default function Page() {
   return (
-    <main className="container mx-auto flex min-h-dvh w-full p-6">
-      <CTAButton />
-      <Button
-        variant={"link"}
-        size={"sm"}
-        className="text-muted-foreground"
-        nativeButton={false}
-        render={<Link href={"/changelog"}>Changelog</Link>}
-      ></Button>
+    <main className="flex min-h-dvh w-full flex-col px-6">
+      <LandingHeader />
+      <section className="flex h-dvh flex-col items-center justify-center">
+        <aside>
+          <CTAButton />
+        </aside>
+      </section>
+      <LandingFooter />
     </main>
   );
 }

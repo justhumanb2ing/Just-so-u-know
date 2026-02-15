@@ -14,12 +14,12 @@ export default function CTAButton() {
     <Button
       variant={"default"}
       size={"lg"}
-      className={"h-10"}
+      className={"phantom-border px-5 py-6 text-base"}
       nativeButton={false}
       onMouseEnter={() => router.prefetch("/me")}
       render={
         <Link href="/me" prefetch={false}>
-          Sign in
+          Start for free
         </Link>
       }
     />
