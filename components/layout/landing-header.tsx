@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Clock } from "./clock";
 
 export default function LandingHeader() {
   return (
@@ -6,6 +7,9 @@ export default function LandingHeader() {
       <nav className="flex items-center justify-between">
         <aside>
           <Link href={"/"}>로고</Link>
+        </aside>
+        <aside>
+          <Clock />
         </aside>
       </nav>
     </header>

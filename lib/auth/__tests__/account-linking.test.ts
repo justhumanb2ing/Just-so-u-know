@@ -5,7 +5,7 @@ import { ACCOUNT_LINKING_CONFIG, ACCOUNT_LINKING_TRUSTED_PROVIDERS } from "@/lib
 describe("ACCOUNT_LINKING_CONFIG", () => {
   test("동일 이메일 기준 계정 링크를 위해 신뢰 provider를 명시한다", () => {
     // Arrange
-    const expectedProviders = ["email-password", "google", "kakao", "github", "naver"];
+    const expectedProviders = ["email-password", "google", "github", "kakao", "naver"];
 
     // Act
     const providers = ACCOUNT_LINKING_TRUSTED_PROVIDERS;

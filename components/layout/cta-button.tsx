@@ -14,7 +14,7 @@ export default function CTAButton() {
     <Button
       variant={"default"}
       size={"lg"}
-      className={"phantom-border px-5 py-6 text-base"}
+      className={"phantom-border px-5 text-sm md:py-6 md:text-base"}
       nativeButton={false}
       onMouseEnter={() => router.prefetch("/me")}
       render={
