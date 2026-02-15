@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircleIcon, LoaderIcon } from "lucide-react";
+import { LoaderIcon } from "lucide-react";
 import { usePageSaveStatusView } from "@/hooks/use-page-save-status";
 import { cn } from "@/lib/utils";
 import CopyUrlButton from "../layout/copy-button";
@@ -39,12 +39,7 @@ export function PageSaveStatusIndicator() {
           </>
         ) : null}
         {isSaved ? <span>Saved!</span> : null}
-        {isError ? (
-          <>
-            <AlertCircleIcon className="size-4" />
-            <span>Save failed</span>
-          </>
-        ) : null}
+        {isError ? <span>Save failed</span> : null}
       </div>
     </aside>
   );
