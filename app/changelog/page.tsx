@@ -42,7 +42,7 @@ export default function Page() {
       <header className="space-y-3">
         <div className="flex items-center gap-2">
           <Link href={"/"}>
-            <ChevronLeftIcon className="size-8"/>
+            <ChevronLeftIcon className="size-8" />
           </Link>
           <h1 className="font-bold text-2xl">Changelog</h1>
         </div>
