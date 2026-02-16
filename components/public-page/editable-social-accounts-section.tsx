@@ -15,6 +15,7 @@ import {
 } from "@/constants/social-platforms";
 import { usePageSocialAccounts } from "@/hooks/use-page-social-accounts";
 import { cn } from "@/lib/utils";
+import { trackFeatureUse } from "@/service/analytics/tracker";
 import { SOCIAL_PLATFORM_ICON_MAP, type SocialPlatformIconComponent } from "../icons/social-platform-icon-map";
 import { ScrollArea } from "../ui/scroll-area";
 import { SOCIAL_PLATFORM_PRESENTATION } from "./social-platform-presentation";
@@ -386,8 +387,18 @@ export function EditableSocialAccountsSection({
       return nextState;
     });
 
+    trackFeatureUse({
+      featureName: "social_accounts_connect",
+      actorType: "owner",
+      context: {
+        handle,
+        upsert_count: upsertItemsToSave.length,
+        delete_count: deletePlatformsToSave.length,
+      },
+    });
+
     onSaveSuccess?.();
-  }, [deletePlatformsToSave, onSaveSuccess, saveSocialPlatformChanges, upsertItemsToSave]);
+  }, [deletePlatformsToSave, handle, onSaveSuccess, saveSocialPlatformChanges, upsertItemsToSave]);
 
   useEffect(() => {
     if (!onPersistedItemsChange) {

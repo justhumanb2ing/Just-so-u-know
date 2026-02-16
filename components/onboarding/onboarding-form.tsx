@@ -1,18 +1,39 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import type { OnboardingSubmitState } from "@/app/(auth)/onboarding/actions";
 import { submitOnboardingAction } from "@/app/(auth)/onboarding/actions";
 import { HandleForm } from "@/components/onboarding/handle-form";
 import { OnboardingAccountActions } from "@/components/onboarding/onboarding-account-actions";
 import { OnboardingComplete } from "@/components/onboarding/onboarding-complete";
+import { trackSignupComplete } from "@/service/analytics/tracker";
 
 const INITIAL_ONBOARDING_SUBMIT_STATE: OnboardingSubmitState = { status: "idle" };
 
 export function OnboardingForm() {
   const [submitState, submitAction, isSubmitting] = useActionState(submitOnboardingAction, INITIAL_ONBOARDING_SUBMIT_STATE);
+  const trackedSignupCompleteKeyRef = useRef<string | null>(null);
   const submitErrorMessage = submitState.status === "error" ? submitState.message : undefined;
+
+  useEffect(() => {
+    if (submitState.status !== "success") {
+      return;
+    }
+
+    const trackingKey = `${submitState.userId}:${submitState.createdPageId}`;
+
+    if (trackedSignupCompleteKeyRef.current === trackingKey) {
+      return;
+    }
+
+    trackSignupComplete({
+      userId: submitState.userId,
+      createdPageId: submitState.createdPageId,
+      source: "onboarding",
+    });
+    trackedSignupCompleteKeyRef.current = trackingKey;
+  }, [submitState]);
 
   if (submitState.status === "success") {
     return (

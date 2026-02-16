@@ -6,6 +6,8 @@ import { SOCIAL_PROVIDER_OPTIONS, type SocialProvider } from "@/components/auth/
 import { Badge } from "@/components/ui/badge";
 import { authClient } from "@/lib/auth/auth-client";
 import { cn } from "@/lib/utils";
+import { resolveCallbackPath, resolveSignupSource } from "@/service/analytics/schema";
+import { trackAuthSocialLoginClick, trackSignupStart } from "@/service/analytics/tracker";
 import { Button } from "../ui/button";
 
 type SocialLoginOptionsProps = {
@@ -25,6 +27,19 @@ export function SocialLoginOptions({ callbackURL = "/" }: SocialLoginOptionsProp
     try {
       setError(null);
       setLoadingProvider(provider);
+      const callbackPath = resolveCallbackPath(callbackURL);
+      const signupSource = resolveSignupSource(callbackPath);
+
+      trackAuthSocialLoginClick({
+        provider,
+        callbackPath,
+        entrySource: signupSource,
+      });
+      trackSignupStart({
+        source: signupSource,
+        provider,
+      });
+
       await authClient.signIn.social({
         provider,
         callbackURL,

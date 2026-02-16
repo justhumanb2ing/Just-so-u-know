@@ -4,6 +4,7 @@ import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTrackPageDbWrite } from "@/hooks/use-page-save-status";
+import { trackFeatureUse } from "@/service/analytics/tracker";
 import {
   isAllowedPageItemMediaFileSize,
   isAllowedPageItemMediaMimeType,
@@ -165,6 +166,21 @@ export type MapItemView = {
   caption: string;
   googleMapUrl: string;
 };
+
+type ItemCreateFeatureName = "item_create_memo" | "item_create_link" | "item_create_map" | "item_create_image" | "item_create_video";
+
+/**
+ * 페이지 아이템 생성 성공 이벤트를 `feature_use` 포맷으로 전송한다.
+ */
+function trackItemCreateFeatureUse(handle: string, featureName: ItemCreateFeatureName) {
+  trackFeatureUse({
+    featureName,
+    actorType: "owner",
+    context: {
+      handle,
+    },
+  });
+}
 
 async function parseJsonResponse<TResponse>(response: Response): Promise<TResponse | null> {
   try {
@@ -928,6 +944,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         itemLastSyncedOrderIdsRef.current = resolvePageItemIds(nextItems);
         return nextItems;
       });
+      trackItemCreateFeatureUse(handle, "item_create_memo");
       setDraft((prevDraft) => resolveDraftAfterPersistSuccess(prevDraft, currentDraft.id));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to create item.";
@@ -997,6 +1014,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
           itemLastSyncedOrderIdsRef.current = resolvePageItemIds(nextItems);
           return nextItems;
         });
+        trackItemCreateFeatureUse(handle, "item_create_link");
         setDraft((prevDraft) => (prevDraft?.kind === "link" ? null : prevDraft));
 
         return true;
@@ -1053,6 +1071,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
           itemLastSyncedOrderIdsRef.current = resolvePageItemIds(nextItems);
           return nextItems;
         });
+        trackItemCreateFeatureUse(handle, "item_create_map");
 
         return true;
       } catch (error) {
@@ -1107,6 +1126,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
           itemLastSyncedOrderIdsRef.current = resolvePageItemIds(nextItems);
           return nextItems;
         });
+        trackItemCreateFeatureUse(handle, mediaPayload.type === "video" ? "item_create_video" : "item_create_image");
 
         return true;
       } catch (error) {

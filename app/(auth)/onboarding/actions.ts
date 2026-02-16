@@ -11,6 +11,8 @@ export type OnboardingSubmitState =
   | {
       status: "success";
       message: string;
+      userId: string;
+      createdPageId: string;
       publicPath: string;
       storedHandle: string;
     };
@@ -95,6 +97,8 @@ export async function submitOnboardingAction(_prevState: OnboardingSubmitState, 
     return {
       status: "success",
       message: "Onboarding complete. Your page is ready.",
+      userId: session.user.id,
+      createdPageId: result.pageId,
       publicPath: result.publicPath,
       storedHandle: result.storedHandle,
     };

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
+import { trackFeatureUse } from "@/service/analytics/tracker";
 
 type PageSettingsSheetProps = {
   contentId: string;
@@ -52,6 +53,14 @@ export function PageSettingsSheet({ contentId, handle, initialIsPublic, open, on
 
         setIsPublic(result.isPublic);
         setVisibilityFeedback(result.isPublic ? "Your page is now public." : "Your page is now private.");
+        trackFeatureUse({
+          featureName: "page_visibility_toggle",
+          actorType: "owner",
+          context: {
+            handle,
+            target_visibility: result.isPublic ? "public" : "private",
+          },
+        });
       });
     },
     [handle, isPending, isPublic],

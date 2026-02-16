@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import type { CtaPlacement } from "@/service/analytics/schema";
+import { trackAuthMyPageClick, trackAuthSignInClick } from "@/service/analytics/tracker";
 
 type PublicPageAuthActionProps = {
+  pageId: string;
   hasSession: boolean;
   isOwnerPage: boolean;
   userImage: string | null;
   userName: string | null;
+  placement: CtaPlacement;
   size?: "sm" | "lg";
   returnTo?: string;
 };
@@ -75,7 +79,16 @@ function HomeButton({ size = "sm" }: Pick<PublicPageAuthActionProps, "size">) {
 /**
  * 공개 페이지 상단 인증 CTA를 렌더링한다.
  */
-export function PublicPageAuthAction({ hasSession, isOwnerPage, userImage, userName, size = "sm", returnTo }: PublicPageAuthActionProps) {
+export function PublicPageAuthAction({
+  pageId,
+  hasSession,
+  isOwnerPage,
+  userImage,
+  userName,
+  placement,
+  size = "sm",
+  returnTo,
+}: PublicPageAuthActionProps) {
   const actionType = resolvePublicPageAuthActionType({ hasSession, isOwnerPage });
   const signInHref = resolvePublicPageSignInHref({ returnTo });
 
@@ -92,7 +105,13 @@ export function PublicPageAuthAction({ hasSession, isOwnerPage, userImage, userN
           className="rounded-sm py-4 text-muted-foreground"
           nativeButton={false}
           render={
-            <Link href="/me" prefetch={false}>
+            <Link
+              href="/me"
+              prefetch={false}
+              onClick={() => {
+                trackAuthMyPageClick({ pageId, placement });
+              }}
+            >
               <UserAvatar userImage={userImage} userName={userName} />
               <span className="text-xs">My Page</span>
             </Link>
@@ -111,7 +130,13 @@ export function PublicPageAuthAction({ hasSession, isOwnerPage, userImage, userN
         className="rounded-sm py-4 text-muted-foreground"
         nativeButton={false}
         render={
-          <Link href={signInHref} prefetch={false}>
+          <Link
+            href={signInHref}
+            prefetch={false}
+            onClick={() => {
+              trackAuthSignInClick({ pageId, placement, returnTo });
+            }}
+          >
             Sign In
           </Link>
         }

@@ -26,7 +26,7 @@ import CopyUrlButton from "../layout/copy-button";
 export const READONLY_VISITOR_HANDLE_CLASSNAME = "hidden min-w-0 max-w-md truncate py-6 font-semibold text-base tracking-wide md:block";
 
 type ReadonlyPageVisitorSectionProps = {
-  page: Pick<PublicPageRow, "handle" | "name" | "bio" | "image">;
+  page: Pick<PublicPageRow, "id" | "handle" | "name" | "bio" | "image">;
   socialItems: VisiblePageSocialItem[];
   items: VisiblePageItem[];
   hasSession: boolean;
@@ -118,22 +118,26 @@ export function ReadonlyPageVisitorSection({
           </aside>
           <aside className="mt-6 md:hidden">
             <PublicPageAuthAction
+              pageId={page.id}
               hasSession={hasSession}
               isOwnerPage={false}
               userImage={userImage}
               userName={userName}
               size="lg"
+              placement="inline"
               returnTo={visitorReturnTo}
             />
           </aside>
         </section>
         <aside className="fixed bottom-3 left-3 z-40 hidden supports-[padding:max(0px)]:bottom-[max(1rem,env(safe-area-inset-bottom))] md:block">
           <PublicPageAuthAction
+            pageId={page.id}
             hasSession={hasSession}
             isOwnerPage={false}
             userImage={userImage}
             userName={userName}
             size="lg"
+            placement="floating"
             returnTo={visitorReturnTo}
           />
         </aside>

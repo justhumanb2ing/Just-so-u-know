@@ -31,6 +31,7 @@ export class OnboardingServiceError extends Error {
 }
 
 export type CompleteOnboardingResult = {
+  pageId: string;
   publicPath: string;
   storedHandle: string;
   isPrimary: boolean;
@@ -170,7 +171,21 @@ export async function completeOnboardingWithPageCreation(
         throw new OnboardingServiceError("USER_NOT_FOUND", "User not found.");
       }
 
+      const createdPageIdResult = await sql<{ id: string }>`
+        select id
+        from public.page
+        where user_id = ${userId}
+          and handle = ${createdPage.handle}
+        limit 1
+      `.execute(trx);
+      const createdPageId = createdPageIdResult.rows[0]?.id;
+
+      if (!createdPageId) {
+        throw new OnboardingServiceError("UNKNOWN", "Created page id is missing.");
+      }
+
       return {
+        pageId: createdPageId,
         publicPath: `/${createdPage.handle}`,
         storedHandle: createdPage.handle,
         isPrimary: createdPage.isPrimary,

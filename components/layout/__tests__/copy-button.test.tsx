@@ -1,13 +1,18 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import CopyUrlButton from "@/components/layout/copy-button";
+import CopyUrlButton, { resolveShareTrackingPath } from "@/components/layout/copy-button";
 import { useCopyCurrentRouteUrl } from "@/hooks/use-copy-current-route-url";
+import { trackFeatureUse } from "@/service/analytics/tracker";
 
 vi.mock("@/hooks/use-copy-current-route-url", () => ({
   useCopyCurrentRouteUrl: vi.fn(),
 }));
+vi.mock("@/service/analytics/tracker", () => ({
+  trackFeatureUse: vi.fn(),
+}));
 
 const mockedUseCopyCurrentRouteUrl = vi.mocked(useCopyCurrentRouteUrl);
+const mockedTrackFeatureUse = vi.mocked(trackFeatureUse);
 
 describe("CopyUrlButton", () => {
   beforeEach(() => {
@@ -56,6 +61,13 @@ describe("CopyUrlButton", () => {
     // Assert
     expect(screen.getByTestId("copy-url-icon-success")).toBeTruthy();
     expect(button.hasAttribute("disabled")).toBe(false);
+    expect(mockedTrackFeatureUse).toHaveBeenCalledWith({
+      featureName: "share_copy_url",
+      actorType: "owner",
+      context: {
+        path: "/@owner",
+      },
+    });
 
     // Act
     act(() => {
@@ -93,5 +105,29 @@ describe("CopyUrlButton", () => {
     expect(button?.className).toContain("custom-copy-button");
     expect(button?.className).toContain("size-9");
     expect(button?.className).toContain("hover:bg-muted");
+  });
+});
+
+describe("resolveShareTrackingPath", () => {
+  test("절대 URL에서 path+query를 추출한다", () => {
+    // Arrange
+    const currentRouteUrl = "https://tsuki.app/@owner?tab=links#profile";
+
+    // Act
+    const result = resolveShareTrackingPath(currentRouteUrl);
+
+    // Assert
+    expect(result).toBe("/@owner?tab=links");
+  });
+
+  test("잘못된 URL이면 기본 경로를 반환한다", () => {
+    // Arrange
+    const currentRouteUrl = "not-a-url";
+
+    // Act
+    const result = resolveShareTrackingPath(currentRouteUrl);
+
+    // Assert
+    expect(result).toBe("/");
   });
 });

@@ -50,6 +50,19 @@ bun dev
 - `sitemap.xml`은 `app/sitemap.ts`에서 생성하며, 정적 라우트와 공개 페이지 handle(`is_public=true`)을 함께 포함한다.
 - `robots.txt`는 `app/robots.ts`, 웹 앱 매니페스트는 `app/manifest.ts`에서 생성한다.
 
+### Analytics (Umami)
+- Umami 스크립트는 `components/analytics/umami-script.tsx`에서 로드한다.
+- 현재 설정은 `https://cloud.umami.is/script.js` + `data-website-id=54691228-974f-4ba0-a7f5-5789120ead3f`이며 `data-auto-track=\"false\"`를 사용한다.
+- 전역 pageview는 `components/analytics/route-tracker.tsx`에서 수동 수집한다.
+- `/@{handle}` 라우트는 pageview를 보내지 않고 `profile_view` 이벤트를 `page_id` 기준으로 수집한다.
+- 이벤트 래퍼와 스키마는 `service/analytics/tracker.ts`, `service/analytics/schema.ts`에서 관리한다.
+- `feature_use` 이벤트는 현재 다음 성공 액션에 연결되어 있다.
+- `item_create_{memo|link|map|image|video}`: 아이템 생성 성공 시
+- `social_accounts_connect`: 소셜 계정 배치 저장 성공 시
+- `page_visibility_toggle`: 공개/비공개 토글 성공 시
+- `page_handle_update`: handle 변경 성공 시 (동일 handle 재제출 제외)
+- `share_copy_url`: 공유 버튼 URL 복사 성공 시
+
 ### 랜딩 CTA 라우팅
 - 홈 CTA는 정적 링크(`/me`)로 동작한다.
 - `/me` 서버 라우트가 인증 상태를 확인해 아래로 리다이렉트한다.

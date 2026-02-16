@@ -6,11 +6,28 @@ import { type ComponentProps, useCallback, useEffect, useRef, useState } from "r
 import { Button } from "@/components/ui/button";
 import { useCopyCurrentRouteUrl } from "@/hooks/use-copy-current-route-url";
 import { cn } from "@/lib/utils";
+import { trackFeatureUse } from "@/service/analytics/tracker";
 
 const COPY_SUCCESS_VISIBLE_MS = 1500;
 
 type CopyButtonStatus = "idle" | "pending" | "success";
 type CopyUrlButtonProps = Pick<ComponentProps<typeof Button>, "className" | "size" | "variant">;
+
+/**
+ * 공유 이벤트 컨텍스트에 저장할 경로(path+query)를 URL 문자열에서 안전하게 추출한다.
+ */
+export function resolveShareTrackingPath(currentRouteUrl: string | null) {
+  if (!currentRouteUrl) {
+    return "/";
+  }
+
+  try {
+    const parsedUrl = new URL(currentRouteUrl);
+    return `${parsedUrl.pathname}${parsedUrl.search}`;
+  } catch {
+    return "/";
+  }
+}
 
 /**
  * 복사 진행 상태에 따라 표시할 아이콘을 반환한다.
@@ -28,7 +45,7 @@ function CopyButtonIcon({ status }: { status: CopyButtonStatus }) {
 }
 
 export default function CopyUrlButton({ className, size = "lg", variant = "default" }: CopyUrlButtonProps) {
-  const { copyCurrentRouteUrl } = useCopyCurrentRouteUrl();
+  const { copyCurrentRouteUrl, currentRouteUrl } = useCopyCurrentRouteUrl();
   const [status, setStatus] = useState<CopyButtonStatus>("idle");
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -61,12 +78,20 @@ export default function CopyUrlButton({ className, size = "lg", variant = "defau
       return;
     }
 
+    trackFeatureUse({
+      featureName: "share_copy_url",
+      actorType: "owner",
+      context: {
+        path: resolveShareTrackingPath(currentRouteUrl),
+      },
+    });
+
     setStatus("success");
     resetTimerRef.current = setTimeout(() => {
       setStatus("idle");
       resetTimerRef.current = null;
     }, COPY_SUCCESS_VISIBLE_MS);
-  }, [copyCurrentRouteUrl, status]);
+  }, [copyCurrentRouteUrl, currentRouteUrl, status]);
 
   return (
     <Button
