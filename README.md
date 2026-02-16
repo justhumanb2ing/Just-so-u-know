@@ -50,6 +50,13 @@ bun dev
 - `sitemap.xml`은 `app/sitemap.ts`에서 생성하며, 정적 라우트와 공개 페이지 handle(`is_public=true`)을 함께 포함한다.
 - `robots.txt`는 `app/robots.ts`, 웹 앱 매니페스트는 `app/manifest.ts`에서 생성한다.
 
+### Service Versioning / Changelog
+- 서비스 버전 정책은 SemVer(`major.minor.patch`)를 사용한다.
+- 현재 기준 버전은 `package.json`의 `version` 필드(`0.1.0`)다.
+- `/changelog`는 MDX 엔트리(`changelog/*.mdx`)를 렌더링해 버전별 릴리즈 이력을 노출한다.
+- changelog 날짜(`releasedAt`)는 배포일을 기준으로 기록한다.
+- 버전 업그레이드 절차는 `docs/domains/service-versioning.md`를 따른다.
+
 ### Analytics (Umami)
 - Umami 스크립트는 `components/analytics/umami-script.tsx`에서 로드한다.
 - 현재 설정은 `https://cloud.umami.is/script.js` + `data-website-id=54691228-974f-4ba0-a7f5-5789120ead3f`이며 `data-auto-track=\"false\"`를 사용한다.

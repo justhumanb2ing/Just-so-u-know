@@ -12,6 +12,7 @@
 - `service/page/schema.ts`: 페이지 아이템 입력 검증과 path handle 정규화
 - `service/page/items.ts`: 페이지 아이템 DB 호출 로직
 - `service/page/__tests__/*`: 페이지 도메인 단위 테스트
+- `service/versioning/*`: 서비스 버전 정책, changelog 메타데이터 검증/정렬
 
 ## 핵심 설계 결정
 - handle 정책은 `schema.ts`를 단일 소스로 사용한다.

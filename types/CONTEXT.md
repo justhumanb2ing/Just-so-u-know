@@ -5,6 +5,7 @@
 
 ## 파일 구조와 역할
 - `types/supabase.ts`: Supabase/DB 스키마 기반 타입 아웃풋
+- `types/mdx.d.ts`: MDX 모듈 import 타입 선언
 
 ## 핵심 설계 결정
 - 수동 편집보다 생성 커맨드(`bun run typegen`)를 우선한다.
