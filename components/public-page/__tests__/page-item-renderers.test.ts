@@ -143,11 +143,12 @@ describe("page item renderers", () => {
 
   test("image 렌더러는 src가 있으면 실제 이미지 태그를 렌더링한다", () => {
     // Arrange
+    const imageSource = "https://example.com/image.webp";
     const item = createItem({
       typeCode: "image",
       data: {
         alt: "Profile image",
-        src: "https://example.com/image.webp",
+        src: imageSource,
       },
     });
     const ImageRenderer = getPageItemRenderer("image");
@@ -155,9 +156,10 @@ describe("page item renderers", () => {
     // Act
     render(ImageRenderer({ item }));
     const image = screen.getByRole("img", { name: "Profile image" });
+    const optimizedSource = image.getAttribute("src");
 
     // Assert
-    expect(image.getAttribute("src")).toBe("https://example.com/image.webp");
+    expect(optimizedSource).toContain(encodeURIComponent(imageSource));
   });
 
   test("map 타입은 caption/googleMapUrl 순서로 텍스트를 선택한다", () => {

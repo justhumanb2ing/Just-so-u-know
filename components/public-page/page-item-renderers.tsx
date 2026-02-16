@@ -2,6 +2,7 @@
 
 import { ArrowUpRightIcon, LayersIcon } from "lucide-react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import type { KeyboardEvent, ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { Map as MapCanvas } from "@/components/ui/map";
@@ -258,8 +259,15 @@ function ImageItemRenderer({ item }: PageItemRendererProps) {
 
   return (
     <div className="h-full w-full overflow-hidden rounded-[12px] border">
-      {/* biome-ignore lint/performance/noImgElement: 외부 public URL 미디어는 img 태그로 직접 렌더링한다. */}
-      <img src={mediaSrc} alt={resolvePageItemDisplayText(item)} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+      <Image
+        src={mediaSrc}
+        alt={resolvePageItemDisplayText(item)}
+        fill
+        quality={75}
+        className="h-full w-full rounded-[12px] object-cover"
+        loading="lazy"
+        decoding="async"
+      />
     </div>
   );
 }

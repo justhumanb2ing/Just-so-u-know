@@ -52,9 +52,6 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <div>Link in bio</div>
           <div>— more than a link.</div>
         </aside>
-        <aside>
-          <div className="text-sm">2026. All rights reserved.</div>
-        </aside>
       </div>
     </main>
   );

@@ -1,4 +1,5 @@
 import { ArrowUpRightIcon } from "lucide-react";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import {
   normalizeReadonlyPageItems,
@@ -114,8 +115,13 @@ function ReadonlyImageItem({ item }: { item: ReadonlyPageItem }) {
 
   return (
     <div className="h-full w-full overflow-hidden rounded-[12px] border">
-      {/* biome-ignore lint/performance/noImgElement: 외부 public URL 미디어는 img 태그로 직접 렌더링한다. */}
-      <img src={mediaView.src} alt={resolveReadonlyPageItemDisplayText(item)} className="h-full w-full object-cover" loading="lazy" />
+      <Image
+        src={mediaView.src}
+        alt={resolveReadonlyPageItemDisplayText(item)}
+        fill
+        className="h-full w-full rounded-[12px] object-cover"
+        loading="lazy"
+      />
     </div>
   );
 }
