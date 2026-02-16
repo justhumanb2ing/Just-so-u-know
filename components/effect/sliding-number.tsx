@@ -1,4 +1,4 @@
-/** biome-ignore-all lint/suspicious/noShadowRestrictedNames: <explanation> */
+/** biome-ignore-all lint/suspicious/noShadowRestrictedNames: UI 컴포넌트 이름으로 Number 식별자를 의도적으로 사용한다. */
 "use client";
 
 import { type MotionValue, motion, motionValue, useSpring, useTransform } from "motion/react";

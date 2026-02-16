@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -9,6 +10,14 @@ type SignInPageProps = {
   searchParams: Promise<{
     returnTo?: string | string[];
   }>;
+};
+
+export const metadata: Metadata = {
+  title: "Sign in",
+  description: "Sign in to Tsuki and continue editing your profile page.",
+  alternates: {
+    canonical: "/sign-in",
+  },
 };
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {

@@ -40,6 +40,16 @@ bun dev
 - 로컬 sans 폰트는 `public/font/*.woff2`를 사용한다.
 - Next.js 폰트 설정은 `config/font.ts`에서 중앙 관리한다.
 
+### SEO 메타데이터 / JSON-LD
+- 전역 사이트 SEO 속성은 `config/seo/site.ts`에서 관리한다.
+- Metadata 조합 유틸은 `config/seo/metadata.ts`, 페이지별 메타 조합은 `service/seo/metadata.ts`를 사용한다.
+- JSON-LD 직렬화/공통 스키마는 `config/seo/json-ld.ts`, 도메인 스키마 조합은 `service/seo/json-ld.ts`를 사용한다.
+- JSON-LD 스크립트 렌더링은 `components/seo/json-ld-script.tsx`를 사용한다.
+- 기본 OG 이미지는 `app/opengraph-image.tsx`에서 `next/og` 기반으로 동적 생성한다.
+- `/changelog`, `/sign-in`, `/{handle}`는 라우트별 title/description을 별도로 설정한다.
+- `sitemap.xml`은 `app/sitemap.ts`에서 생성하며, 정적 라우트와 공개 페이지 handle(`is_public=true`)을 함께 포함한다.
+- `robots.txt`는 `app/robots.ts`, 웹 앱 매니페스트는 `app/manifest.ts`에서 생성한다.
+
 ### 랜딩 CTA 라우팅
 - 홈 CTA는 정적 링크(`/me`)로 동작한다.
 - `/me` 서버 라우트가 인증 상태를 확인해 아래로 리다이렉트한다.

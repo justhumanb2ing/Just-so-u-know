@@ -1,8 +1,15 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { createNoIndexMetadata } from "@/config/seo/metadata";
 import { auth } from "@/lib/auth/auth";
 import { isOnboardingComplete, resolveMeRedirectPath } from "@/lib/auth/route-access";
 import { findPrimaryPageHandleByUserId } from "@/service/onboarding/public-page";
+
+export const metadata: Metadata = createNoIndexMetadata({
+  title: "Redirecting",
+  description: "This route is used only for authenticated redirect flow.",
+});
 
 /**
  * 랜딩 CTA 전용 진입점.

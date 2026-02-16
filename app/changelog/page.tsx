@@ -1,5 +1,14 @@
+import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+
+export const metadata: Metadata = {
+  title: "Changelog",
+  description: "Track product updates, improvements, and fixes in Tsuki.",
+  alternates: {
+    canonical: "/changelog",
+  },
+};
 
 export default function Page() {
   return (

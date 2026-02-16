@@ -18,6 +18,11 @@ export type PrimaryPageHandleRow = {
   handle: string;
 };
 
+export type PublicSitemapPageRow = {
+  handle: string;
+  updatedAt: string | Date;
+};
+
 export type PrivatePageAccessPolicyInput = {
   isPublic: boolean;
   isOwner: boolean;
@@ -66,6 +71,19 @@ const queryPrimaryPageHandleByUserId = cache(async (userId: string) => {
   return result.rows[0] ?? null;
 });
 
+const queryPublicSitemapPages = cache(async () => {
+  const result = await sql<PublicSitemapPageRow>`
+    select
+      handle,
+      updated_at as "updatedAt"
+    from public.page
+    where is_public = true
+    order by updated_at desc
+  `.execute(kysely);
+
+  return result.rows;
+});
+
 /**
  * 비공개 페이지는 소유자에게만 접근을 허용한다.
  */
@@ -112,6 +130,13 @@ export async function findPublicPageByPathHandle(pathHandle: string) {
  */
 export async function findPrimaryPageHandleByUserId(userId: string) {
   return queryPrimaryPageHandleByUserId(userId);
+}
+
+/**
+ * sitemap 생성 시 색인 가능한 공개 페이지 handle 목록을 조회한다.
+ */
+export async function findPublicSitemapPages() {
+  return queryPublicSitemapPages();
 }
 
 export type UpdateOwnedPageProfileInput = {
