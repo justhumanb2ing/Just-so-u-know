@@ -14,11 +14,11 @@ describe("metadata routes", () => {
     // Arrange
     const findPublicSitemapPagesMock = vi.mocked(findPublicSitemapPages);
     const expectedUrls = [
-      "https://tsuki-sigma.vercel.app/",
-      "https://tsuki-sigma.vercel.app/changelog",
-      "https://tsuki-sigma.vercel.app/sign-in",
-      "https://tsuki-sigma.vercel.app/@alpha",
-      "https://tsuki-sigma.vercel.app/@bravo",
+      "https://justsouknow.me/",
+      "https://justsouknow.me/changelog",
+      "https://justsouknow.me/sign-in",
+      "https://justsouknow.me/@alpha",
+      "https://justsouknow.me/@bravo",
     ];
     findPublicSitemapPagesMock.mockResolvedValue([
       {
@@ -37,18 +37,14 @@ describe("metadata routes", () => {
 
     // Assert
     expect(urls).toEqual(expectedUrls);
-    expect(urls).not.toContain("https://tsuki-sigma.vercel.app/me");
-    expect(urls).not.toContain("https://tsuki-sigma.vercel.app/onboarding");
+    expect(urls).not.toContain("https://justsouknow.me/me");
+    expect(urls).not.toContain("https://justsouknow.me/onboarding");
   });
 
   it("sitemap handle 조회가 실패해도 정적 라우트는 유지해야 한다", async () => {
     // Arrange
     const findPublicSitemapPagesMock = vi.mocked(findPublicSitemapPages);
-    const expectedStaticUrls = [
-      "https://tsuki-sigma.vercel.app/",
-      "https://tsuki-sigma.vercel.app/changelog",
-      "https://tsuki-sigma.vercel.app/sign-in",
-    ];
+    const expectedStaticUrls = ["https://justsouknow.me/", "https://justsouknow.me/changelog", "https://justsouknow.me/sign-in"];
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     findPublicSitemapPagesMock.mockRejectedValue(new Error("DB unavailable"));
 
@@ -69,8 +65,8 @@ describe("metadata routes", () => {
     const robotConfig = robots();
 
     // Assert
-    expect(robotConfig.sitemap).toBe("https://tsuki-sigma.vercel.app/sitemap.xml");
-    expect(robotConfig.host).toBe("https://tsuki-sigma.vercel.app");
+    expect(robotConfig.sitemap).toBe("https://justsouknow.me/sitemap.xml");
+    expect(robotConfig.host).toBe("https://justsouknow.me");
     expect(robotConfig.rules).toEqual({
       userAgent: "*",
       allow: "/",

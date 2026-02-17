@@ -20,7 +20,7 @@ describe("config/seo/json-ld.ts", () => {
 
   it("WebSite JSON-LD는 사이트 URL과 식별자를 포함해야 한다", () => {
     // Arrange
-    const expectedUrl = "https://tsuki-sigma.vercel.app/";
+    const expectedUrl = "https://justsouknow.me/";
 
     // Act
     const websiteJsonLd = createWebSiteJsonLd();

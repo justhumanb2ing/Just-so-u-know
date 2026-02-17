@@ -35,7 +35,7 @@ describe("CopyUrlButton", () => {
     );
 
     mockedUseCopyCurrentRouteUrl.mockReturnValue({
-      currentRouteUrl: "https://tsuki.app/@owner",
+      currentRouteUrl: "https://justsouknow.me/@owner",
       copyCurrentRouteUrl,
     });
 
@@ -89,7 +89,7 @@ describe("CopyUrlButton", () => {
   test("외부에서 className, size, variant를 주입하면 버튼 스타일에 반영된다", () => {
     // Arrange
     mockedUseCopyCurrentRouteUrl.mockReturnValue({
-      currentRouteUrl: "https://tsuki.app/@owner",
+      currentRouteUrl: "https://justsouknow.me/@owner",
       copyCurrentRouteUrl: vi.fn().mockResolvedValue(true),
     });
 
@@ -111,7 +111,7 @@ describe("CopyUrlButton", () => {
 describe("resolveShareTrackingPath", () => {
   test("절대 URL에서 path+query를 추출한다", () => {
     // Arrange
-    const currentRouteUrl = "https://tsuki.app/@owner?tab=links#profile";
+    const currentRouteUrl = "https://justsouknow.me/@owner?tab=links#profile";
 
     // Act
     const result = resolveShareTrackingPath(currentRouteUrl);

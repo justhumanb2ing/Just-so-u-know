@@ -11,7 +11,7 @@ import { DEFAULT_OG_IMAGE_ALT, SITE_NAME } from "@/config/seo/site";
 describe("config/seo/metadata.ts", () => {
   it("루트 메타데이터에 metadataBase와 기본 OG 이미지가 포함되어야 한다", () => {
     // Arrange
-    const expectedMetadataBase = "https://tsuki-sigma.vercel.app/";
+    const expectedMetadataBase = "https://justsouknow.me/";
     const expectedManifestPath = "/manifest.webmanifest";
 
     // Act

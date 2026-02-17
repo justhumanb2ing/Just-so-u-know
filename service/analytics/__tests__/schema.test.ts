@@ -26,7 +26,7 @@ describe("analytics schema", () => {
 
   test("callback URL에서 path+query만 추출한다", () => {
     // Arrange
-    const callbackURL = "https://tsuki-sigma.vercel.app/@tester?from=landing#section";
+    const callbackURL = "https://justsouknow.me/@tester?from=landing#section";
 
     // Act
     const result = resolveCallbackPath(callbackURL);

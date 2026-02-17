@@ -23,7 +23,7 @@ describe("buildAbsoluteRouteUrl", () => {
   test("query/hash 접두어 없이 전달되면 URL 규격에 맞춰 정규화한다", () => {
     // Arrange
     const input = {
-      origin: "https://tsuki.app",
+      origin: "https://justsouknow.me",
       pathname: "@owner",
       search: "tab=links",
       hash: "profile",
@@ -33,13 +33,13 @@ describe("buildAbsoluteRouteUrl", () => {
     const url = buildAbsoluteRouteUrl(input);
 
     // Assert
-    expect(url).toBe("https://tsuki.app/@owner?tab=links#profile");
+    expect(url).toBe("https://justsouknow.me/@owner?tab=links#profile");
   });
 
   test("query/hash가 비어 있으면 pathname까지만 반환한다", () => {
     // Arrange
     const input = {
-      origin: "https://tsuki.app",
+      origin: "https://justsouknow.me",
       pathname: "/@owner",
       search: "",
       hash: "",
@@ -49,7 +49,7 @@ describe("buildAbsoluteRouteUrl", () => {
     const url = buildAbsoluteRouteUrl(input);
 
     // Assert
-    expect(url).toBe("https://tsuki.app/@owner");
+    expect(url).toBe("https://justsouknow.me/@owner");
   });
 });
 

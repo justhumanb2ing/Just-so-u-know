@@ -1,4 +1,4 @@
-export const SITE_URL = "https://tsuki-sigma.vercel.app";
+export const SITE_URL = "https://justsouknow.me";
 
 export const SITE_NAME = "Just so u know";
 
