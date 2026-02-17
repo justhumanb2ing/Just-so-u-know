@@ -1,4 +1,4 @@
-# tsuki
+# Just so u know
 
 ## 개발 환경
 

@@ -3,6 +3,7 @@ import type { UseHandleAvailabilityResult } from "@/components/onboarding/use-ha
 import { Field, FieldContent, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from "@/service/onboarding/schema";
+import { SITE_DEFAULT_DESCRIPTION, SITE_URL } from "@/config/seo/site";
 
 type HandleInputFieldProps = {
   handleInput: UseHandleAvailabilityResult["handleInput"];
@@ -53,10 +54,10 @@ export function HandleInputField({ handleInput, handleCheckState, onHandleChange
               onChange={(event) => onHandleChange(event.target.value)}
               aria-invalid={handleCheckState.status === "invalid" || handleCheckState.status === "taken"}
               required
-              className="peer rounded-lg border-none bg-muted py-6 ps-30 text-base! shadow-none"
+              className="peer rounded-lg border-none bg-muted py-6 ps-40 text-base! shadow-none"
             />
             <span className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-base text-muted-foreground peer-disabled:opacity-50">
-              domain.me/@
+              justsouknow.me/@
             </span>
             <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-3 peer-disabled:opacity-50">
               <HandleStatusIcon status={handleCheckState.status} />
