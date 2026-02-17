@@ -41,40 +41,78 @@ function withSchemaVersion(payload: AnalyticsPayload) {
   };
 }
 
+/**
+ * handle 변경에 영향받지 않도록 page_id 기반 canonical URL을 구성한다.
+ */
+function resolvePageTrackingUrl(pageId: string) {
+  return `/page/${pageId}`;
+}
+
 export function trackPageView() {
   runWhenTrackerReady((tracker) => {
     tracker.track();
   });
 }
 
-export function trackEvent(name: string, payload: AnalyticsPayload = {}) {
+export function trackEvent(name: string, payload: AnalyticsPayload = {}, options?: { pageId?: string }) {
   runWhenTrackerReady((tracker) => {
-    tracker.track(name, withSchemaVersion(payload));
+    const eventPayload = withSchemaVersion(payload);
+    const pageId = options?.pageId;
+
+    if (pageId) {
+      tracker.track((props) => ({
+        ...props,
+        url: resolvePageTrackingUrl(pageId),
+        name,
+        data: eventPayload,
+      }));
+      return;
+    }
+
+    tracker.track(name, eventPayload);
   });
 }
 
 export function trackProfileView(input: { pageId: string; isOwner: boolean; isPublic: boolean; entryPath?: string }) {
-  trackEvent(ANALYTICS_EVENT_NAMES.profileView, {
-    page_id: input.pageId,
-    is_owner: input.isOwner,
-    is_public: input.isPublic,
-    entry_path: input.entryPath,
-  });
+  trackEvent(
+    ANALYTICS_EVENT_NAMES.profileView,
+    {
+      page_id: input.pageId,
+      is_owner: input.isOwner,
+      is_public: input.isPublic,
+      entry_path: input.entryPath,
+    },
+    {
+      pageId: input.pageId,
+    },
+  );
 }
 
 export function trackAuthSignInClick(input: { pageId: string; placement: CtaPlacement; returnTo?: string }) {
-  trackEvent(ANALYTICS_EVENT_NAMES.authSignInClick, {
-    page_id: input.pageId,
-    placement: input.placement,
-    return_to: input.returnTo,
-  });
+  trackEvent(
+    ANALYTICS_EVENT_NAMES.authSignInClick,
+    {
+      page_id: input.pageId,
+      placement: input.placement,
+      return_to: input.returnTo,
+    },
+    {
+      pageId: input.pageId,
+    },
+  );
 }
 
 export function trackAuthMyPageClick(input: { pageId: string; placement: CtaPlacement }) {
-  trackEvent(ANALYTICS_EVENT_NAMES.authMyPageClick, {
-    page_id: input.pageId,
-    placement: input.placement,
-  });
+  trackEvent(
+    ANALYTICS_EVENT_NAMES.authMyPageClick,
+    {
+      page_id: input.pageId,
+      placement: input.placement,
+    },
+    {
+      pageId: input.pageId,
+    },
+  );
 }
 
 export function trackAuthSocialLoginClick(input: { provider: string; callbackPath: string; entrySource: SignupSource }) {
@@ -86,11 +124,17 @@ export function trackAuthSocialLoginClick(input: { provider: string; callbackPat
 }
 
 export function trackSignupStart(input: { source: SignupSource; provider: string; pageId?: string }) {
-  trackEvent(ANALYTICS_EVENT_NAMES.signupStart, {
-    source: input.source,
-    provider: input.provider,
-    page_id: input.pageId,
-  });
+  trackEvent(
+    ANALYTICS_EVENT_NAMES.signupStart,
+    {
+      source: input.source,
+      provider: input.provider,
+      page_id: input.pageId,
+    },
+    {
+      pageId: input.pageId,
+    },
+  );
 }
 
 export function trackSignupComplete(input: { userId: string; createdPageId: string; source: string; provider?: string }) {
@@ -112,12 +156,18 @@ export function trackFeatureUse(input: {
   pageId?: string;
   context?: Record<string, unknown>;
 }) {
-  trackEvent(ANALYTICS_EVENT_NAMES.featureUse, {
-    feature_name: input.featureName,
-    actor_type: input.actorType,
-    page_id: input.pageId,
-    context: input.context,
-  });
+  trackEvent(
+    ANALYTICS_EVENT_NAMES.featureUse,
+    {
+      feature_name: input.featureName,
+      actor_type: input.actorType,
+      page_id: input.pageId,
+      context: input.context,
+    },
+    {
+      pageId: input.pageId,
+    },
+  );
 }
 
 export function identifySession(input: { distinctId?: string; userId?: string; role?: "guest" | "member" }) {

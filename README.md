@@ -62,6 +62,7 @@ bun dev
 - 현재 설정은 `https://cloud.umami.is/script.js` + `data-website-id=54691228-974f-4ba0-a7f5-5789120ead3f`이며 `data-auto-track=\"false\"`를 사용한다.
 - 전역 pageview는 `components/analytics/route-tracker.tsx`에서 수동 수집한다.
 - `/@{handle}` 라우트는 pageview를 보내지 않고 `profile_view` 이벤트를 `page_id` 기준으로 수집한다.
+- `page_id`가 포함된 이벤트는 Umami `url` 값을 `/page/{page_id}`로 오버라이드해 handle 변경 전/후 로그가 분산되지 않도록 관리한다.
 - 이벤트 래퍼와 스키마는 `service/analytics/tracker.ts`, `service/analytics/schema.ts`에서 관리한다.
 - `feature_use` 이벤트는 현재 다음 성공 액션에 연결되어 있다.
 - `item_create_{memo|link|map|image|video}`: 아이템 생성 성공 시

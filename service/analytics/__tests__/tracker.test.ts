@@ -24,16 +24,26 @@ describe("analytics tracker", () => {
       isPublic: true,
       entryPath: "/@tester",
     });
+    const payloadFactory = umamiTrack.mock.calls[0]?.[0] as ((props: Record<string, unknown>) => Record<string, unknown>) | undefined;
+    const payload = payloadFactory?.({
+      url: "/@tester",
+      title: "Tester",
+      website: "test-site",
+    });
 
     // Assert
-    expect(umamiTrack).toHaveBeenCalledWith(
-      "profile_view",
+    expect(umamiTrack).toHaveBeenCalledTimes(1);
+    expect(payload).toEqual(
       expect.objectContaining({
-        page_id: "page-1",
-        is_owner: false,
-        is_public: true,
-        entry_path: "/@tester",
-        schema_version: "v1",
+        url: "/page/page-1",
+        name: "profile_view",
+        data: expect.objectContaining({
+          page_id: "page-1",
+          is_owner: false,
+          is_public: true,
+          entry_path: "/@tester",
+          schema_version: "v1",
+        }),
       }),
     );
   });
@@ -108,6 +118,38 @@ describe("analytics tracker", () => {
           target_visibility: "public",
         },
         schema_version: "v1",
+      }),
+    );
+  });
+
+  test("page_id가 있는 feature_use 이벤트는 canonical url로 전송한다", () => {
+    // Arrange
+    const umamiTrack = vi.mocked(window.umami?.track);
+
+    // Act
+    trackFeatureUse({
+      featureName: "profile_save",
+      actorType: "owner",
+      pageId: "page-42",
+    });
+    const payloadFactory = umamiTrack.mock.calls[0]?.[0] as ((props: Record<string, unknown>) => Record<string, unknown>) | undefined;
+    const payload = payloadFactory?.({
+      url: "/@tester",
+      title: "Tester",
+      website: "test-site",
+    });
+
+    // Assert
+    expect(payload).toEqual(
+      expect.objectContaining({
+        url: "/page/page-42",
+        name: "feature_use",
+        data: expect.objectContaining({
+          feature_name: "profile_save",
+          actor_type: "owner",
+          page_id: "page-42",
+          schema_version: "v1",
+        }),
       }),
     );
   });

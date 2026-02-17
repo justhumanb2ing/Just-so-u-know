@@ -34,6 +34,7 @@
   - Umami Tracker 설정은 `data-auto-track="false"`로 고정한다.
   - `/[handle]`은 URL(handle) 기반 pageview를 수집하지 않는다.
   - `/[handle]` 전용 페이지뷰 이벤트 `profile_view`를 커스텀 이벤트로 수집하고, `page_id`를 필수 속성으로 넣는다.
+  - `page_id`가 포함된 이벤트는 Umami `url` 필드를 `/page/{page_id}`로 오버라이드해 handle 변경 전/후를 동일 페이지 엔티티로 집계한다.
   - 비 `/[handle]` 라우트는 라우트 트래커에서 `umami.track()`를 수동 호출해 pageview를 수집한다.
 - 이벤트 네이밍 규칙
   - 형식: `<domain>_<action>` (예: `profile_view`, `auth_signin_click`)
@@ -95,7 +96,7 @@
 - Umami 연동 규약
   - pageview: 전역 자동 추적은 비활성화하고, 비 `/[handle]` 라우트에서만 `umami.track()`를 수동 호출한다.
   - `/[handle]`: pageview는 전송하지 않고 `profile_view` 이벤트를 source of truth로 사용한다.
-  - event: `umami.track(eventName, payload)`
+  - event: 기본은 `umami.track(eventName, payload)`를 사용하고, `page_id` 기준 집계가 필요한 경우 `umami.track(props => ({ ...props, url, name, data }))` 형태로 `url`을 `/page/{page_id}`로 고정한다.
   - session identify: `umami.identify(uniqueId, data)` (PII 금지)
 - Payload schema (요약)
   - 공통: `schema_version`, `source`, `timestamp_client?`
