@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { createNoIndexMetadata, createOpenGraphImages, createTwitterImages } from "@/config/seo/metadata";
-import { SITE_NAME } from "@/config/seo/site";
+import { createNoIndexMetadata } from "@/config/seo/metadata";
+import { DEFAULT_OG_IMAGE_ALT, DEFAULT_OG_IMAGE_HEIGHT, DEFAULT_OG_IMAGE_WIDTH, SITE_NAME } from "@/config/seo/site";
 
 export type PublicProfileMetadataInput = {
   handle: string;
   name: string | null;
   bio: string | null;
-  image: string | null;
 };
 
 export type PrivateProfileMetadataInput = {
@@ -17,8 +16,9 @@ export type PrivateProfileMetadataInput = {
 /**
  * 공개 프로필 페이지의 메타데이터를 생성한다.
  */
-export function createPublicProfileMetadata({ handle, name, bio, image }: PublicProfileMetadataInput): Metadata {
+export function createPublicProfileMetadata({ handle, name, bio }: PublicProfileMetadataInput): Metadata {
   const profilePath = `/${handle}`;
+  const profileOpenGraphPath = `${profilePath}/opengraph-image`;
   const displayName = name?.trim() || handle;
   const description = bio?.trim() || `${displayName} profile on ${SITE_NAME}.`;
 
@@ -34,13 +34,20 @@ export function createPublicProfileMetadata({ handle, name, bio, image }: Public
       description,
       url: profilePath,
       siteName: SITE_NAME,
-      images: createOpenGraphImages(image),
+      images: [
+        {
+          url: profileOpenGraphPath,
+          width: DEFAULT_OG_IMAGE_WIDTH,
+          height: DEFAULT_OG_IMAGE_HEIGHT,
+          alt: DEFAULT_OG_IMAGE_ALT,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: displayName,
       description,
-      images: createTwitterImages(image),
+      images: [profileOpenGraphPath],
     },
   };
 }

@@ -22,6 +22,13 @@ type OpenGraphImage = {
 };
 
 /**
+ * 페이지 제목 문자열을 사이트 타이틀 템플릿(`%s | SITE_NAME`)에 맞춰 확장한다.
+ */
+export function createTemplatedPageTitle(title: string) {
+  return SITE_TITLE_TEMPLATE.replace("%s", title);
+}
+
+/**
  * 상대 경로를 사이트 절대 URL로 정규화한다.
  */
 export function createAbsoluteUrl(pathname: string) {
@@ -71,10 +78,6 @@ export function createRootMetadata(): Metadata {
       template: SITE_TITLE_TEMPLATE,
     },
     description: SITE_DEFAULT_DESCRIPTION,
-    robots: {
-      index: true,
-      follow: true,
-    },
     openGraph: {
       type: "website",
       locale: SITE_DEFAULT_LOCALE,

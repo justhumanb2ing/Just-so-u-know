@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SocialLoginOptions } from "@/components/auth/social-login-options";
+import Logo from "@/components/layout/logo";
+import { createTemplatedPageTitle } from "@/config/seo/metadata";
+import { SITE_NAME } from "@/config/seo/site";
 import { auth } from "@/lib/auth/auth";
 import { resolveReturnPathFromHeaders, resolveReturnPathFromSearchParam } from "@/lib/auth/route-access";
 
@@ -14,9 +16,18 @@ type SignInPageProps = {
 
 export const metadata: Metadata = {
   title: "Sign in",
-  description: "Sign in to Tsuki and continue editing your profile page.",
+  description: `Sign in to ${SITE_NAME} and continue editing your profile page.`,
   alternates: {
     canonical: "/sign-in",
+  },
+  openGraph: {
+    title: createTemplatedPageTitle("Sign in"),
+    description: `Sign in to ${SITE_NAME} and continue editing your profile page.`,
+    url: "/sign-in",
+  },
+  twitter: {
+    title: createTemplatedPageTitle("Sign in"),
+    description: `Sign in to ${SITE_NAME} and continue editing your profile page.`,
   },
 };
 
@@ -36,7 +47,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   return (
     <main className="relative flex h-full w-full flex-col justify-between gap-8">
       <div className="flex-1 basis-0">
-        <Link href={"/"}>로고</Link>
+        <Logo />
       </div>
 
       <div className="flex-1 basis-0 space-y-8">
@@ -49,7 +60,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
       <div className="flex flex-1 basis-0 items-end justify-between">
         <aside className="text-sm">
-          <div>Link in bio</div>
+          <div>{SITE_NAME}, A Link in Bio</div>
           <div>— more than a link.</div>
         </aside>
       </div>

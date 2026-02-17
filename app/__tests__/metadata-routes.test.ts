@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import manifest from "@/app/manifest";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
+import { SITE_DEFAULT_DESCRIPTION, SITE_NAME } from "@/config/seo/site";
 import { findPublicSitemapPages } from "@/service/onboarding/public-page";
 
 vi.mock("@/service/onboarding/public-page", () => ({
@@ -77,14 +78,22 @@ describe("metadata routes", () => {
     });
   });
 
-  it("manifest는 앱 이름과 아이콘 정보를 포함해야 한다", () => {
+  it("manifest는 웹매니페스트 아이콘/테마 구성을 포함해야 한다", () => {
     // Arrange
-    const expectedName = "Tsuki";
-    const expectedIcon = {
-      src: "/favicon.ico",
-      sizes: "any",
-      type: "image/x-icon",
-    };
+    const expectedName = SITE_NAME;
+    const expectedDescription = SITE_DEFAULT_DESCRIPTION;
+    const expectedIcons = [
+      {
+        src: "/android-chrome-192x192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        src: "/android-chrome-512x512.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+    ];
 
     // Act
     const manifestData = manifest();
@@ -92,7 +101,14 @@ describe("metadata routes", () => {
     // Assert
     expect(manifestData.name).toBe(expectedName);
     expect(manifestData.short_name).toBe(expectedName);
-    expect(manifestData.icons).toContainEqual(expectedIcon);
+    expect(manifestData.description).toBe(expectedDescription);
     expect(manifestData.start_url).toBe("/");
+    expect(manifestData.id).toBe("/");
+    expect(manifestData.scope).toBe("/");
+    expect(manifestData.lang).toBe("en-US");
+    expect(manifestData.display).toBe("standalone");
+    expect(manifestData.background_color).toBe("#ffffff");
+    expect(manifestData.theme_color).toBe("#ffffff");
+    expect(manifestData.icons).toEqual(expectedIcons);
   });
 });

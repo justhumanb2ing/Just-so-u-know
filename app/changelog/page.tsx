@@ -2,13 +2,24 @@ import { ChevronLeftIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { createTemplatedPageTitle } from "@/config/seo/metadata";
+import { SITE_NAME } from "@/config/seo/site";
 import { changelogEntries } from "@/service/versioning/changelog";
 
 export const metadata: Metadata = {
   title: "Changelog",
-  description: "Track product updates, improvements, and fixes in Tsuki.",
+  description: `Track product updates, improvements, and fixes in ${SITE_NAME}.`,
   alternates: {
     canonical: "/changelog",
+  },
+  openGraph: {
+    title: createTemplatedPageTitle("Changelog"),
+    description: `Track product updates, improvements, and fixes in ${SITE_NAME}.`,
+    url: "/changelog",
+  },
+  twitter: {
+    title: createTemplatedPageTitle("Changelog"),
+    description: `Track product updates, improvements, and fixes in ${SITE_NAME}.`,
   },
 };
 

@@ -45,7 +45,9 @@ bun dev
 - Metadata 조합 유틸은 `config/seo/metadata.ts`, 페이지별 메타 조합은 `service/seo/metadata.ts`를 사용한다.
 - JSON-LD 직렬화/공통 스키마는 `config/seo/json-ld.ts`, 도메인 스키마 조합은 `service/seo/json-ld.ts`를 사용한다.
 - JSON-LD 스크립트 렌더링은 `components/seo/json-ld-script.tsx`를 사용한다.
-- 기본 OG 이미지는 `app/opengraph-image.tsx`에서 `next/og` 기반으로 동적 생성한다.
+- 기본 OG 이미지는 `app/opengraph-image.tsx`에서 logo + `Just so u know` 행 레이아웃(A2Z bold, tracking-tighter)으로 동적 생성한다.
+- `/{handle}` 라우트 OG 이미지는 `app/[handle]/opengraph-image.tsx`에서 원형 프로필 이미지 + handle + (logo + 사이트명) 행 레이아웃으로 동적 생성한다.
+- `/{handle}` OG 프로필 이미지는 `png/jpg/jpeg`만 원본 이미지로 사용하고, 미지원 포맷(예: `webp`)은 원형 플레이스홀더로 폴백한다.
 - `/changelog`, `/sign-in`, `/{handle}`는 라우트별 title/description을 별도로 설정한다.
 - `sitemap.xml`은 `app/sitemap.ts`에서 생성하며, 정적 라우트와 공개 페이지 handle(`is_public=true`)을 함께 포함한다.
 - `robots.txt`는 `app/robots.ts`, 웹 앱 매니페스트는 `app/manifest.ts`에서 생성한다.

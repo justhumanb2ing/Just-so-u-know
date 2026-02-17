@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { ProfileViewTracker } from "@/components/analytics/profile-view-tracker";
+import Logo from "@/components/layout/logo";
 import { EditablePageOwnerSection } from "@/components/public-page/editable-page-owner-section";
 import { ReadonlyPageVisitorSection } from "@/components/public-page/readonly-page-visitor-section";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
@@ -58,7 +59,6 @@ export async function generateMetadata({ params }: PublicPageProps): Promise<Met
     handle: page.handle,
     name: page.name,
     bio: page.bio,
-    image: page.image,
   });
 }
 
@@ -96,6 +96,9 @@ export default async function PublicPage({ params }: PublicPageProps) {
 
   return (
     <main className="container mx-auto flex h-dvh min-h-0 flex-col items-center justify-center gap-0 overflow-hidden">
+      <aside className="fixed top-3 left-3 hidden md:flex">
+        <Logo />
+      </aside>
       {publicProfileJsonLd ? <JsonLdScript id="profile-json-ld" data={publicProfileJsonLd} /> : null}
       <ProfileViewTracker pageId={page.id} isOwner={isOwner} isPublic={page.isPublic} />
       {canEdit ? (

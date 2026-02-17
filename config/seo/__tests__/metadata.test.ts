@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createNoIndexMetadata, createOpenGraphImages, createRootMetadata, createTwitterImages } from "@/config/seo/metadata";
+import {
+  createNoIndexMetadata,
+  createOpenGraphImages,
+  createRootMetadata,
+  createTemplatedPageTitle,
+  createTwitterImages,
+} from "@/config/seo/metadata";
+import { DEFAULT_OG_IMAGE_ALT, SITE_NAME } from "@/config/seo/site";
 
 describe("config/seo/metadata.ts", () => {
   it("루트 메타데이터에 metadataBase와 기본 OG 이미지가 포함되어야 한다", () => {
@@ -14,12 +21,13 @@ describe("config/seo/metadata.ts", () => {
     expect(metadata.metadataBase?.toString()).toBe(expectedMetadataBase);
     expect(metadata.manifest).toBe(expectedManifestPath);
     expect(metadata.alternates).toBeUndefined();
+    expect(metadata.robots).toBeUndefined();
     expect(metadata.openGraph?.images).toEqual([
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Tsuki profile sharing image",
+        alt: DEFAULT_OG_IMAGE_ALT,
       },
     ]);
   });
@@ -35,6 +43,17 @@ describe("config/seo/metadata.ts", () => {
     // Assert
     expect(openGraphImages).toEqual([{ url: customImageUrl }]);
     expect(twitterImages).toEqual([customImageUrl]);
+  });
+
+  it("페이지 타이틀 템플릿은 `%s | SITE_NAME` 형태를 반환해야 한다", () => {
+    // Arrange
+    const pageTitle = "Sign in";
+
+    // Act
+    const templatedTitle = createTemplatedPageTitle(pageTitle);
+
+    // Assert
+    expect(templatedTitle).toBe(`${pageTitle} | ${SITE_NAME}`);
   });
 
   it("noindex 메타데이터는 robots 색인 차단 값을 포함해야 한다", () => {
