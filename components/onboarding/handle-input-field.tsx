@@ -3,7 +3,6 @@ import type { UseHandleAvailabilityResult } from "@/components/onboarding/use-ha
 import { Field, FieldContent, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from "@/service/onboarding/schema";
-import { SITE_DEFAULT_DESCRIPTION, SITE_URL } from "@/config/seo/site";
 
 type HandleInputFieldProps = {
   handleInput: UseHandleAvailabilityResult["handleInput"];
