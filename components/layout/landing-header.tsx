@@ -1,16 +1,13 @@
-import Link from "next/link";
-import { Clock } from "./clock";
+import Logo from "./logo";
 
 export default function LandingHeader() {
   return (
     <header className="container mx-auto py-4">
       <nav className="flex items-center justify-between">
         <aside>
-          <Link href={"/"}>로고</Link>
+          <Logo />
         </aside>
-        <aside>
-          <Clock />
-        </aside>
+        <aside></aside>
       </nav>
     </header>
   );

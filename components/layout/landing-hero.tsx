@@ -39,6 +39,7 @@ export default function LandingHero() {
           }}
         >
           <span>Creator</span>
+          <span>Streamer</span>
           <span>Designer</span>
           <span>Writer</span>
           <span>Developer</span>
