@@ -3,6 +3,7 @@ import {
   isWideShortSizeBlockedForItemType,
   resolveDefaultMapItemSizeCode,
   resolveDefaultMediaItemSizeCode,
+  resolveDefaultSectionItemSizeCode,
   resolveReorderTemporaryOffset,
 } from "@/service/page/items";
 
@@ -58,6 +59,16 @@ describe("page items reorder helpers", () => {
 
     // Assert
     expect(result).toBe("wide-tall");
+  });
+
+  test("section 아이템 기본 size_code는 wide-short를 사용한다", () => {
+    // Arrange
+
+    // Act
+    const result = resolveDefaultSectionItemSizeCode();
+
+    // Assert
+    expect(result).toBe("wide-short");
   });
 
   test("image/video 타입은 wide-short를 금지한다", () => {

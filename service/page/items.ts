@@ -43,6 +43,12 @@ export type CreateOwnedMemoItemInput = {
   content: string;
 };
 
+export type CreateOwnedSectionItemInput = {
+  storedHandle: string;
+  userId: string;
+  content: string;
+};
+
 export type CreateOwnedLinkItemInput = {
   storedHandle: string;
   userId: string;
@@ -73,6 +79,13 @@ export type CreateOwnedMediaItemInput = {
 };
 
 export type UpdateOwnedMemoItemInput = {
+  storedHandle: string;
+  userId: string;
+  itemId: string;
+  content: string;
+};
+
+export type UpdateOwnedSectionItemInput = {
   storedHandle: string;
   userId: string;
   itemId: string;
@@ -118,6 +131,7 @@ export type ReorderVisiblePageItemsInput = {
 const PAGE_ITEM_ORDER_KEY_MAX = 2147483647;
 const DEFAULT_MAP_ITEM_SIZE_CODE = "wide-full";
 const DEFAULT_MEDIA_ITEM_SIZE_CODE = "wide-tall";
+const DEFAULT_SECTION_ITEM_SIZE_CODE = "wide-short";
 
 /**
  * map 아이템 생성 시 적용할 기본 size_code를 반환한다.
@@ -131,6 +145,13 @@ export function resolveDefaultMapItemSizeCode() {
  */
 export function resolveDefaultMediaItemSizeCode() {
   return DEFAULT_MEDIA_ITEM_SIZE_CODE;
+}
+
+/**
+ * section 아이템 생성 시 적용할 기본 size_code를 반환한다.
+ */
+export function resolveDefaultSectionItemSizeCode() {
+  return DEFAULT_SECTION_ITEM_SIZE_CODE;
 }
 
 /**
@@ -239,6 +260,99 @@ export async function createOwnedMemoItem({ storedHandle, userId, content }: Cre
   }
 
   return createdItem;
+}
+
+/**
+ * 소유한 페이지에 section 아이템 1개를 생성한다.
+ * 페이지 단위 advisory lock으로 순서 키 충돌을 방지하고 제목 텍스트를 data.content에 저장한다.
+ */
+export async function createOwnedSectionItem({ storedHandle, userId, content }: CreateOwnedSectionItemInput): Promise<PageItemRow> {
+  const result = await sql<PageItemRow>`
+    with owned_page as (
+      select public.page.id
+      from public.page
+      where public.page.handle = ${storedHandle}
+        and public.page.user_id = ${userId}
+      limit 1
+    ),
+    page_lock as (
+      select pg_advisory_xact_lock(hashtext(owned_page.id::text))
+      from owned_page
+    ),
+    next_order as (
+      select
+        owned_page.id as page_id,
+        coalesce(max(public.page_item.order_key), 0) + 1 as next_order_key
+      from owned_page
+      inner join page_lock on true
+      left join public.page_item
+        on public.page_item.page_id = owned_page.id
+      group by owned_page.id
+    ),
+    inserted as (
+      insert into public.page_item (
+        page_id,
+        type_code,
+        size_code,
+        order_key,
+        data
+      )
+      select
+        next_order.page_id,
+        'section',
+        ${resolveDefaultSectionItemSizeCode()}::public.page_item_size,
+        next_order.next_order_key,
+        jsonb_build_object(
+          'content', ${content}::text
+        )
+      from next_order
+      where next_order.next_order_key <= ${PAGE_ITEM_ORDER_KEY_MAX}
+      returning
+        id,
+        page_id as "pageId",
+        type_code as "typeCode",
+        size_code as "sizeCode",
+        order_key as "orderKey",
+        data,
+        is_visible as "isVisible",
+        lock_version as "lockVersion",
+        created_at as "createdAt",
+        updated_at as "updatedAt"
+    )
+    select
+      inserted.id,
+      inserted."pageId",
+      inserted."typeCode",
+      inserted."sizeCode",
+      inserted."orderKey",
+      inserted.data,
+      inserted."isVisible",
+      inserted."lockVersion",
+      inserted."createdAt",
+      inserted."updatedAt"
+    from inserted
+  `.execute(kysely);
+
+  const createdItem = result.rows[0];
+
+  if (createdItem) {
+    return createdItem;
+  }
+
+  const ownershipResult = await sql<{ isOwner: boolean }>`
+    select exists(
+      select 1
+      from public.page
+      where public.page.handle = ${storedHandle}
+        and public.page.user_id = ${userId}
+    ) as "isOwner"
+  `.execute(kysely);
+
+  if (!ownershipResult.rows[0]?.isOwner) {
+    throw createPageItemDomainError("page not found or permission denied");
+  }
+
+  throw createPageItemDomainError("order key overflow");
 }
 
 /**
@@ -518,6 +632,43 @@ export async function updateOwnedMemoItem({
       and public.page.user_id = ${userId}
       and page_item.id = ${itemId}::uuid
       and page_item.type_code = 'memo'
+    returning
+      page_item.id,
+      page_item.page_id as "pageId",
+      page_item.type_code as "typeCode",
+      page_item.size_code as "sizeCode",
+      page_item.order_key as "orderKey",
+      page_item.data,
+      page_item.is_visible as "isVisible",
+      page_item.lock_version as "lockVersion",
+      page_item.created_at as "createdAt",
+      page_item.updated_at as "updatedAt"
+  `.execute(kysely);
+
+  return result.rows[0] ?? null;
+}
+
+/**
+ * 소유한 페이지의 section 아이템 content를 수정한다.
+ * 페이지 소유권과 아이템 타입(section) 조건을 동시에 만족해야 갱신된다.
+ */
+export async function updateOwnedSectionItem({
+  storedHandle,
+  userId,
+  itemId,
+  content,
+}: UpdateOwnedSectionItemInput): Promise<PageItemRow | null> {
+  const result = await sql<PageItemRow>`
+    update public.page_item
+    set
+      data = jsonb_set(page_item.data, '{content}', to_jsonb(${content}::text), true),
+      lock_version = page_item.lock_version + 1
+    from public.page
+    where public.page.id = page_item.page_id
+      and public.page.handle = ${storedHandle}
+      and public.page.user_id = ${userId}
+      and page_item.id = ${itemId}::uuid
+      and page_item.type_code = 'section'
     returning
       page_item.id,
       page_item.page_id as "pageId",

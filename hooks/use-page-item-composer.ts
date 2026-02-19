@@ -115,7 +115,10 @@ export type PageItemComposerController = {
   draft: ItemDraftState | null;
   items: PageItem[];
   focusRequestId: number;
+  sectionFocusItemId: string | null;
+  sectionFocusRequestId: number;
   handleOpenComposer: () => void;
+  handleCreateSectionItem: () => Promise<boolean>;
   handleOpenLinkDraft: () => void;
   handleDraftChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
   handleRemoveDraft: () => void;
@@ -124,6 +127,8 @@ export type PageItemComposerController = {
   handleCreateMediaItemFromFile: (file: File) => Promise<boolean>;
   handleUpdateMapItem: (itemId: string, payload: MapItemCreatePayload) => Promise<boolean>;
   handleItemMemoChange: (itemId: string, nextValue: string) => void;
+  handleItemSectionChange: (itemId: string, nextValue: string) => void;
+  handleItemSectionSubmit: (itemId: string) => void;
   handleItemLinkTitleChange: (itemId: string, nextValue: string) => void;
   handleItemLinkTitleSubmit: (itemId: string) => void;
   handleItemResize: (itemId: string, nextSizeCode: PageItemSizeCode) => void;
@@ -167,7 +172,14 @@ export type MapItemView = {
   googleMapUrl: string;
 };
 
-type ItemCreateFeatureName = "item_create_memo" | "item_create_link" | "item_create_map" | "item_create_image" | "item_create_video";
+type ItemCreateFeatureName =
+  | "item_create_memo"
+  | "item_create_section"
+  | "item_create_link"
+  | "item_create_map"
+  | "item_create_image"
+  | "item_create_video";
+const DEFAULT_SECTION_ITEM_CONTENT = "Section";
 
 /**
  * 페이지 아이템 생성 성공 이벤트를 `feature_use` 포맷으로 전송한다.
@@ -386,6 +398,25 @@ export function resolveMemoItemContent(item: PageItem) {
 }
 
 /**
+ * section 아이템 데이터에서 content를 추출한다.
+ */
+export function resolveSectionItemContent(item: PageItem) {
+  const data = toObjectData(item.data);
+
+  if (!data) {
+    return "";
+  }
+
+  const content = data.content;
+
+  if (typeof content !== "string") {
+    return "";
+  }
+
+  return normalizeLinkTitleInput(content);
+}
+
+/**
  * link 아이템 데이터에서 title을 추출한다.
  */
 export function resolveLinkItemTitle(item: PageItem) {
@@ -559,6 +590,17 @@ function mergeMemoItemDataContent(data: unknown, content: string) {
 }
 
 /**
+ * section data에 content를 주입한 새 객체를 반환한다.
+ */
+function mergeSectionItemDataContent(data: unknown, content: string) {
+  const nextData = toObjectData(data) ?? {};
+  return {
+    ...nextData,
+    content,
+  };
+}
+
+/**
  * link data에 title을 주입한 새 객체를 반환한다.
  */
 function mergeLinkItemDataTitle(data: unknown, title: string) {
@@ -604,6 +646,32 @@ export function updateMemoItemContent(items: PageItem[], itemId: string, content
     return {
       ...item,
       data: mergeMemoItemDataContent(item.data, content),
+    };
+  });
+
+  return hasChanged ? nextItems : items;
+}
+
+/**
+ * 아이템 목록에서 특정 section 아이템의 content를 낙관적으로 갱신한다.
+ */
+export function updateSectionItemContent(items: PageItem[], itemId: string, content: string) {
+  let hasChanged = false;
+
+  const nextItems = items.map((item) => {
+    if (item.id !== itemId || item.typeCode !== "section") {
+      return item;
+    }
+
+    if (resolveSectionItemContent(item) === content) {
+      return item;
+    }
+
+    hasChanged = true;
+
+    return {
+      ...item,
+      data: mergeSectionItemDataContent(item.data, content),
     };
   });
 
@@ -819,7 +887,7 @@ export function resolveLinkItemCreatePayloadFromCrawl(crawlResponse: CrawlRespon
 }
 
 /**
- * memo/link 타입 생성과 아이템 수정/삭제를 관리한다.
+ * memo/section/link 타입 생성과 아이템 수정/삭제를 관리한다.
  */
 export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemComposerParams): PageItemComposerController {
   const normalizedInitialItemsRef = useRef<PageItem[] | null>(null);
@@ -831,12 +899,17 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
   const [draft, setDraft] = useState<ItemDraftState | null>(null);
   const [items, setItems] = useState<PageItem[]>(() => normalizedInitialItemsRef.current ?? []);
   const [focusRequestId, setFocusRequestId] = useState(0);
+  const [sectionFocusItemId, setSectionFocusItemId] = useState<string | null>(null);
+  const [sectionFocusRequestId, setSectionFocusRequestId] = useState(0);
   const trackPageDbWrite = useTrackPageDbWrite();
   const draftRef = useRef<ItemDraftState | null>(null);
   const itemsRef = useRef<PageItem[]>(items);
   const memoSaveTimerMapRef = useRef<Map<string, number>>(new Map());
   const memoPersistInFlightIdsRef = useRef<Set<string>>(new Set());
   const memoPersistQueuedIdsRef = useRef<Set<string>>(new Set());
+  const sectionSaveTimerMapRef = useRef<Map<string, number>>(new Map());
+  const sectionPersistInFlightIdsRef = useRef<Set<string>>(new Set());
+  const sectionPersistQueuedIdsRef = useRef<Set<string>>(new Set());
   const linkTitleSaveTimerMapRef = useRef<Map<string, number>>(new Map());
   const linkTitlePersistInFlightIdsRef = useRef<Set<string>>(new Set());
   const linkTitlePersistQueuedIdsRef = useRef<Set<string>>(new Set());
@@ -865,6 +938,10 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         window.clearTimeout(timerId);
       }
 
+      for (const timerId of sectionSaveTimerMapRef.current.values()) {
+        window.clearTimeout(timerId);
+      }
+
       for (const timerId of linkTitleSaveTimerMapRef.current.values()) {
         window.clearTimeout(timerId);
       }
@@ -876,6 +953,9 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       memoSaveTimerMapRef.current.clear();
       memoPersistInFlightIdsRef.current.clear();
       memoPersistQueuedIdsRef.current.clear();
+      sectionSaveTimerMapRef.current.clear();
+      sectionPersistInFlightIdsRef.current.clear();
+      sectionPersistQueuedIdsRef.current.clear();
       linkTitleSaveTimerMapRef.current.clear();
       linkTitlePersistInFlightIdsRef.current.clear();
       linkTitlePersistQueuedIdsRef.current.clear();
@@ -963,6 +1043,56 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       toast.error("Failed to save item", {
         description: message,
       });
+    }
+  }, [handle, trackPageDbWrite]);
+
+  /**
+   * section 아이템을 생성하고 생성 직후 input 포커스를 요청한다.
+   */
+  const handleCreateSectionItem = useCallback(async () => {
+    try {
+      const payload = await trackPageDbWrite(async () => {
+        const response = await fetch(buildPageItemsEndpoint(handle), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "section",
+            data: {
+              content: DEFAULT_SECTION_ITEM_CONTENT,
+            },
+          }),
+        });
+
+        const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+        if (!response.ok || payload.status !== "success") {
+          throw new Error(payload.status === "error" ? payload.message : "Failed to create item.");
+        }
+
+        return payload;
+      });
+
+      const createdItem = normalizeCreatedItem(payload.item);
+      itemLastSyncedSizeCodeMapRef.current.set(createdItem.id, createdItem.sizeCode);
+      setItems((prevItems) => {
+        const nextItems = sortPageItems([...prevItems, createdItem]);
+        itemLastSyncedOrderIdsRef.current = resolvePageItemIds(nextItems);
+        return nextItems;
+      });
+      trackItemCreateFeatureUse(handle, "item_create_section");
+      setSectionFocusItemId(createdItem.id);
+      setSectionFocusRequestId((prevValue) => prevValue + 1);
+
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create item.";
+
+      toast.error("Failed to create section", {
+        description: message,
+      });
+      return false;
     }
   }, [handle, trackPageDbWrite]);
 
@@ -1353,6 +1483,88 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     };
   }, [draft, persistDraft]);
 
+  /**
+   * section 아이템 content를 서버에 저장한다.
+   * 동일 아이템은 단일 in-flight 요청만 허용하고, 중복 요청은 마지막 상태로 재실행한다.
+   */
+  const persistItemSection = useCallback(
+    async (itemId: string) => {
+      if (sectionPersistInFlightIdsRef.current.has(itemId)) {
+        sectionPersistQueuedIdsRef.current.add(itemId);
+        return;
+      }
+
+      const targetItem = itemsRef.current.find((item) => item.id === itemId);
+
+      if (!targetItem || targetItem.typeCode !== "section") {
+        return;
+      }
+
+      const content = resolveSectionItemContent(targetItem);
+
+      if (!hasMeaningfulItemContent(content)) {
+        return;
+      }
+
+      sectionPersistInFlightIdsRef.current.add(itemId);
+
+      try {
+        const payload = await trackPageDbWrite(async () => {
+          const response = await fetch(buildPageItemEndpoint(handle, itemId), {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: "section",
+              data: {
+                content,
+              },
+            }),
+          });
+
+          const payload = (await response.json()) as PersistedPageItemApiResponse | ErrorApiResponse;
+
+          if (!response.ok || payload.status !== "success") {
+            throw new Error(payload.status === "error" ? payload.message : "Failed to update item.");
+          }
+
+          return payload;
+        });
+
+        const updatedItem = normalizeCreatedItem(payload.item);
+
+        setItems((prevItems) =>
+          prevItems.map((item) => {
+            if (item.id !== itemId) {
+              return item;
+            }
+
+            return {
+              ...item,
+              data: updatedItem.data,
+              updatedAt: updatedItem.updatedAt,
+            };
+          }),
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to update item.";
+
+        toast.error("Failed to update item", {
+          description: message,
+        });
+      } finally {
+        sectionPersistInFlightIdsRef.current.delete(itemId);
+
+        if (sectionPersistQueuedIdsRef.current.has(itemId)) {
+          sectionPersistQueuedIdsRef.current.delete(itemId);
+          void persistItemSection(itemId);
+        }
+      }
+    },
+    [handle, trackPageDbWrite],
+  );
+
   const persistItemMemo = useCallback(
     async (itemId: string) => {
       if (memoPersistInFlightIdsRef.current.has(itemId)) {
@@ -1700,6 +1912,24 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     [persistItemMemo],
   );
 
+  const scheduleSectionPersist = useCallback(
+    (itemId: string) => {
+      const activeTimerId = sectionSaveTimerMapRef.current.get(itemId);
+
+      if (activeTimerId) {
+        window.clearTimeout(activeTimerId);
+      }
+
+      const nextTimerId = window.setTimeout(() => {
+        sectionSaveTimerMapRef.current.delete(itemId);
+        void persistItemSection(itemId);
+      }, ITEM_COMPOSER_AUTOSAVE_DEBOUNCE_MS);
+
+      sectionSaveTimerMapRef.current.set(itemId, nextTimerId);
+    },
+    [persistItemSection],
+  );
+
   const scheduleLinkTitlePersist = useCallback(
     (itemId: string) => {
       const activeTimerId = linkTitleSaveTimerMapRef.current.get(itemId);
@@ -1727,6 +1957,17 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     }
 
     memoPersistQueuedIdsRef.current.delete(itemId);
+  }, []);
+
+  const cancelSectionPersist = useCallback((itemId: string) => {
+    const activeTimerId = sectionSaveTimerMapRef.current.get(itemId);
+
+    if (activeTimerId) {
+      window.clearTimeout(activeTimerId);
+      sectionSaveTimerMapRef.current.delete(itemId);
+    }
+
+    sectionPersistQueuedIdsRef.current.delete(itemId);
   }, []);
 
   const cancelLinkTitlePersist = useCallback((itemId: string) => {
@@ -1814,6 +2055,24 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     [scheduleMemoPersist],
   );
 
+  const handleItemSectionChange = useCallback(
+    (itemId: string, nextValue: string) => {
+      const normalizedValue = normalizeLinkTitleInput(nextValue);
+
+      setItems((prevItems) => updateSectionItemContent(prevItems, itemId, normalizedValue));
+      scheduleSectionPersist(itemId);
+    },
+    [scheduleSectionPersist],
+  );
+
+  const handleItemSectionSubmit = useCallback(
+    (itemId: string) => {
+      cancelSectionPersist(itemId);
+      void persistItemSection(itemId);
+    },
+    [cancelSectionPersist, persistItemSection],
+  );
+
   const handleItemLinkTitleChange = useCallback(
     (itemId: string, nextValue: string) => {
       const normalizedValue = normalizeLinkTitleInput(nextValue);
@@ -1881,8 +2140,11 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       }
       itemOrderPersistQueuedRef.current = false;
       cancelMemoPersist(itemId);
+      cancelSectionPersist(itemId);
       cancelLinkTitlePersist(itemId);
       itemLastSyncedSizeCodeMapRef.current.delete(itemId);
+      sectionPersistQueuedIdsRef.current.delete(itemId);
+      sectionPersistInFlightIdsRef.current.delete(itemId);
       linkTitlePersistQueuedIdsRef.current.delete(itemId);
       linkTitlePersistInFlightIdsRef.current.delete(itemId);
       itemSizePersistQueuedIdsRef.current.delete(itemId);
@@ -1917,14 +2179,17 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         }
       })();
     },
-    [cancelLinkTitlePersist, cancelMemoPersist, handle, trackPageDbWrite],
+    [cancelLinkTitlePersist, cancelMemoPersist, cancelSectionPersist, handle, trackPageDbWrite],
   );
 
   return {
     draft,
     items,
     focusRequestId,
+    sectionFocusItemId,
+    sectionFocusRequestId,
     handleOpenComposer,
+    handleCreateSectionItem,
     handleOpenLinkDraft,
     handleDraftChange,
     handleRemoveDraft,
@@ -1933,6 +2198,8 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
     handleCreateMediaItemFromFile,
     handleUpdateMapItem,
     handleItemMemoChange,
+    handleItemSectionChange,
+    handleItemSectionSubmit,
     handleItemLinkTitleChange,
     handleItemLinkTitleSubmit,
     handleItemResize,

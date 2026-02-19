@@ -54,9 +54,15 @@ type ItemListProps = {
   withBottomSpacing?: boolean;
   draftItem?: ReactNode;
   draftState?: DraftItemAnimationState | null;
+  sectionFocus?: {
+    itemId: string | null;
+    requestId: number;
+  };
   dndContextId?: string;
   itemActions?: EditableItemActions;
   onMemoChange?: (itemId: string, nextValue: string) => void;
+  onSectionChange?: (itemId: string, nextValue: string) => void;
+  onSectionSubmit?: (itemId: string) => void;
   onLinkTitleChange?: (itemId: string, nextValue: string) => void;
   onLinkTitleSubmit?: (itemId: string) => void;
   onItemReorder?: (activeItemId: string, overItemId: string) => void;
@@ -88,6 +94,9 @@ type SortableItemCardProps = {
   item: PageItem;
   itemActions?: EditableItemActions;
   onMemoChange?: (itemId: string, nextValue: string) => void;
+  onSectionChange?: (itemId: string, nextValue: string) => void;
+  onSectionSubmit?: (itemId: string) => void;
+  sectionAutoFocusRequestId?: number;
   onLinkTitleChange?: (itemId: string, nextValue: string) => void;
   onLinkTitleSubmit?: (itemId: string) => void;
   reorderEnabled?: boolean;
@@ -134,6 +143,14 @@ const PAGE_ITEM_CARD_STYLE_CONFIG_MAP: Record<string, PageItemCardStyleConfig> =
   memo: {
     className: "overflow-visible",
   },
+  section: {
+    className: "mt-4 overflow-visible bg-transparent p-2 transition-shadow duration-150 hover:shadow-sm",
+    sizeClassByCode: {
+      "wide-short": "h-auto min-h-16",
+      "wide-tall": "h-auto min-h-16",
+      "wide-full": "h-auto min-h-16",
+    },
+  },
   link: {
     className: "overflow-visible p-2 flex flex-col justify-center",
   },
@@ -152,6 +169,10 @@ const PAGE_ITEM_CARD_STYLE_CONFIG_MAP: Record<string, PageItemCardStyleConfig> =
  * 아이템 타입/사이즈 조합 기준으로 리사이즈 옵션 비활성화 여부를 계산한다.
  */
 export function isItemResizeOptionDisabled(itemTypeCode: string, sizeCode: PageItem["sizeCode"]) {
+  if (itemTypeCode === "section") {
+    return true;
+  }
+
   if (itemTypeCode === "link") {
     return sizeCode !== "wide-short";
   }
@@ -312,6 +333,8 @@ function DraftItemCard({ draft, focusRequestId, onDraftChange, onDraftRemove }: 
 }
 
 function EditableItemActionControls({ item, itemActions }: { item: PageItem; itemActions: EditableItemActions }) {
+  const shouldHideResizeOptions = item.typeCode === "section";
+
   return (
     <>
       <motion.button
@@ -329,50 +352,52 @@ function EditableItemActionControls({ item, itemActions }: { item: PageItem; ite
       >
         <TrashIcon className="size-4" strokeWidth={3} />
       </motion.button>
-      <ButtonGroup
-        aria-label="Item size options"
-        orientation={"horizontal"}
-        data-no-dnd="true"
-        className={cn(
-          PUBLIC_PAGE_ITEM_RESIZE_GROUP_CLASSNAME,
-          "phantom-border gap-1 rounded-sm p-1.5 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
-        )}
-      >
-        {PAGE_ITEM_RESIZE_OPTIONS.map((option) => {
-          const isSelected = option.sizeCode === item.sizeCode;
-          const isOptionDisabled = isItemResizeOptionDisabled(item.typeCode, option.sizeCode);
+      {shouldHideResizeOptions ? null : (
+        <ButtonGroup
+          aria-label="Item size options"
+          orientation={"horizontal"}
+          data-no-dnd="true"
+          className={cn(
+            PUBLIC_PAGE_ITEM_RESIZE_GROUP_CLASSNAME,
+            "phantom-border gap-1 rounded-sm p-1.5 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+          )}
+        >
+          {PAGE_ITEM_RESIZE_OPTIONS.map((option) => {
+            const isSelected = option.sizeCode === item.sizeCode;
+            const isOptionDisabled = isItemResizeOptionDisabled(item.typeCode, option.sizeCode);
 
-          return (
-            <motion.button
-              key={option.sizeCode}
-              type="button"
-              data-no-dnd="true"
-              aria-label={option.ariaLabel}
-              disabled={isOptionDisabled}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
+            return (
+              <motion.button
+                key={option.sizeCode}
+                type="button"
+                data-no-dnd="true"
+                aria-label={option.ariaLabel}
+                disabled={isOptionDisabled}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
 
-                if (isOptionDisabled) {
-                  return;
-                }
+                  if (isOptionDisabled) {
+                    return;
+                  }
 
-                itemActions.onResize(item.id, option.sizeCode);
-              }}
-              className={cn(
-                buttonVariants({ size: "icon-xs", variant: "ghost" }),
-                "size-7 rounded-[4px]! border-0 p-0 text-background hover:bg-background/20 hover:text-background",
-                isSelected && "bg-background text-foreground hover:bg-background hover:text-foreground",
-                isOptionDisabled && "cursor-not-allowed opacity-45 hover:bg-transparent hover:text-background",
-              )}
-              whileTap={ITEM_REMOVE_TAP}
-              transition={ITEM_BUTTON_TRANSITION}
-            >
-              {option.icon}
-            </motion.button>
-          );
-        })}
-      </ButtonGroup>
+                  itemActions.onResize(item.id, option.sizeCode);
+                }}
+                className={cn(
+                  buttonVariants({ size: "icon-xs", variant: "ghost" }),
+                  "size-7 rounded-[4px]! border-0 p-0 text-background hover:bg-background/20 hover:text-background",
+                  isSelected && "bg-background text-foreground hover:bg-background hover:text-foreground",
+                  isOptionDisabled && "cursor-not-allowed opacity-45 hover:bg-transparent hover:text-background",
+                )}
+                whileTap={ITEM_REMOVE_TAP}
+                transition={ITEM_BUTTON_TRANSITION}
+              >
+                {option.icon}
+              </motion.button>
+            );
+          })}
+        </ButtonGroup>
+      )}
     </>
   );
 }
@@ -381,6 +406,9 @@ function SortableItemCard({
   item,
   itemActions,
   onMemoChange,
+  onSectionChange,
+  onSectionSubmit,
+  sectionAutoFocusRequestId = 0,
   onLinkTitleChange,
   onLinkTitleSubmit,
   reorderEnabled = false,
@@ -431,6 +459,7 @@ function SortableItemCard({
           isDragging && "opacity-0",
           (item.typeCode === "memo" || item.typeCode === "map" || item.typeCode === "image" || item.typeCode === "video") &&
             "h-full min-h-0 overflow-hidden",
+          item.typeCode === "section" && "flex h-full w-full items-center",
         )}
       >
         {itemActions ? <EditableItemActionControls item={item} itemActions={itemActions} /> : null}
@@ -438,6 +467,10 @@ function SortableItemCard({
           item={item}
           canEditMemo={Boolean(itemActions)}
           onMemoChange={onMemoChange}
+          canEditSection={Boolean(itemActions)}
+          onSectionChange={onSectionChange}
+          onSectionSubmit={onSectionSubmit}
+          sectionAutoFocusRequestId={sectionAutoFocusRequestId}
           canEditLinkTitle={Boolean(itemActions)}
           onLinkTitleChange={onLinkTitleChange}
           onLinkTitleSubmit={onLinkTitleSubmit}
@@ -454,9 +487,12 @@ function ItemList({
   withBottomSpacing = false,
   draftItem,
   draftState = null,
+  sectionFocus,
   dndContextId,
   itemActions,
   onMemoChange,
+  onSectionChange,
+  onSectionSubmit,
   onLinkTitleChange,
   onLinkTitleSubmit,
   onItemReorder,
@@ -542,6 +578,9 @@ function ItemList({
           item={item}
           itemActions={itemActions}
           onMemoChange={onMemoChange}
+          onSectionChange={onSectionChange}
+          onSectionSubmit={onSectionSubmit}
+          sectionAutoFocusRequestId={sectionFocus?.itemId === item.id ? sectionFocus.requestId : 0}
           onLinkTitleChange={onLinkTitleChange}
           onLinkTitleSubmit={onLinkTitleSubmit}
           reorderEnabled={isReorderEnabled}
@@ -566,6 +605,9 @@ function ItemList({
                 item={item}
                 itemActions={itemActions}
                 onMemoChange={onMemoChange}
+                onSectionChange={onSectionChange}
+                onSectionSubmit={onSectionSubmit}
+                sectionAutoFocusRequestId={sectionFocus?.itemId === item.id ? sectionFocus.requestId : 0}
                 onLinkTitleChange={onLinkTitleChange}
                 onLinkTitleSubmit={onLinkTitleSubmit}
                 reorderEnabled={isReorderEnabled}
@@ -688,6 +730,12 @@ export function EditablePageItemSection({ handle, initialItems = [], composerApp
         dndContextId={`page-item-sortable-${encodeURIComponent(handle)}`}
         itemActions={itemActions}
         onMemoChange={controller.handleItemMemoChange}
+        onSectionChange={controller.handleItemSectionChange}
+        onSectionSubmit={controller.handleItemSectionSubmit}
+        sectionFocus={{
+          itemId: controller.sectionFocusItemId,
+          requestId: controller.sectionFocusRequestId,
+        }}
         onLinkTitleChange={controller.handleItemLinkTitleChange}
         onLinkTitleSubmit={controller.handleItemLinkTitleSubmit}
         onItemReorder={controller.handleItemReorder}
@@ -696,6 +744,7 @@ export function EditablePageItemSection({ handle, initialItems = [], composerApp
         <ItemComposerBar
           hasDraft={Boolean(controller.draft)}
           onOpenComposer={controller.handleOpenComposer}
+          onCreateSectionItem={controller.handleCreateSectionItem}
           ogController={ogController}
           onSaveMapItem={controller.handleCreateMapItem}
           onCreateMediaItemFromFile={controller.handleCreateMediaItemFromFile}

@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Popover, PopoverPanel, PopoverTrigger } from "@/components/animate-ui/components/base/popover";
 import { Tooltip, TooltipPanel, TooltipTrigger } from "@/components/animate-ui/components/base/tooltip";
+import { TextInitialIcon } from "@/components/icons/text-initial-icon";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { OgCrawlController } from "@/hooks/use-og-crawl";
@@ -24,6 +25,7 @@ const PageItemLocationDialog = dynamic(() => import("./page-item-location-dialog
 type ItemComposerBarProps = {
   hasDraft: boolean;
   onOpenComposer: () => void;
+  onCreateSectionItem: () => Promise<boolean>;
   ogController: OgCrawlController;
   onSaveMapItem: (payload: MapItemCreatePayload) => Promise<boolean>;
   onCreateMediaItemFromFile: (file: File) => Promise<boolean>;
@@ -72,6 +74,7 @@ function ComposerTooltipButton({ tooltipText, ...props }: ComposerTooltipButtonP
 export function ItemComposerBar({
   hasDraft,
   onOpenComposer,
+  onCreateSectionItem,
   ogController,
   onSaveMapItem,
   onCreateMediaItemFromFile,
@@ -81,6 +84,7 @@ export function ItemComposerBar({
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isMediaUploadPending, setIsMediaUploadPending] = useState(false);
+  const [isSectionCreatePending, setIsSectionCreatePending] = useState(false);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
   const shouldReduceMotion = useReducedMotion() ?? false;
 
@@ -207,6 +211,31 @@ export function ItemComposerBar({
             className={cn("gap-1.5", hasDraft ? "border-primary/60" : undefined)}
           >
             <StickyNoteIcon className="size-5" strokeWidth={2.5} />
+          </ComposerTooltipButton>
+          <ComposerTooltipButton
+            aria-label="Add section item"
+            tooltipText="Section"
+            className={cn("gap-1.5")}
+            disabled={isSectionCreatePending}
+            onClick={async () => {
+              if (isSectionCreatePending) {
+                return;
+              }
+
+              setIsSectionCreatePending(true);
+
+              try {
+                await onCreateSectionItem();
+              } catch {
+                toast.error("Failed to create section", {
+                  description: "Please try again.",
+                });
+              } finally {
+                setIsSectionCreatePending(false);
+              }
+            }}
+          >
+            <TextInitialIcon className="size-5" />
           </ComposerTooltipButton>
           <ComposerTooltipButton
             aria-label="Add image and video item"

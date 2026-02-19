@@ -52,6 +52,22 @@ describe("page item renderers", () => {
     expect(result).toBe("memo content");
   });
 
+  test("section 타입은 content 필드를 표시 텍스트로 사용한다", () => {
+    // Arrange
+    const item = createItem({
+      typeCode: "section",
+      data: {
+        content: "Section title",
+      },
+    });
+
+    // Act
+    const result = resolvePageItemDisplayText(item);
+
+    // Assert
+    expect(result).toBe("Section title");
+  });
+
   test("link 타입은 title/url 순서로 텍스트를 선택한다", () => {
     // Arrange
     const item = createItem({
@@ -122,6 +138,35 @@ describe("page item renderers", () => {
     // Assert
     expect(onLinkTitleSubmit).toHaveBeenCalledTimes(1);
     expect(onLinkTitleSubmit).toHaveBeenCalledWith("item-1");
+  });
+
+  test("소유자 모드 section input에서 Enter 입력 시 저장 콜백을 호출한다", () => {
+    // Arrange
+    const onSectionSubmit = vi.fn();
+    const onSectionChange = vi.fn();
+    const item = createItem({
+      typeCode: "section",
+      data: {
+        content: "My Section",
+      },
+    });
+    const SectionRenderer = getPageItemRenderer("section");
+
+    // Act
+    render(
+      SectionRenderer({
+        item,
+        canEditSection: true,
+        onSectionChange,
+        onSectionSubmit,
+      }),
+    );
+    const input = screen.getByPlaceholderText("Section");
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+
+    // Assert
+    expect(onSectionSubmit).toHaveBeenCalledTimes(1);
+    expect(onSectionSubmit).toHaveBeenCalledWith("item-1");
   });
 
   test("image 타입은 alt/caption/title/src 순서로 텍스트를 선택한다", () => {

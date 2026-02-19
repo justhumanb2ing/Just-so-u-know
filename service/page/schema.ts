@@ -26,6 +26,16 @@ const memoContentSchema = z
   });
 
 /**
+ * 섹션 아이템 제목 입력은 단일 라인으로 정규화하고 빈 문자열을 거부한다.
+ */
+const sectionContentSchema = z
+  .string()
+  .transform((value) => value.replace(LINK_TITLE_LINE_BREAK_PATTERN, " ").trim())
+  .refine((value) => value.length > 0, {
+    message: "Section content is required.",
+  });
+
+/**
  * 링크 아이템 title 입력은 단일 라인으로 정규화하고 빈 문자열을 거부한다.
  */
 const linkTitleSchema = z
@@ -108,6 +118,13 @@ const pageItemLinkCreateSchema = z.object({
   }),
 });
 
+const pageItemSectionCreateSchema = z.object({
+  type: z.literal("section"),
+  data: z.object({
+    content: sectionContentSchema,
+  }),
+});
+
 const mapCaptionSchema = z
   .string()
   .optional()
@@ -165,10 +182,11 @@ const pageItemVideoCreateSchema = z.object({
 
 /**
  * 페이지 아이템 생성 API 입력을 검증한다.
- * 현재는 memo/link/map/image/video 타입 생성을 지원한다.
+ * 현재는 memo/section/link/map/image/video 타입 생성을 지원한다.
  */
 export const pageItemCreateSchema = z.discriminatedUnion("type", [
   pageItemMemoCreateSchema,
+  pageItemSectionCreateSchema,
   pageItemLinkCreateSchema,
   pageItemMapCreateSchema,
   pageItemImageCreateSchema,
@@ -188,6 +206,13 @@ const pageItemLinkUpdateSchema = z.object({
   type: z.literal("link"),
   data: z.object({
     title: linkTitleSchema,
+  }),
+});
+
+const pageItemSectionUpdateSchema = z.object({
+  type: z.literal("section"),
+  data: z.object({
+    content: sectionContentSchema,
   }),
 });
 
@@ -233,10 +258,11 @@ export const pageItemReorderSchema = z
 
 /**
  * 페이지 아이템 수정 API 입력을 검증한다.
- * 현재는 memo content, link title, map data, size_code 수정을 지원한다.
+ * 현재는 memo/section content, link title, map data, size_code 수정을 지원한다.
  */
 export const pageItemUpdateSchema = z.discriminatedUnion("type", [
   pageItemMemoUpdateSchema,
+  pageItemSectionUpdateSchema,
   pageItemLinkUpdateSchema,
   pageItemMapUpdateSchema,
   pageItemSizeUpdateSchema,

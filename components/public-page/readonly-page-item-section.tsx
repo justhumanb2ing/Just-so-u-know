@@ -28,7 +28,15 @@ const DEFAULT_PAGE_ITEM_CARD_STYLE_CONFIG: PageItemCardStyleConfig = {
 
 const PAGE_ITEM_CARD_STYLE_CONFIG_MAP: Record<string, PageItemCardStyleConfig> = {
   memo: {
-    className: "overflow-visible",
+    className: "overflow-hidden",
+  },
+  section: {
+    className: "mt-4 overflow-visible bg-transparent p-2",
+    sizeClassByCode: {
+      "wide-short": "h-auto min-h-16",
+      "wide-tall": "h-auto min-h-16",
+      "wide-full": "h-auto min-h-16",
+    },
   },
   link: {
     className: "overflow-visible p-2 flex flex-col justify-center",
@@ -69,10 +77,16 @@ function ReadonlyMemoItem({ item }: { item: ReadonlyPageItem }) {
   const displayText = memoContent.length > 0 ? memoContent : fallbackText;
 
   return (
-    <p className="wrap-break-word h-full min-h-0 w-full whitespace-pre-wrap rounded-sm p-2 font-medium text-base! leading-relaxed">
+    <p className="scrollbar-hide wrap-break-word h-full min-h-0 w-full overflow-y-auto whitespace-pre-wrap rounded-sm p-2 font-medium text-base! leading-relaxed">
       {displayText}
     </p>
   );
+}
+
+function ReadonlySectionItem({ item }: { item: ReadonlyPageItem }) {
+  const displayText = resolveReadonlyPageItemDisplayText(item);
+
+  return <p className="wrap-break-word h-fit w-full whitespace-pre-wrap p-2 font-bold text-lg! leading-relaxed">{displayText}</p>;
 }
 
 function ReadonlyLinkItem({ item }: { item: ReadonlyPageItem }) {
@@ -207,6 +221,10 @@ function renderReadonlyItemContent(item: ReadonlyPageItem): ReactNode {
 
   if (item.typeCode === "link") {
     return <ReadonlyLinkItem item={item} />;
+  }
+
+  if (item.typeCode === "section") {
+    return <ReadonlySectionItem item={item} />;
   }
 
   if (item.typeCode === "image") {

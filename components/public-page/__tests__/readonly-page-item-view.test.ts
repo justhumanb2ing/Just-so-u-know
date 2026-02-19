@@ -96,6 +96,27 @@ describe("readonly page item view", () => {
     expect(result).toBe("Seoul City Hall");
   });
 
+  it("section 타입은 content를 읽기 전용 표시 텍스트로 사용한다", () => {
+    // Arrange
+    const item = {
+      id: "section-1",
+      typeCode: "section",
+      sizeCode: "wide-short",
+      orderKey: 2,
+      data: {
+        content: "Section Title",
+      },
+      createdAt: "2026-02-13T00:00:00.000Z",
+      updatedAt: "2026-02-13T00:00:00.000Z",
+    } satisfies ReadonlyPageItem;
+
+    // Act
+    const result = resolveReadonlyPageItemDisplayText(item);
+
+    // Assert
+    expect(result).toBe("Section Title");
+  });
+
   it("map 뷰 모델은 좌표 기반 fallback 링크를 생성하고 캡션 줄바꿈을 정규화한다", () => {
     // Arrange
     const item = {

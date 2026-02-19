@@ -67,7 +67,7 @@ bun dev
 - `page_id`가 포함된 이벤트는 Umami `url` 값을 `/page/{page_id}`로 오버라이드해 handle 변경 전/후 로그가 분산되지 않도록 관리한다.
 - 이벤트 래퍼와 스키마는 `service/analytics/tracker.ts`, `service/analytics/schema.ts`에서 관리한다.
 - `feature_use` 이벤트는 현재 다음 성공 액션에 연결되어 있다.
-- `item_create_{memo|link|map|image|video}`: 아이템 생성 성공 시
+- `item_create_{memo|section|link|map|image|video}`: 아이템 생성 성공 시
 - `social_accounts_connect`: 소셜 계정 배치 저장 성공 시
 - `page_visibility_toggle`: 공개/비공개 토글 성공 시
 - `page_handle_update`: handle 변경 성공 시 (동일 handle 재제출 제외)
@@ -115,6 +115,7 @@ bun dev
 - 로그아웃 성공 시 루트(`/`)로 이동하지 않고 현재 URL을 유지한 채 페이지를 갱신한다.
 - 소유자 화면의 아이템 생성 입력은 하단 고정 컴포넌트(`page-item-composer-bar`)로 분리되어 동작한다.
 - 소유자 화면 하단 바의 `Add Link` 팝오버에서 링크 URL을 입력해 `GET /api/page/og`로 OG를 조회할 수 있다. (`http/https` 미입력 시 `https://` 자동 보정)
+- 소유자 화면 하단 바의 `Section` 버튼 클릭 시 기본 `wide-short` 크기의 `section` 아이템이 즉시 생성된다.
 - OG 조회 성공 시 `data.url`/`data.title`/`data.favicon`을 기준으로 `link` 아이템이 즉시 생성되며, 생성 성공 시 팝오버 닫힘 + 입력 초기화가 수행된다.
 - OG 응답의 `title` 또는 `data.url`이 비어있으면 링크 아이템 저장을 시도하지 않는다.
 - OG 조회 실패 시 에러 toast를 표시한다.
@@ -139,9 +140,13 @@ bun dev
 - 방문자 읽기 화면의 `map` 아이템은 읽기 전용 지도 미리보기와 캡션, `Open in Google Maps` 외부 링크 버튼을 함께 렌더링한다.
 - 위치 저장 요청 진행 중에는 저장 버튼 라벨이 `Saving...`으로 바뀌고 버튼이 비활성화된다.
 - `memo` 아이템은 카드 본문에서 `textarea`로 직접 수정되며, 비소유자는 동일 UI를 비활성화 상태로만 확인할 수 있다.
+- `section` 아이템은 카드 본문에서 `input`으로 직접 수정되며, 기본 텍스트 스타일은 `font-bold`다.
+- `section` 아이템 카드는 `bg-transparent`, `mt-12` 스타일을 사용하고 hover 시 부모 래퍼에는 shadow만 적용된다.
+- `section` 아이템은 hover 시 리사이즈 옵션 그룹을 노출하지 않는다.
+- 소유자 `section` input에서 Enter 입력은 즉시 저장을 트리거하며, 자동 저장 중에도 input focus를 유지한다.
 - `link` 아이템은 favicon(`48x48`)과 title만 렌더링한다. favicon 클릭 시 외부 링크로 이동하며, favicon이 없으면 `/no-favicon.png`를 사용한다.
-- 소유자는 `link` 아이템 title을 `textarea`로 수정할 수 있고, `800ms` 디바운스로 자동 저장된다.
-- 소유자 `link` title textarea에서 Enter는 줄바꿈이 아닌 즉시 저장 트리거로 동작한다.
+- 소유자는 `link` 아이템 title을 `input`으로 수정할 수 있고, `800ms` 디바운스로 자동 저장된다.
+- 소유자 `link` title input에서 Enter는 줄바꿈이 아닌 즉시 저장 트리거로 동작한다.
 - 소유자 화면의 아이템 카드 우상단에는 hover 시에만 삭제 버튼이 노출되며, 클릭하면 아이템이 DB에서 물리 삭제된다.
 - 소유자 화면의 아이템 카드 hover 액션에 사이즈 버튼 그룹(`wide-short`, `wide-tall`, `wide-full`)이 노출된다.
 - 사이즈 버튼 그룹 컨테이너는 `bg-foreground`이며, 현재 선택된 옵션은 `bg-background text-foreground` 상태로 표시된다.
@@ -186,6 +191,7 @@ psql "$DIRECT_URL" -f schema/migrations/20260212130000_create_page_item_schema.s
 psql "$DIRECT_URL" -f schema/migrations/20260212173000_create_link_item_function.sql
 psql "$DIRECT_URL" -f schema/migrations/20260212213000_add_page_social_items_unique_platform.sql
 psql "$DIRECT_URL" -f schema/migrations/20260212223000_relax_page_social_platform_format_check.sql
+psql "$DIRECT_URL" -f schema/migrations/20260219170000_add_section_item_type.sql
 ```
 
 ## 문서

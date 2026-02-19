@@ -244,6 +244,10 @@ export function resolveReadonlyPageItemDisplayText(item: ReadonlyPageItem) {
     return pickFirstText(data, ["content"]) ?? pickFirstPrimitiveText(data) ?? READONLY_PAGE_ITEM_FALLBACK_UNSUPPORTED_TEXT;
   }
 
+  if (item.typeCode === "section") {
+    return pickFirstText(data, ["content"]) ?? pickFirstPrimitiveText(data) ?? READONLY_PAGE_ITEM_FALLBACK_UNSUPPORTED_TEXT;
+  }
+
   if (item.typeCode === "link") {
     return pickFirstText(data, ["title", "url"]) ?? pickFirstPrimitiveText(data) ?? READONLY_PAGE_ITEM_FALLBACK_UNSUPPORTED_TEXT;
   }

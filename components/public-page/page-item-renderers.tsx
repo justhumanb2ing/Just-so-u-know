@@ -17,6 +17,7 @@ import {
   resolveMediaItemMimeType,
   resolveMediaItemSrc,
   resolveMemoItemContent,
+  resolveSectionItemContent,
 } from "@/hooks/use-page-item-composer";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
@@ -30,6 +31,10 @@ type PageItemRendererProps = {
   item: PageItem;
   canEditMemo?: boolean;
   onMemoChange?: (itemId: string, nextValue: string) => void;
+  canEditSection?: boolean;
+  onSectionChange?: (itemId: string, nextValue: string) => void;
+  onSectionSubmit?: (itemId: string) => void;
+  sectionAutoFocusRequestId?: number;
   canEditLinkTitle?: boolean;
   onLinkTitleChange?: (itemId: string, nextValue: string) => void;
   onLinkTitleSubmit?: (itemId: string) => void;
@@ -83,6 +88,7 @@ function pickFirstPrimitiveText(data: PageItemData) {
 
 const PAGE_ITEM_TEXT_RESOLVER_MAP: Record<string, PageItemTextResolver> = {
   memo: (data) => pickFirstText(data, ["content"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
+  section: (data) => pickFirstText(data, ["content"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
   link: (data) => pickFirstText(data, ["title", "url"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
   map: (data) => pickFirstText(data, ["caption", "googleMapUrl"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
   image: (data) => pickFirstText(data, ["alt", "caption", "title", "src"]) ?? pickFirstPrimitiveText(data) ?? FALLBACK_UNSUPPORTED_TEXT,
@@ -121,6 +127,44 @@ function MemoItemRenderer({ item, canEditMemo = false, onMemoChange }: PageItemR
         isDisabled
           ? "cursor-default bg-transparent hover:bg-transparent focus-visible:bg-transparent disabled:cursor-default disabled:bg-transparent disabled:opacity-100"
           : "hover:bg-input/60 focus-visible:bg-input/60",
+      )}
+    />
+  );
+}
+
+function SectionItemRenderer({
+  item,
+  canEditSection = false,
+  onSectionChange,
+  onSectionSubmit,
+  sectionAutoFocusRequestId = 0,
+}: PageItemRendererProps) {
+  const isEditable = canEditSection && Boolean(onSectionChange);
+
+  const handleTitleEnter = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!isEditable || event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    onSectionSubmit?.(item.id);
+  };
+
+  return (
+    <Textarea
+      value={resolveSectionItemContent(item)}
+      placeholder="Section"
+      readOnly={!isEditable}
+      autoFocus={isEditable && sectionAutoFocusRequestId > 0}
+      onChange={isEditable ? (event) => onSectionChange?.(item.id, event.target.value) : undefined}
+      onKeyDown={isEditable ? handleTitleEnter : undefined}
+      tabIndex={isEditable ? 0 : -1}
+      rows={1}
+      className={cn(
+        "field-sizing-content min-h-0 w-full resize-none overflow-hidden whitespace-pre-wrap rounded-sm border-0 bg-transparent p-2 font-bold text-lg! leading-normal shadow-none",
+        isEditable
+          ? "hover:bg-input/60 focus-visible:bg-input/60 focus-visible:ring-0"
+          : "cursor-default hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0",
       )}
     />
   );
@@ -295,6 +339,7 @@ function DefaultItemRenderer({ item }: PageItemRendererProps) {
 
 const PAGE_ITEM_RENDERER_MAP: Record<string, PageItemRenderer> = {
   memo: MemoItemRenderer,
+  section: SectionItemRenderer,
   link: LinkItemRenderer,
   map: MapItemRenderer,
   image: ImageItemRenderer,

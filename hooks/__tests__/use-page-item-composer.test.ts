@@ -25,11 +25,13 @@ import {
   resolveMediaItemMimeType,
   resolveMediaItemSrc,
   resolveMemoItemContent,
+  resolveSectionItemContent,
   restoreRemovedPageItem,
   updateLinkItemTitle,
   updateMapItemData,
   updateMemoItemContent,
   updatePageItemSize,
+  updateSectionItemContent,
   usePageItemComposer,
 } from "@/hooks/use-page-item-composer";
 import { PageSaveStatusProvider } from "@/hooks/use-page-save-status";
@@ -347,6 +349,45 @@ describe("usePageItemComposer helpers", () => {
       content: "after",
     });
     expect(result[1]).toEqual(items[1]);
+  });
+
+  test("section content 추출/수정은 section 아이템만 대상으로 처리한다", () => {
+    // Arrange
+    const items = [
+      {
+        id: "item-1",
+        typeCode: "section",
+        sizeCode: "wide-short",
+        orderKey: 1,
+        data: {
+          content: "Before\r\nSection",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+      {
+        id: "item-2",
+        typeCode: "memo",
+        sizeCode: "wide-short",
+        orderKey: 2,
+        data: {
+          content: "Memo",
+        },
+        createdAt: "2026-02-12T00:00:00.000Z",
+        updatedAt: "2026-02-12T00:00:00.000Z",
+      },
+    ];
+
+    // Act
+    const extracted = resolveSectionItemContent(items[0] as (typeof items)[number]);
+    const updated = updateSectionItemContent(items, "item-1", "After Section");
+
+    // Assert
+    expect(extracted).toBe("Before Section");
+    expect(updated[0]?.data).toEqual({
+      content: "After Section",
+    });
+    expect(updated[1]).toEqual(items[1]);
   });
 
   test("link title 수정 시 대상 link만 낙관적으로 갱신한다", () => {

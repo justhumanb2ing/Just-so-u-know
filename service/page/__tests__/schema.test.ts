@@ -57,6 +57,28 @@ describe("page item schema", () => {
     expect(result.success).toBe(false);
   });
 
+  test("아이템 생성 스키마는 section content를 단일 라인으로 정규화한다", () => {
+    // Arrange
+    const payload = {
+      type: "section",
+      data: {
+        content: "  My\r\nSection  ",
+      },
+    };
+
+    // Act
+    const result = pageItemCreateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      type: "section",
+      data: {
+        content: "My Section",
+      },
+    });
+  });
+
   test("아이템 생성 스키마는 map 데이터(lat/lng/zoom/caption/url)를 허용한다", () => {
     // Arrange
     const payload = {
@@ -187,6 +209,28 @@ describe("page item schema", () => {
       type: "memo",
       data: {
         content: "Hello\nWorld",
+      },
+    });
+  });
+
+  test("아이템 수정 스키마는 section content 개행을 공백으로 정규화한다", () => {
+    // Arrange
+    const payload = {
+      type: "section",
+      data: {
+        content: "My\r\nSection",
+      },
+    };
+
+    // Act
+    const result = pageItemUpdateSchema.safeParse(payload);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      type: "section",
+      data: {
+        content: "My Section",
       },
     });
   });

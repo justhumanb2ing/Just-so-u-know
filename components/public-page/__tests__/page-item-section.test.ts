@@ -110,4 +110,18 @@ describe("isItemResizeOptionDisabled", () => {
     expect(videoDisabled).toBe(true);
     expect(mapDisabled).toBe(true);
   });
+
+  test("section 타입은 모든 리사이즈 옵션을 비활성화한다", () => {
+    // Arrange
+
+    // Act
+    const shortDisabled = isItemResizeOptionDisabled("section", "wide-short");
+    const tallDisabled = isItemResizeOptionDisabled("section", "wide-tall");
+    const fullDisabled = isItemResizeOptionDisabled("section", "wide-full");
+
+    // Assert
+    expect(shortDisabled).toBe(true);
+    expect(tallDisabled).toBe(true);
+    expect(fullDisabled).toBe(true);
+  });
 });
