@@ -42,6 +42,7 @@ bun dev
 
 ### SEO 메타데이터 / JSON-LD
 - 전역 사이트 SEO 속성은 `config/seo/site.ts`에서 관리한다.
+- 기본 루트 title은 `Just so u know - A Link in Bio`로 설정되어 검색 노출 시 브랜드 문구를 우선 전달한다.
 - Metadata 조합 유틸은 `config/seo/metadata.ts`, 페이지별 메타 조합은 `service/seo/metadata.ts`를 사용한다.
 - JSON-LD 직렬화/공통 스키마는 `config/seo/json-ld.ts`, 도메인 스키마 조합은 `service/seo/json-ld.ts`를 사용한다.
 - JSON-LD 스크립트 렌더링은 `components/seo/json-ld-script.tsx`를 사용한다.

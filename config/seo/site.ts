@@ -2,7 +2,7 @@ export const SITE_URL = "https://justsouknow.me";
 
 export const SITE_NAME = "Just so u know";
 
-export const SITE_DEFAULT_TITLE = SITE_NAME;
+export const SITE_DEFAULT_TITLE = "Just so u know - A Link in Bio";
 
 export const SITE_TITLE_TEMPLATE = `%s | ${SITE_NAME}`;
 

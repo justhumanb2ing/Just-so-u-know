@@ -6,7 +6,7 @@ import {
   createTemplatedPageTitle,
   createTwitterImages,
 } from "@/config/seo/metadata";
-import { DEFAULT_OG_IMAGE_ALT, SITE_NAME } from "@/config/seo/site";
+import { DEFAULT_OG_IMAGE_ALT, SITE_DEFAULT_TITLE, SITE_NAME } from "@/config/seo/site";
 
 describe("config/seo/metadata.ts", () => {
   it("루트 메타데이터에 metadataBase와 기본 OG 이미지가 포함되어야 한다", () => {
@@ -20,6 +20,10 @@ describe("config/seo/metadata.ts", () => {
     // Assert
     expect(metadata.metadataBase?.toString()).toBe(expectedMetadataBase);
     expect(metadata.manifest).toBe(expectedManifestPath);
+    expect(metadata.title).toEqual({
+      default: SITE_DEFAULT_TITLE,
+      template: `%s | ${SITE_NAME}`,
+    });
     expect(metadata.alternates).toBeUndefined();
     expect(metadata.robots).toBeUndefined();
     expect(metadata.openGraph?.images).toEqual([
