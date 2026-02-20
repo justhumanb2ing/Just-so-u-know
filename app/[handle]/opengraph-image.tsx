@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { DEFAULT_OG_IMAGE_HEIGHT, DEFAULT_OG_IMAGE_WIDTH, SITE_NAME } from "@/config/seo/site";
 import { findPublicPageByPathHandle } from "@/service/onboarding/public-page";
-import { toRenderableOpenGraphImageUrl } from "./opengraph-image-utils";
 
 export const runtime = "nodejs";
 
@@ -85,7 +84,7 @@ function toDisplayHandle(pathHandle: string, storedHandle?: string | null) {
 export default async function OpenGraphImage({ params }: HandleOpenGraphImageProps) {
   const { handle } = await params;
   const page = await findPublicPageByPathHandle(handle);
-  const pageImageUrl = toRenderableOpenGraphImageUrl(page?.image);
+  const pageImageUrl = page?.image?.trim() || null;
   const displayHandle = toDisplayHandle(handle, page?.handle);
   const [a2zBoldFont, a2zMediumFont, logoDataUrl] = await Promise.all([loadA2zBoldFont(), loadA2zMediumFont(), loadLogoDataUrl()]);
 
