@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import {
   applyPageItemOrder,
   buildGoogleMapUrl,
+  buildOptimizedPageItemImageFileName,
   buildPageItemEndpoint,
   buildPageItemMediaCompleteUploadEndpoint,
   buildPageItemMediaInitUploadEndpoint,
@@ -15,6 +16,7 @@ import {
   normalizeItemInput,
   normalizeLinkTitleInput,
   normalizePageItemSizeCode,
+  preparePageItemMediaUploadFile,
   removePageItemById,
   renumberPageItemOrder,
   reorderPageItemsById,
@@ -27,6 +29,7 @@ import {
   resolveMemoItemContent,
   resolveSectionItemContent,
   restoreRemovedPageItem,
+  shouldOptimizePageItemImageMimeType,
   updateLinkItemTitle,
   updateMapItemData,
   updateMemoItemContent,
@@ -133,6 +136,63 @@ describe("usePageItemComposer helpers", () => {
 
     // Assert
     expect(result).toBe("/api/page/item-media/complete-upload");
+  });
+
+  test("이미지 최적화 대상 MIME 타입을 판별한다", () => {
+    // Arrange
+    const optimizedMimeType = "image/jpeg";
+    const passthroughMimeType = "image/gif";
+
+    // Act
+    const optimizedResult = shouldOptimizePageItemImageMimeType(optimizedMimeType);
+    const passthroughResult = shouldOptimizePageItemImageMimeType(passthroughMimeType);
+
+    // Assert
+    expect(optimizedResult).toBe(true);
+    expect(passthroughResult).toBe(false);
+  });
+
+  test("이미지 최적화 파일명은 webp 확장자로 정규화한다", () => {
+    // Arrange
+    const imageFileName = "my-photo.png";
+
+    // Act
+    const result = buildOptimizedPageItemImageFileName(imageFileName);
+
+    // Assert
+    expect(result).toBe("my-photo.webp");
+  });
+
+  test("GIF 업로드 파일은 최적화 없이 원본을 유지한다", async () => {
+    // Arrange
+    const gifFile = new File(["gif-binary"], "animated.gif", {
+      type: "image/gif",
+    });
+
+    // Act
+    const result = await preparePageItemMediaUploadFile(gifFile);
+
+    // Assert
+    expect(result.mediaType).toBe("image");
+    expect(result.normalizedMimeType).toBe("image/gif");
+    expect(result.normalizedFileName).toBe("animated.gif");
+    expect(result.uploadFile).toBe(gifFile);
+  });
+
+  test("비디오 업로드 파일은 최적화 없이 원본을 유지한다", async () => {
+    // Arrange
+    const videoFile = new File(["video-binary"], "sample.webm", {
+      type: "video/webm",
+    });
+
+    // Act
+    const result = await preparePageItemMediaUploadFile(videoFile);
+
+    // Assert
+    expect(result.mediaType).toBe("video");
+    expect(result.normalizedMimeType).toBe("video/webm");
+    expect(result.normalizedFileName).toBe("sample.webm");
+    expect(result.uploadFile).toBe(videoFile);
   });
 
   test("초기 아이템 목록은 sizeCode를 정규화하고 orderKey 기준으로 정렬한다", () => {

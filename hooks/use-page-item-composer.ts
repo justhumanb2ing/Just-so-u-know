@@ -20,6 +20,10 @@ export const DEFAULT_PAGE_ITEM_SIZE_CODE: PageItemSizeCode = "wide-short";
 const WINDOWS_LINE_BREAK_PATTERN = /\r\n?/g;
 const LINK_TITLE_LINE_BREAK_PATTERN = /\r?\n/g;
 const PAGE_ITEM_MEDIA_MAX_SIZE_MB = Math.floor(PAGE_ITEM_MEDIA_MAX_FILE_SIZE_BYTES / (1024 * 1024));
+const PAGE_ITEM_IMAGE_OPTIMIZATION_TARGET_MIME_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
+const PAGE_ITEM_IMAGE_OUTPUT_MIME_TYPE = "image/webp";
+const PAGE_ITEM_IMAGE_COMPRESSION_QUALITY = 0.98;
+const PAGE_ITEM_IMAGE_MAX_WIDTH_OR_HEIGHT = 2048;
 
 export type { PageItemSizeCode } from "@/service/page/item-size";
 
@@ -286,6 +290,73 @@ export function buildPageItemMediaInitUploadEndpoint() {
  */
 export function buildPageItemMediaCompleteUploadEndpoint() {
   return "/api/page/item-media/complete-upload";
+}
+
+/**
+ * page item 이미지 업로드에서 WebP 변환 대상을 판별한다.
+ * GIF는 애니메이션 보존을 위해 원본 업로드를 유지한다.
+ */
+export function shouldOptimizePageItemImageMimeType(mimeType: string) {
+  return PAGE_ITEM_IMAGE_OPTIMIZATION_TARGET_MIME_TYPES.has(mimeType.toLowerCase());
+}
+
+/**
+ * 이미지 최적화 결과 파일명을 `.webp` 확장자로 정규화한다.
+ */
+export function buildOptimizedPageItemImageFileName(fileName: string) {
+  const trimmedFileName = fileName.trim();
+  const fallbackFileName = trimmedFileName.length > 0 ? trimmedFileName : "upload-file";
+  const extensionIndex = fallbackFileName.lastIndexOf(".");
+  const hasBaseName = extensionIndex > 0;
+  const baseName = hasBaseName ? fallbackFileName.slice(0, extensionIndex) : fallbackFileName;
+
+  return `${baseName}.webp`;
+}
+
+type PreparedPageItemMediaUploadFile = {
+  uploadFile: File;
+  normalizedMimeType: string;
+  normalizedFileName: string;
+  mediaType: "image" | "video";
+};
+
+/**
+ * 업로드 전 파일을 정규화한다.
+ * image/jpeg|jpg|png|webp는 WebP로 압축/변환하고, GIF/비디오는 원본을 유지한다.
+ */
+export async function preparePageItemMediaUploadFile(file: File): Promise<PreparedPageItemMediaUploadFile> {
+  const normalizedMimeType = file.type.trim().toLowerCase();
+  const normalizedFileName = file.name.trim() || "upload-file";
+  const mediaType = normalizedMimeType.startsWith("video/") ? "video" : "image";
+
+  if (mediaType !== "image" || !shouldOptimizePageItemImageMimeType(normalizedMimeType)) {
+    return {
+      uploadFile: file,
+      normalizedMimeType,
+      normalizedFileName,
+      mediaType,
+    };
+  }
+
+  const { default: imageCompression } = await import("browser-image-compression");
+  const compressedImage = await imageCompression(file, {
+    useWebWorker: true,
+    maxWidthOrHeight: PAGE_ITEM_IMAGE_MAX_WIDTH_OR_HEIGHT,
+    fileType: PAGE_ITEM_IMAGE_OUTPUT_MIME_TYPE,
+    initialQuality: PAGE_ITEM_IMAGE_COMPRESSION_QUALITY,
+    alwaysKeepResolution: true,
+  });
+  const optimizedFileName = buildOptimizedPageItemImageFileName(normalizedFileName);
+  const optimizedFile = new File([compressedImage], optimizedFileName, {
+    type: PAGE_ITEM_IMAGE_OUTPUT_MIME_TYPE,
+  });
+
+  return {
+    uploadFile: optimizedFile,
+    normalizedMimeType: PAGE_ITEM_IMAGE_OUTPUT_MIME_TYPE,
+    normalizedFileName: optimizedFileName,
+    mediaType,
+  };
 }
 
 function sortPageItems(items: PageItem[]) {
@@ -1277,7 +1348,6 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
   const handleCreateMediaItemFromFile = useCallback(
     async (file: File) => {
       const normalizedMimeType = file.type.trim().toLowerCase();
-      const normalizedFileName = file.name.trim() || "upload-file";
       const mediaType = normalizedMimeType.startsWith("video/") ? "video" : "image";
 
       if (!isAllowedPageItemMediaMimeType(normalizedMimeType)) {
@@ -1310,6 +1380,8 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
       });
 
       try {
+        const preparedUploadFile = await preparePageItemMediaUploadFile(file);
+
         const initResponse = await fetch(buildPageItemMediaInitUploadEndpoint(), {
           method: "POST",
           headers: {
@@ -1317,9 +1389,9 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
           },
           body: JSON.stringify({
             handle,
-            mimeType: normalizedMimeType,
-            fileSize: file.size,
-            fileName: normalizedFileName,
+            mimeType: preparedUploadFile.normalizedMimeType,
+            fileSize: preparedUploadFile.uploadFile.size,
+            fileName: preparedUploadFile.normalizedFileName,
           }),
         });
         const initPayload = await parseJsonResponse<InitPageItemMediaUploadApiSuccess | ErrorApiResponse>(initResponse);
@@ -1331,7 +1403,7 @@ export function usePageItemComposer({ handle, initialItems = [] }: UsePageItemCo
         const uploadResponse = await fetch(initPayload.uploadUrl, {
           method: "PUT",
           headers: initPayload.uploadHeaders,
-          body: file,
+          body: preparedUploadFile.uploadFile,
         });
 
         if (!uploadResponse.ok) {
