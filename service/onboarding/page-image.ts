@@ -1,6 +1,6 @@
 export const PAGE_IMAGE_BUCKET_NAME = "page-thumbnail";
-export const PAGE_IMAGE_FILE_NAME = "profile.webp";
-export const PAGE_IMAGE_OUTPUT_MIME_TYPE = "image/webp";
+export const PAGE_IMAGE_FILE_NAME = "profile.jpg";
+export const PAGE_IMAGE_OUTPUT_MIME_TYPE = "image/jpeg";
 export const PAGE_IMAGE_ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
 export const PAGE_IMAGE_MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 

@@ -72,7 +72,7 @@ export function useProfileImageEditor({ handle, initialImage }: UseProfileImageE
   const isImageBusy = isUploadingImage || isDeletingImage;
 
   /**
-   * 선택한 이미지를 정책에 맞게 WebP로 압축한 뒤 업로드 완료 API까지 처리한다.
+   * 선택한 이미지를 호환성 우선 JPEG로 압축한 뒤 업로드 완료 API까지 처리한다.
    */
   const uploadImage = useCallback(
     async (file: File) => {

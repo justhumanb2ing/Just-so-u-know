@@ -132,7 +132,7 @@
 
 ## 공개 페이지 이미지 업로드 동작
 - 버킷: `page-thumbnail`
-- object key: `page/{userId}/{pageId}/profile.webp` (단일 이미지만 허용)
+- object key: `page/{userId}/{pageId}/profile.jpg` (단일 이미지만 허용)
 - 업로드 프로토콜: Supabase Storage S3 endpoint + AWS SDK presigned PUT
 - 처리 순서:
   - `POST /api/page/image/init-upload`: 세션/소유권 검증 후 presigned URL 발급
@@ -141,7 +141,7 @@
 - `page.image`는 public URL로 저장하며 캐시 무효화를 위해 `?v=<timestamp>`를 포함한다.
 - 삭제(`DELETE /api/page/image/delete`)는 `page.image = null`과 Storage object 삭제를 모두 시도한다.
 - DB 반영은 성공했지만 Storage 삭제가 실패하면 partial success 응답을 반환해 UI에서 경고 toast를 띄운다.
-- 업로드 전 클라이언트에서 `jpg/jpeg/png/webp`, 최대 `5MB`를 검증하고, `WebP(320x320, quality 0.85)`로 변환한다.
+- 업로드 전 클라이언트에서 `jpg/jpeg/png/webp`, 최대 `5MB`를 검증하고, `JPEG(quality 0.98, maxWidthOrHeight 2048)`로 압축/변환한다.
 
 ## 페이지 아이템 생성 API 동작
 - 엔드포인트: `POST /api/pages/{handle}/items`
@@ -159,6 +159,7 @@
   - `type: "video"` + `data.src`/`data.mimeType`/`data.fileName`/`data.fileSize`/`data.objectKey`
   - image/video `mimeType`은 `image/jpeg|image/jpg|image/png|image/webp|image/gif|video/webm|video/mp4`만 허용한다.
   - image/video `fileSize`는 최대 `5MB`를 허용한다.
+  - image 업로드(`jpeg/jpg/png/webp`)는 클라이언트에서 `image/webp`로 압축/변환(quality 0.98, maxWidthOrHeight 2048) 후 업로드하며, `gif`/`video`는 원본을 유지한다.
 - 처리 정책:
   - `handle`은 경로 파라미터를 저장 포맷(`@handle`)으로 정규화해 검증한다.
   - `memo` 생성은 DB RPC(`create_memo_item_for_owned_page`)로 처리한다.

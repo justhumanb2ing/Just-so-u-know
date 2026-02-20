@@ -20,7 +20,7 @@ describe("page-image", () => {
     const objectKey = buildPageImageObjectKey(payload);
 
     // Assert
-    expect(objectKey).toBe("page/user-1/page-1/profile.webp");
+    expect(objectKey).toBe("page/user-1/page-1/profile.jpg");
   });
 
   test("S3 endpoint에서 public object base URL을 계산한다", () => {
@@ -39,7 +39,7 @@ describe("page-image", () => {
     const payload = {
       publicObjectBaseUrl: "https://project-ref.storage.supabase.co/storage/v1/object/public",
       bucketName: "page-thumbnail",
-      objectKey: "page/user-1/page-1/profile.webp",
+      objectKey: "page/user-1/page-1/profile.jpg",
       version: "1739156400000",
     };
 
@@ -48,25 +48,25 @@ describe("page-image", () => {
 
     // Assert
     expect(imageUrl).toBe(
-      "https://project-ref.storage.supabase.co/storage/v1/object/public/page-thumbnail/page/user-1/page-1/profile.webp?v=1739156400000",
+      "https://project-ref.storage.supabase.co/storage/v1/object/public/page-thumbnail/page/user-1/page-1/profile.jpg?v=1739156400000",
     );
   });
 
   test("page.image URL에서 object key를 추출한다", () => {
     // Arrange
     const imageUrl =
-      "https://project-ref.storage.supabase.co/storage/v1/object/public/page-thumbnail/page/user-1/page-1/profile.webp?v=1739156400000";
+      "https://project-ref.storage.supabase.co/storage/v1/object/public/page-thumbnail/page/user-1/page-1/profile.jpg?v=1739156400000";
 
     // Act
     const objectKey = extractPageImageObjectKey(imageUrl, "page-thumbnail");
 
     // Assert
-    expect(objectKey).toBe("page/user-1/page-1/profile.webp");
+    expect(objectKey).toBe("page/user-1/page-1/profile.jpg");
   });
 
   test("다른 bucket URL이면 object key를 추출하지 않는다", () => {
     // Arrange
-    const imageUrl = "https://project-ref.storage.supabase.co/storage/v1/object/public/other-bucket/path/profile.webp";
+    const imageUrl = "https://project-ref.storage.supabase.co/storage/v1/object/public/other-bucket/path/profile.jpg";
 
     // Act
     const objectKey = extractPageImageObjectKey(imageUrl, "page-thumbnail");

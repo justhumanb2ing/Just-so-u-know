@@ -105,8 +105,8 @@ bun dev
 - `buildSocialProfileUrl(platform, identifier)`로 플랫폼별 식별자(username/channel ID) 기반 링크를 일관되게 생성할 수 있다.
 - 프로필 이미지 업로드는 파일 선택 즉시 시작된다.
 - 업로드 전 클라이언트에서 `jpg/jpeg/png/webp`, 최대 `5MB` 검증을 수행한다.
-- 업로드 전 이미지를 `WebP(320x320, quality 0.85)`로 압축한다.
-- Storage 버킷은 `page-thumbnail`, object key는 `page/{userId}/{pageId}/profile.webp`를 사용한다.
+- 업로드 전 이미지를 `JPEG(quality 0.98, maxWidthOrHeight 2048)`로 압축한다.
+- Storage 버킷은 `page-thumbnail`, object key는 `page/{userId}/{pageId}/profile.jpg`를 사용한다.
 - 업로드는 `init-upload → presigned PUT → complete-upload` 순서로 처리되며, `page.image`에는 public URL(`?v=` 캐시 버전 포함)이 저장된다.
 - 삭제는 즉시 실행되며 `page.image = null`과 Storage object 삭제를 모두 시도한다.
 - DB 반영은 성공했지만 Storage 정리가 실패한 경우 partial failure toast를 표시한다.
@@ -122,6 +122,7 @@ bun dev
 - OG 조회 실패 시 에러 toast를 표시한다.
 - 소유자 화면 하단 바의 `Image&Video` 버튼은 파일 선택 즉시 업로드를 시작한다.
 - 이미지/비디오 업로드 전 클라이언트에서 `image/jpeg`, `image/jpg`, `image/png`, `image/webp`, `image/gif`, `video/webm`, `video/mp4` 및 최대 `5MB`를 검증한다.
+- 이미지 업로드(`jpg/jpeg/png/webp`)는 업로드 전에 `WebP(quality 0.98, maxWidthOrHeight 2048)`로 압축/변환하며, `gif`/`video`는 원본으로 업로드한다.
 - 업로드 버킷은 `page-item-image-video`, object key는 `page-item/{userId}/{pageId}/{image|video}/{uuid}.{ext}` 규칙을 사용한다.
 - 업로드는 `init-upload → presigned PUT → complete-upload → POST /api/pages/{handle}/items` 순서로 처리된다.
 - image/video 아이템의 생성 기본 `size_code`는 `wide-tall`이다.
