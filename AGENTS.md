@@ -19,16 +19,16 @@
 
 기능 구현/수정/리팩토링 시에는 아래 두 스킬을 항상 함께 사용한다.
 
-- [$vercel-composition-patterns](/Users/zentechie/.agents/skills/vercel-composition-patterns/SKILL.md)
-- [$vercel-react-best-practices](/Users/zentechie/.agents/skills/vercel-react-best-practices/SKILL.md)
-- skill path: `/Users/zentechie/.agents/skills/vercel-composition-patterns/SKILL.md`
-- skill path: `/Users/zentechie/.agents/skills/vercel-react-best-practices/SKILL.md`
+- [$vercel-composition-patterns](/Users/kinmongsang/.agents/skills/vercel-composition-patterns/SKILL.md)
+- [$vercel-react-best-practices](/Users/kinmongsang/.agents/skills/vercel-react-best-practices/SKILL.md)
+- skill path: `/Users/kinmongsang/.agents/skills/vercel-composition-patterns/SKILL.md`
+- skill path: `/Users/kinmongsang/.agents/skills/vercel-react-best-practices/SKILL.md`
 
 참고용 수동 확인 명령:
 
 ```bash
-cat /Users/zentechie/.agents/skills/vercel-composition-patterns/SKILL.md
-cat /Users/zentechie/.agents/skills/vercel-react-best-practices/SKILL.md
+cat /Users/kinmongsang/.agents/skills/vercel-composition-patterns/SKILL.md
+cat /Users/kinmongsang/.agents/skills/vercel-react-best-practices/SKILL.md
 ```
 
 ### UI 작업
